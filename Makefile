@@ -3,8 +3,8 @@ PKG         := ./cmd/$(BINARY)
 VERSION     := $(shell grep -oE 'org\.opencontainers\.image\.version="[^"]+"' Dockerfile | cut -d'"' -f2)
 COMMIT      := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 LDFLAGS     := -s -w \
-	-X github.com/younsl/o/box/kubernetes/forklift/internal/version.Version=$(VERSION) \
-	-X github.com/younsl/o/box/kubernetes/forklift/internal/version.Commit=$(COMMIT)
+	-X github.com/opencomputinggarage/forklift/internal/version.Version=$(VERSION) \
+	-X github.com/opencomputinggarage/forklift/internal/version.Commit=$(COMMIT)
 ECR_REGISTRY ?= ghcr.io/younsl
 IMAGE        := $(ECR_REGISTRY)/$(BINARY)
 COVER_MIN   ?= 73

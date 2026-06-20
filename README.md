@@ -3,7 +3,7 @@
 [![Go](https://img.shields.io/badge/go-1.26.4-black?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
 [![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-forklift-black?style=flat-square&logo=docker&logoColor=white)](https://github.com/younsl/o/pkgs/container/forklift)
 [![Helm Chart](https://img.shields.io/badge/ghcr.io-charts%2Fforklift-black?style=flat-square&logo=helm&logoColor=white)](https://github.com/younsl/o/tree/main/box/kubernetes/forklift/charts/forklift)
-[![License](https://img.shields.io/badge/license-Apache--2.0-black?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/github/license/younsl/o?style=flat-square&color=black)](https://github.com/younsl/o/blob/main/LICENSE)
 
 Lightweight, Kubernetes-native artifact repository. A single static Go binary that hosts and proxies Maven, npm, Cargo, Go module, and PyPI artifacts, with a clean React UI, OIDC and local auth, fine-grained access tokens, per-repository caching, and a supply-chain age policy. A focused alternative to heavyweight JVM-based repository managers.
 
@@ -254,7 +254,3 @@ make helm-lint    # lint the chart
 ```
 
 The React UI lives in `web/` (Vite + TypeScript) and is embedded into the binary via `go:embed`. A placeholder is committed so `make build` works without a frontend build; `make web-build` or the Docker build produces the real UI.
-
-## License
-
-Licensed under the [Apache License 2.0](LICENSE).

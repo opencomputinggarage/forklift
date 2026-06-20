@@ -22,7 +22,7 @@ COPY . .
 COPY --from=web /internal/webui/dist ./internal/webui/dist
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath \
-    -ldflags="-s -w -X github.com/younsl/o/box/kubernetes/forklift/internal/version.Version=${VERSION} -X github.com/younsl/o/box/kubernetes/forklift/internal/version.Commit=${COMMIT}" \
+    -ldflags="-s -w -X github.com/opencomputinggarage/forklift/internal/version.Version=${VERSION} -X github.com/opencomputinggarage/forklift/internal/version.Commit=${COMMIT}" \
     -o /out/forklift ./cmd/forklift
 
 FROM alpine:3.23 AS certs

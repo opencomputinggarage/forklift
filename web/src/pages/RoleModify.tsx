@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, Role, User } from "../api";
+import { api, Me, Role, User } from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { Combobox } from "../components/Combobox";
 
-const ACTIONS = ["read", "write", "delete", "approve", "admin"];
+const ACTIONS = ["read", "write", "delete", "approve", "audit", "admin"];
 
 // Per-role modify page: permission mapping, assigned users, and the danger zone
-// (delete). The Roles list is read-only; all edits happen here.
-export function RoleModify() {
+// (delete). The Roles list is read-only; all edits happen here. The page is
+// read-only (no add/remove permission, no delete) for an auditor and for managed
+// roles, which are owned by the chart's declarative RBAC policy.
+export function RoleModify({ me }: { me: Me }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const roleId = Number(id);
@@ -35,6 +37,12 @@ export function RoleModify() {
     p.then(load).catch((e) => setError((e as Error).message));
   };
 
+  // Managed roles are reconciled from the chart's declarative RBAC policy and are
+  // read-only via the API. Gate every edit control on !role.managed so an admin
+  // never sees a button that would only return a 409; the backend still enforces
+  // this regardless of the UI.
+  const editable = !!me.admin && !role.managed;
+
   return (
     <>
       <div className="page-head">
@@ -42,11 +50,27 @@ export function RoleModify() {
         <Link className="btn secondary" to="/roles">Back to roles</Link>
       </div>
       {role.description && <p className="page-desc">{role.description}</p>}
+      {role.managed && (
+        <div className="panel" style={{ borderColor: "var(--accent)" }}>
+          <h2 style={{ marginTop: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+              style={{ color: "var(--accent)" }}>
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Managed role
+          </h2>
+          <p className="muted" style={{ margin: 0 }}>
+            This role was configured by a Forklift administrator in the declarative RBAC policy so it cannot be edited here. To change its permissions or delete it ask an administrator to update the policy file and restart forklift.
+          </p>
+        </div>
+      )}
       {error && <div className="error">{error}</div>}
 
-      <PermissionsPanel role={role} run={run} />
+      <PermissionsPanel role={role} run={run} canWrite={editable} />
       <AssignedUsersPanel members={members} />
-      <DangerPanel role={role} onDeleted={() => navigate("/roles")} onError={setError} />
+      {editable && <DangerPanel role={role} onDeleted={() => navigate("/roles")} onError={setError} />}
     </>
   );
 }
@@ -99,7 +123,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
   );
 }
 
-function PermissionsPanel({ role, run }: { role: Role; run: (p: Promise<unknown>) => void }) {
+function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promise<unknown>) => void; canWrite: boolean }) {
   const [pattern, setPattern] = useState("");
   const [actions, setActions] = useState<string[]>(["read"]);
   const [repoOptions, setRepoOptions] = useState<string[]>(["*"]);
@@ -130,24 +154,28 @@ function PermissionsPanel({ role, run }: { role: Role; run: (p: Promise<unknown>
         {role.permissions.map((p) => (
           <span key={p.id} className="badge" style={{ fontFamily: "ui-monospace, monospace" }}>
             {p.repo_pattern}: {p.actions.join(",")}
-            <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
-              onClick={() => run(api.deletePermission(role.id, p.id))}>×</a>
+            {canWrite && (
+              <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
+                onClick={() => run(api.deletePermission(role.id, p.id))}>×</a>
+            )}
           </span>
         ))}
         {role.permissions.length === 0 && <span className="muted">No permissions granted.</span>}
       </div>
-      <div className="inline" style={{ marginTop: 12, flexWrap: "wrap", gap: 8 }}>
-        <Combobox style={{ width: 200 }} value={pattern} onChange={setPattern}
-          options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
-        {ACTIONS.map((a) => (
-          <label key={a} className="checkbox" style={{ margin: 0, fontSize: 12 }}>
-            <input type="checkbox" checked={actions.includes(a)} onChange={() => toggle(a)} />
-            <span>{a}</span>
-          </label>
-        ))}
-        <button className="btn secondary" type="button"
-          disabled={!pattern.trim() || actions.length === 0} onClick={add}>Add</button>
-      </div>
+      {canWrite && (
+        <div className="inline" style={{ marginTop: 12, flexWrap: "wrap", gap: 8 }}>
+          <Combobox style={{ width: 200 }} value={pattern} onChange={setPattern}
+            options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
+          {ACTIONS.map((a) => (
+            <label key={a} className="checkbox" style={{ margin: 0, fontSize: 12 }}>
+              <input type="checkbox" checked={actions.includes(a)} onChange={() => toggle(a)} />
+              <span>{a}</span>
+            </label>
+          ))}
+          <button className="btn secondary" type="button"
+            disabled={!pattern.trim() || actions.length === 0} onClick={add}>Add</button>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { api, Me, Role } from "../../api";
 import { useAuth } from "../../authContext";
+import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/roles/")({
   component: RolesRoute,
@@ -24,53 +36,55 @@ export function Roles({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Roles</h1>
-        {me.admin && <Link className="btn" to="/roles/new">Create role</Link>}
-      </div>
-      <p className="page-desc">
+      <PageHeader
+        title="Roles"
+        actions={me.admin && <Link className={buttonVariants()} to="/roles/new">Create role</Link>}
+      />
+      <PageDescription>
         Bundle repository permissions (read, write, delete, approve, audit, admin) over name patterns.
         Open a role to map permissions; roles are assigned to users on each user's detail page.
-      </p>
-      {error && <div className="error">{error}</div>}
+      </PageDescription>
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      <div className="panel">
-        <table>
-          <thead>
-            <tr><th>Role</th><th>Source</th><th>Description</th><th>Users</th><th>Permissions</th><th></th></tr>
-          </thead>
-          <tbody>
+      <Panel>
+        <PanelBody>
+          <Table>
+            <TableHeader>
+              <TableRow><TableHead>Role</TableHead><TableHead>Source</TableHead><TableHead>Description</TableHead><TableHead>Users</TableHead><TableHead>Permissions</TableHead><TableHead /></TableRow>
+            </TableHeader>
+            <TableBody>
             {roles.map((r) => (
-              <tr key={r.id}>
-                <td>{r.name}</td>
-                <td>
-                  <span className="badge" title={r.managed
+              <TableRow key={r.id}>
+                <TableCell>{r.name}</TableCell>
+                <TableCell>
+                  <Badge title={r.managed
                     ? "Managed by the declarative RBAC policy and not editable in the UI."
                     : "Created in the UI or API and editable here."}>
                     {r.managed ? "managed" : "local"}
-                  </span>
-                </td>
-                <td className="muted">{r.description || "-"}</td>
-                <td>{r.user_count}</td>
-                <td>
-                  <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{r.description || "-"}</TableCell>
+                <TableCell>{r.user_count}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1.5">
                     {r.permissions.map((p) => (
-                      <span key={p.id} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
+                      <Badge key={p.id} className="font-mono">
                         {p.repo_pattern}: {p.actions.join(",")}
-                      </span>
+                      </Badge>
                     ))}
-                    {r.permissions.length === 0 && <span className="muted">none</span>}
+                    {r.permissions.length === 0 && <span className="text-muted-foreground">none</span>}
                   </div>
-                </td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <Link className="btn secondary" to="/roles/$id" params={{ id: String(r.id) }}>Modify</Link>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-right">
+                  <Link className={buttonVariants({ variant: "outline" })} to="/roles/$id" params={{ id: String(r.id) }}>Modify</Link>
+                </TableCell>
+              </TableRow>
             ))}
-            {roles.length === 0 && <tr><td colSpan={6} className="muted">No roles yet. Create one to grant repository access.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+            {roles.length === 0 && <TableRow><TableCell colSpan={6} className="text-muted-foreground">No roles yet. Create one to grant repository access.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </PanelBody>
+      </Panel>
     </>
   );
 }

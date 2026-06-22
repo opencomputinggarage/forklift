@@ -2,6 +2,19 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { api, Token } from "../../api";
 import { ConfirmModal } from "../../components/confirm-modal";
+import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/app-ui/table";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tokens/")({
   component: Tokens,
@@ -38,43 +51,45 @@ export function Tokens() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Personal access tokens</h1>
-        <Link className="btn" to="/tokens/new">New token</Link>
-      </div>
-      <p className="page-desc">
+      <PageHeader
+        title="Personal access tokens"
+        actions={<Link className={buttonVariants()} to="/tokens/new">New token</Link>}
+      />
+      <PageDescription>
         Scoped credentials for package clients, limited to chosen repositories and actions
         within your own permissions. Use a token as the password in your package manager
         (npm <code>_authToken</code>, Maven, Cargo, <code>.netrc</code> for Go).
-      </p>
+      </PageDescription>
 
-      {error && <div className="error">{error}</div>}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      <div className="panel">
-        <table>
-          <thead><tr><th>Name</th><th>Description</th><th>Permissions</th><th>Created</th><th>Expires</th><th>Last used</th><th></th></tr></thead>
-          <tbody>
+      <Panel>
+        <PanelBody>
+          <Table>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Permissions</TableHead><TableHead>Created</TableHead><TableHead>Expires</TableHead><TableHead>Last used</TableHead><TableHead /></TableRow></TableHeader>
+            <TableBody>
             {tokens.map((t) => (
-              <tr key={t.id}>
-                <td>{t.name}</td>
-                <td className="muted">{t.description}</td>
-                <td>
+              <TableRow key={t.id}>
+                <TableCell>{t.name}</TableCell>
+                <TableCell className="text-muted-foreground">{t.description}</TableCell>
+                <TableCell>
                   {parseScopes(t.scopes_json).map((s, i) => (
-                    <span key={i} className="badge" style={{ fontFamily: "var(--font-mono)", marginRight: 4 }}>
+                    <Badge key={i} className="mr-1 font-mono">
                       {s.repo_pattern}: {s.actions.join(",")}
-                    </span>
+                    </Badge>
                   ))}
-                </td>
-                <td className="muted">{t.created_at?.slice(0, 10)}</td>
-                <td className="muted">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</td>
-                <td className="muted">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</td>
-                <td><button className="btn danger" onClick={() => setRevokeId(t.id)}>Revoke</button></td>
-              </tr>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{t.created_at?.slice(0, 10)}</TableCell>
+                <TableCell className="text-muted-foreground">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</TableCell>
+                <TableCell className="text-muted-foreground">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</TableCell>
+                <TableCell><button className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => setRevokeId(t.id)}>Revoke</button></TableCell>
+              </TableRow>
             ))}
-            {tokens.length === 0 && <tr><td colSpan={7} className="muted">No tokens yet.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+            {tokens.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No tokens yet.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </PanelBody>
+      </Panel>
 
       <ConfirmModal
         open={revokeId !== null}

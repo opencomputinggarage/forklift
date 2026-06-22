@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { api, Me, User } from "../../api";
 import { useAuth } from "../../authContext";
+import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/users/")({
   component: UsersRoute,
@@ -25,54 +37,56 @@ export function Users({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Users</h1>
-        {me.admin && <Link className="btn" to="/users/new">Create user</Link>}
-      </div>
-      <p className="page-desc">
+      <PageHeader
+        title="Users"
+        actions={me.admin && <Link className={buttonVariants()} to="/users/new">Create user</Link>}
+      />
+      <PageDescription>
         Local and OIDC accounts. Open a user to map roles, reset the password, or disable access.
         OIDC users appear automatically at first login.
-      </p>
-      {error && <div className="error">{error}</div>}
+      </PageDescription>
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      <div className="panel">
-        <h2>Users</h2>
-        <table>
-          <thead>
-            <tr><th>Username</th><th>Source</th><th>Email</th><th>Roles</th><th>Status</th><th>Last login</th><th></th></tr>
-          </thead>
-          <tbody>
+      <Panel>
+        <PanelBody>
+          <h2 className="mb-3 text-base font-semibold">Users</h2>
+          <Table>
+            <TableHeader>
+              <TableRow><TableHead>Username</TableHead><TableHead>Source</TableHead><TableHead>Email</TableHead><TableHead>Roles</TableHead><TableHead>Status</TableHead><TableHead>Last login</TableHead><TableHead /></TableRow>
+            </TableHeader>
+            <TableBody>
             {users.map((u) => (
-              <tr key={u.id}>
-                <td style={{ whiteSpace: "nowrap" }}>
+              <TableRow key={u.id}>
+                <TableCell className="whitespace-nowrap">
                   {u.username}
-                  {u.username === me.username && <span className="badge" style={{ marginLeft: 8 }}>you</span>}
-                </td>
-                <td><span className="badge">{u.source}</span></td>
-                <td className="muted">{u.email || "-"}</td>
-                <td>
-                  <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
-                    {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
-                    {u.roles.length === 0 && <span className="muted">none</span>}
+                  {u.username === me.username && <Badge className="ml-2">you</Badge>}
+                </TableCell>
+                <TableCell><Badge>{u.source}</Badge></TableCell>
+                <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1.5">
+                    {u.roles.map((r) => <Link key={r.id} className={buttonVariants({ variant: "outline", size: "xs" })} to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
+                    {u.roles.length === 0 && <span className="text-muted-foreground">none</span>}
                   </div>
-                </td>
-                <td>
+                </TableCell>
+                <TableCell>
                   {u.disabled
-                    ? <span className="status"><span className="dot bad" /> disabled</span>
-                    : <span className="status"><span className="dot ok" /> active</span>}
-                </td>
-                <td className="muted" style={{ whiteSpace: "nowrap" }} title={u.last_login_at ?? undefined}>
+                    ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-destructive" /> disabled</span>
+                    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-emerald-400" /> active</span>}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground" title={u.last_login_at ?? undefined}>
                   {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
-                </td>
-                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <Link className="btn secondary" to="/users/$id" params={{ id: String(u.id) }}>Modify</Link>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-right">
+                  <Link className={buttonVariants({ variant: "outline" })} to="/users/$id" params={{ id: String(u.id) }}>Modify</Link>
+                </TableCell>
+              </TableRow>
             ))}
-            {users.length === 0 && <tr><td colSpan={7} className="muted">No users.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+            {users.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No users.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </PanelBody>
+      </Panel>
     </>
   );
 }

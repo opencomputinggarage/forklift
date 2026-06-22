@@ -2,13 +2,30 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api } from "../../api";
 import { useAuth } from "../../authContext";
-import { Combobox } from "../../components/combobox";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Plus, X } from "lucide-react";
 
 export const Route = createFileRoute("/roles/new")({
   component: RoleNewRoute,
@@ -38,6 +55,9 @@ export function RoleNew() {
   // Permission add-row state.
   const [pattern, setPattern] = useState("");
   const [actions, setActions] = useState<string[]>(["read"]);
+  const [actionSearch, setActionSearch] = useState("");
+  const actionAnchorRef = useComboboxAnchor();
+  const actionOptions = ACTIONS.filter((action) => action.includes(actionSearch.trim().toLowerCase()));
 
   // Repository names for pattern autocomplete; "*" (all) is offered first.
   const [repoOptions, setRepoOptions] = useState<string[]>(["*"]);
@@ -51,14 +71,12 @@ export function RoleNew() {
       .catch(() => setRepoOptions(["*"]));
   }, []);
 
-  const toggle = (a: string) =>
-    setActions((cur) => cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]);
-
   const addPermission = () => {
     if (!pattern.trim() || actions.length === 0) return;
     setPermissions((cur) => [...cur, { repo_pattern: pattern.trim(), actions: [...actions] }]);
     setPattern("");
     setActions(["read"]);
+    setActionSearch("");
   };
 
   const submit = async (e: FormEvent) => {
@@ -78,48 +96,167 @@ export function RoleNew() {
 
   return (
     <>
-      <h1>Create role</h1>
-      <Panel className="max-w-[35rem]">
+      <PageHeader title="Create role" />
+      <PageDescription>
+        Define a reusable access profile and optional repository permissions.
+      </PageDescription>
+
+      <Panel className="max-w-[44rem]">
         <PanelBody>
-          <form onSubmit={submit} className="space-y-4">
-            <label className="block text-sm font-medium">Role name<span className="text-destructive">*</span></label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="maven-readers" autoFocus required
-              pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
+          <form onSubmit={submit} className="space-y-5">
+            <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="role-name">
+                  Role name<span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="role-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="maven-readers"
+                  autoFocus
+                  required
+                  pattern="[A-Za-z0-9_-]{1,64}"
+                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                />
+                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+              </Field>
 
-            <label className="block text-sm font-medium">Description</label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="optional" />
+              <Field>
+                <FieldLabel htmlFor="role-description">Description</FieldLabel>
+                <Input
+                  id="role-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="optional"
+                />
+              </Field>
+            </FieldGroup>
 
-            <div>
-              <label className="block text-sm font-medium">Permissions</label>
-              <Inline className="mt-2 flex-wrap gap-1.5">
-                {permissions.map((p, i) => (
-                  <Badge key={i} className="font-mono">
-                    {p.repo_pattern}: {p.actions.join(",")}
-                    <button className="ml-1.5 cursor-pointer" type="button" title="Remove permission"
-                      onClick={() => setPermissions((cur) => cur.filter((_, j) => j !== i))}>x</button>
-                  </Badge>
-                ))}
-                {permissions.length === 0 && <span className="text-sm text-muted-foreground">none yet (optional)</span>}
-              </Inline>
-              <Inline className="mt-2 flex-wrap gap-2">
-                <Combobox style={{ width: 200 }} value={pattern} onChange={setPattern}
-                  options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
-                {ACTIONS.map((a) => (
-                  <label key={a} className="inline-flex items-center gap-1.5 text-xs">
-                    <Checkbox checked={actions.includes(a)} onCheckedChange={() => toggle(a)} />
-                    <span>{a}</span>
-                  </label>
-                ))}
-                <Button variant="outline" type="button" onClick={addPermission}
-                  disabled={!pattern.trim() || actions.length === 0}>Add</Button>
-              </Inline>
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="m-0 text-sm font-semibold">Permissions</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add repository patterns and allowed actions. Wildcards are accepted.
+                  </p>
+                </div>
+                <Badge className="mt-0.5">{permissions.length}</Badge>
+              </div>
+
+              <div className="min-h-10 rounded-lg border border-border bg-muted/20 p-2">
+                <Inline className="flex-wrap gap-1.5">
+                  {permissions.map((p, i) => (
+                    <Badge key={`${p.repo_pattern}-${i}`} className="font-mono">
+                      {p.repo_pattern}: {p.actions.join(",")}
+                      <button
+                        className="ml-1.5 inline-flex cursor-pointer items-center text-muted-foreground hover:text-foreground"
+                        type="button"
+                        title="Remove permission"
+                        onClick={() => setPermissions((cur) => cur.filter((_, j) => j !== i))}
+                      >
+                        <X className="size-3" aria-hidden="true" />
+                      </button>
+                    </Badge>
+                  ))}
+                  {permissions.length === 0 && (
+                    <span className="px-1 text-sm text-muted-foreground">No permissions added.</span>
+                  )}
+                </Inline>
+              </div>
+
+              <div className="rounded-lg border border-border/80 bg-background/40 p-3">
+                <FieldGroup className="gap-3">
+                  <Field>
+                    <FieldLabel>Repository pattern</FieldLabel>
+                    <Combobox
+                      items={repoOptions}
+                      inputValue={pattern}
+                      value={repoOptions.includes(pattern) ? pattern : null}
+                      onInputValueChange={setPattern}
+                      onValueChange={(next) => {
+                        if (typeof next === "string") setPattern(next);
+                      }}
+                    >
+                      <ComboboxInput placeholder="repo pattern (* or maven-*)" className="w-full" />
+                      <ComboboxContent>
+                        <ComboboxEmpty>No repositories found.</ComboboxEmpty>
+                        <ComboboxList>
+                          {repoOptions.map((option) => (
+                            <ComboboxItem key={option} value={option}>
+                              <span className="min-w-0 truncate">
+                                {option}
+                                {repoTypes[option] && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {repoTypes[option]}
+                                  </span>
+                                )}
+                              </span>
+                            </ComboboxItem>
+                          ))}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Actions</FieldLabel>
+                    <Combobox
+                      multiple
+                      items={actionOptions}
+                      inputValue={actionSearch}
+                      value={actions}
+                      onInputValueChange={setActionSearch}
+                      onValueChange={(next) => {
+                        setActions(next);
+                        setActionSearch("");
+                      }}
+                    >
+                      <ComboboxChips ref={actionAnchorRef} className="w-full">
+                        {actions.map((action) => (
+                          <ComboboxChip key={action}>{action}</ComboboxChip>
+                        ))}
+                        <ComboboxChipsInput
+                          placeholder={actions.length ? "Add action" : "Select actions"}
+                        />
+                      </ComboboxChips>
+                      <ComboboxContent anchor={actionAnchorRef}>
+                        <ComboboxEmpty>No actions found.</ComboboxEmpty>
+                        <ComboboxList>
+                          {actionOptions.map((action) => (
+                            <ComboboxItem key={action} value={action}>
+                              {action}
+                            </ComboboxItem>
+                          ))}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                  </Field>
+
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={addPermission}
+                      disabled={!pattern.trim() || actions.length === 0}
+                    >
+                      <Plus data-icon="inline-start" />
+                      Add permission
+                    </Button>
+                  </div>
+                </FieldGroup>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">Permissions are optional here and can also be granted on the Roles page later. Assign the role to users on the Users page.</p>
 
             {error && <Alert>{error}</Alert>}
-            <Inline className="pt-1">
-              <Button type="submit" disabled={!name.trim()}>Create</Button>
-              <Button variant="outline" type="button" onClick={() => navigate({ to: "/roles" })}>Cancel</Button>
+
+            <Inline className="border-t border-border pt-4">
+              <Button type="submit" disabled={!name.trim()}>
+                Create role
+              </Button>
+              <Button variant="outline" type="button" onClick={() => navigate({ to: "/roles" })}>
+                Cancel
+              </Button>
             </Inline>
           </form>
         </PanelBody>

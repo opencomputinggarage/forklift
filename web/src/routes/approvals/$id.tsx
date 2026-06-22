@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate, useParams } from "@tanstack/react-rout
 import { Approval, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ReviewModal, SeverityBar, SEV_COLOR } from "./index";
-import { Tooltip } from "../../components/Tooltip";
+import { Tooltip } from "../../components/tooltip";
 
 export const Route = createFileRoute("/approvals/$id")({
   component: ApprovalDetailRoute,

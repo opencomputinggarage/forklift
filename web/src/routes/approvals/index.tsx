@@ -2,8 +2,8 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "../../api";
 import { useAuth } from "../../authContext";
-import { ConfirmModal } from "../../components/ConfirmModal";
-import { Select } from "../../components/Select";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { Select } from "../../components/select";
 
 export const Route = createFileRoute("/approvals/")({
   component: ApprovalsRoute,

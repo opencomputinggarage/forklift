@@ -1,7 +1,7 @@
 import { ComponentProps, FormEvent, useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { api } from "../api";
-import { Logo } from "./Logo";
+import { Logo } from "./logo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { api, Token } from "../../api";
-import { ConfirmModal } from "../../components/ConfirmModal";
+import { ConfirmModal } from "../../components/confirm-modal";
 
 export const Route = createFileRoute("/tokens/")({
   component: Tokens,

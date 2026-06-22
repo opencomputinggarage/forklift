@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { createRootRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { api, Me } from "../api";
 import { AuthProvider } from "../authContext";
-import { Login } from "../components/Login";
-import { Logo } from "../components/Logo";
+import { Login } from "../components/login";
+import { Logo } from "../components/logo";
 
 export const Route = createRootRoute({
   component: AppShell,

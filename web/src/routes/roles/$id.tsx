@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { api, Me, Role, User } from "../../api";
 import { useAuth } from "../../authContext";
-import { ConfirmModal } from "../../components/ConfirmModal";
-import { Combobox } from "../../components/Combobox";
+import { ConfirmModal } from "../../components/confirm-modal";
+import { Combobox } from "../../components/combobox";
 
 export const Route = createFileRoute("/roles/$id")({
   component: RoleModifyRoute,

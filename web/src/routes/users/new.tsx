@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Role } from "../../api";
 import { useAuth } from "../../authContext";
-import { Select } from "../../components/Select";
+import { Select } from "../../components/select";
 
 export const Route = createFileRoute("/users/new")({
   component: UserNewRoute,

@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api } from "../../api";
 import { useAuth } from "../../authContext";
-import { Combobox } from "../../components/Combobox";
+import { Combobox } from "../../components/combobox";
 
 export const Route = createFileRoute("/roles/new")({
   component: RoleNewRoute,

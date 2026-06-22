@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, RepoPermission, RepoToken, repoEndpoint, Repository } from "../../../api";
 import { useAuth } from "../../../authContext";
-import { UpstreamStatus } from "../../../components/UpstreamStatus";
-import { ConfirmModal } from "../../../components/ConfirmModal";
-import { Select } from "../../../components/Select";
-import { Toggle } from "../../../components/Toggle";
+import { UpstreamStatus } from "../../../components/upstream-status";
+import { ConfirmModal } from "../../../components/confirm-modal";
+import { Select } from "../../../components/select";
+import { Toggle } from "../../../components/toggle";
 import { MemberList } from "../new";
 import { ApprovalList, SeverityBar, VersionDenies } from "../../approvals";
 

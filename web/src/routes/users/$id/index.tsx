@@ -2,9 +2,9 @@ import { ReactNode, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { api, Me, Role, Token, User } from "../../../api";
 import { useAuth } from "../../../authContext";
-import { ConfirmModal } from "../../../components/ConfirmModal";
-import { Select } from "../../../components/Select";
-import { Toggle } from "../../../components/Toggle";
+import { ConfirmModal } from "../../../components/confirm-modal";
+import { Select } from "../../../components/select";
+import { Toggle } from "../../../components/toggle";
 
 export const Route = createFileRoute("/users/$id/")({
   component: UserModifyRoute,

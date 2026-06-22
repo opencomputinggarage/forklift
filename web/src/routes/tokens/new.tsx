@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { api } from "../../api";
-import { Combobox } from "../../components/Combobox";
+import { Combobox } from "../../components/combobox";
 
 export const Route = createFileRoute("/tokens/new")({
   component: TokenNew,

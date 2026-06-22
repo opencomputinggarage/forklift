@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Repository, UpstreamHealth } from "../../api";
 import { useAuth } from "../../authContext";
-import { Select } from "../../components/Select";
+import { Select } from "../../components/select";
 
 export const Route = createFileRoute("/repositories/new")({
   component: RepositoryNewRoute,

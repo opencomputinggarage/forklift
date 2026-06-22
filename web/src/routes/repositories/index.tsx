@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { api, humanSize, Me, repoEndpoint, Repository } from "../../api";
 import { useAuth } from "../../authContext";
-import { UpstreamStatus } from "../../components/UpstreamStatus";
+import { UpstreamStatus } from "../../components/upstream-status";
 
 export const Route = createFileRoute("/repositories/")({
   component: RepositoriesRoute,

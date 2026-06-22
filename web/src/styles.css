@@ -176,8 +176,8 @@ a { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
 a:hover { color: var(--accent); text-decoration: underline; }
 /* External (new-tab) links: always underlined and marked with a trailing ↗ so
    it's clear they leave the app. Button-styled links are exempt. */
-a[target="_blank"]:not(.btn):not(.navlink) { text-decoration: underline; }
-a[target="_blank"]:not(.btn):not(.navlink)::after {
+a[target="_blank"]:not(.btn) { text-decoration: underline; }
+a[target="_blank"]:not(.btn)::after {
   content: "\2197"; margin-left: 3px; font-size: 0.85em; display: inline-block; text-decoration: none;
 }
 /* Buttons read as buttons, never underlined. */
@@ -262,65 +262,8 @@ a[target="_blank"]:not(.btn):not(.navlink)::after {
    makes the whole form read-only for both mouse and keyboard. */
 .settings-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
 .settings-fields[disabled] { opacity: 0.65; }
-.tooltip-trigger { cursor: help; outline: none; }
-.tooltip-trigger:focus-visible .help { outline: 2px solid color-mix(in oklch, var(--accent) 60%, transparent); border-radius: 3px; }
-.tooltip-bubble {
-  position: fixed; z-index: 1000; width: max-content; max-width: 260px;
-  background: var(--panel-3); color: var(--text);
-  border: 1px solid var(--border); border-radius: 6px;
-  padding: 8px 10px; font-size: 12px; font-weight: 400; line-height: 1.45;
-  text-transform: none; letter-spacing: 0; text-align: left; white-space: normal;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); pointer-events: none;
-}
-
-/* align-items: flex-start stops the sidebar from stretching to the height of a
-   tall main column; the sidebar pins itself to the viewport instead (below). */
-.app { display: flex; min-height: 100vh; align-items: flex-start; }
-
-.sidebar {
-  width: 236px;
-  background: color-mix(in oklch, var(--panel) 92%, #000 8%);
-  border-right: 1px solid var(--border);
-  padding: 18px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  /* Stay one viewport tall and fixed in place while the main column scrolls,
-     so a long page never drags the sidebar (and its border) down with it. */
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.02);
-}
-.brand-block { padding: 4px 8px 20px; }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; letter-spacing: 0; color: var(--text); cursor: pointer; }
-.brand:hover { text-decoration: none; opacity: 0.85; }
-.brand-version { display: block; margin-left: 44px; margin-top: 2px; font-size: 11px; font-weight: 500; color: var(--subtle); letter-spacing: 0; }
-.brand-commit { opacity: 0.65; }
 .logo-chip { display: inline-flex; align-items: center; justify-content: center; background: #f2f3f5; border-radius: 6px; flex-shrink: 0; }
 .brand-text span { color: var(--accent); }
-.navlink {
-  padding: 8px 10px; border-radius: var(--radius); color: var(--muted);
-  border: 1px solid transparent; transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
-}
-.navlink:hover { background: var(--panel-2); color: var(--text); text-decoration: none; border-color: var(--border); }
-.navlink.active { background: var(--panel-2); color: var(--accent); border-color: var(--border-strong); }
-.navlink.nav-flex { display: flex; align-items: center; justify-content: space-between; }
-.count-badge {
-  min-width: 20px; text-align: center; padding: 1px 7px; border-radius: 99px;
-  font-size: 11px; font-weight: 600; background: rgba(255, 255, 255, 0.05);
-  color: var(--muted); border: 1px solid var(--border);
-}
-.navlink.active .count-badge { background: var(--accent); color: #080a0d; border-color: var(--accent); }
-.sidebar .spacer { flex: 1; }
-.userbox { font-size: 12px; color: var(--muted); padding: 12px 10px 8px; border-top: 1px solid var(--border); }
-.logout-btn { width: 100%; margin-top: 10px; padding: 6px 12px; font-size: 13px; }
-
-/* min-width: 0 lets this flex item shrink below its content's intrinsic width,
-   so wide tables (long monospace package paths) scroll instead of pushing the
-   whole page past the viewport. */
-.main { flex: 1; min-width: 0; padding: 30px 38px; max-width: 1180px; }
 h1 { font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: 0; margin: 0 0 18px; }
 /* Section titles always sit flush with their container's top padding (panels,
    modals, section groups). margin-top: 0 is the standard; bottom margin keeps
@@ -356,12 +299,6 @@ h2 { font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: 0; ma
 }
 .tooltip:hover::after, .tooltip:hover::before,
 .tooltip:focus-visible::after, .tooltip:focus-visible::before { opacity: 1; }
-
-/* Security column icons (Repositories list): on = active policy, dim = disabled.
-   Dim via color, not opacity: opacity would also fade the tooltip pseudo-element. */
-.sec-icons { display: inline-flex; gap: 9px; align-items: center; }
-.sec-icon { display: inline-flex; color: #565d68; cursor: help; }
-.sec-icon.on { color: var(--accent); }
 
 /* Subtitle that groups related settings panels (e.g. Repository, Security). */
 .section-title {
@@ -445,20 +382,6 @@ textarea { font-family: inherit; resize: vertical; }
 .row > * { flex: 1; }
 .inline { display: flex; gap: 10px; align-items: center; }
 
-/* Repository type picker: 3 selectable cards in a row. */
-.type-cards { display: flex; gap: 10px; }
-.type-card {
-  flex: 1; padding: 12px 14px; text-align: left; cursor: pointer;
-  background: var(--input-bg); color: var(--text);
-  border: 1px solid var(--border); border-radius: var(--radius);
-  font: inherit;
-}
-.type-card:hover { background: var(--panel-2); border-color: var(--border-strong); }
-.type-card.selected { border-color: var(--accent); background: color-mix(in oklch, var(--panel-2) 86%, var(--accent) 14%); }
-.type-card .type-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-.type-card.selected .type-title { color: var(--accent); }
-.type-card .type-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
-
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
 .tab {
   padding: 9px 14px; color: var(--muted); font-size: 14px;
@@ -478,18 +401,6 @@ textarea { font-family: inherit; resize: vertical; }
 }
 .badge.proxy, .badge.hosted, .badge.group { color: var(--text); }
 
-/* Artifact count chip: a boxed number. The .pending variant (packages awaiting
-   approval) is a yellow dashed box with a short text label to draw attention. */
-.count-box {
-  display: inline-block; padding: 1px 5px; border-radius: 5px; font-size: 12px;
-  border: 1px solid var(--border); background: var(--panel-2);
-  font-variant-numeric: tabular-nums;
-}
-.count-box.empty { color: var(--muted); }
-.count-box.pending {
-  margin-left: 3px; background: transparent;
-  border-style: dashed; border-color: var(--accent); color: var(--accent); font-weight: 600;
-}
 .badge.approval-pending { color: var(--accent); border-color: var(--accent); }
 .badge.approval-approved { color: var(--success); border-color: var(--success); }
 .badge.approval-rejected { color: var(--danger); border-color: var(--danger); }
@@ -515,7 +426,6 @@ textarea { font-family: inherit; resize: vertical; }
   user-select: all; cursor: text;
 }
 
-.token-value { font-family: var(--font-mono); background: var(--input-bg); padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); word-break: break-all; }
 .muted { color: var(--muted); }
 
 .modal-overlay {
@@ -531,56 +441,6 @@ textarea { font-family: inherit; resize: vertical; }
 
 .checkbox { display: flex; align-items: center; gap: 8px; }
 .checkbox input { width: auto; }
-
-/* Toggle switch: a pill track with a sliding knob, accent-filled when on. */
-.switch-row { display: flex; align-items: center; gap: 10px; }
-.switch-row .switch-text { font-size: 14px; }
-.switch {
-  position: relative; flex: 0 0 auto; width: 40px; height: 22px; padding: 0;
-  border: 1px solid var(--border); border-radius: 999px; background: var(--panel-2);
-  cursor: pointer; transition: background 0.15s, border-color 0.15s;
-}
-.switch .switch-knob {
-  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--muted); transition: transform 0.15s, background 0.15s;
-}
-.switch.on { background: var(--accent); border-color: var(--accent); }
-.switch.on .switch-knob { transform: translateX(18px); background: var(--bg); }
-.switch:disabled { opacity: 0.45; cursor: not-allowed; }
-
-/* Repository group tree: a caret toggle and indented member rows. The branch
-   connectors are drawn with CSS borders (not text glyphs) so they never wrap or
-   misalign when a member name spans multiple lines. */
-.tree-caret {
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  padding: 0 2px; font-size: 11px; line-height: 1;
-}
-.tree-caret:hover { color: var(--text); }
-.tree-child > td { background: rgba(255, 255, 255, 0.018); }
-/* Members are indented to show grouping; no connector lines. */
-.tree-child > td:first-child { padding-left: 28px; }
-
-/* Repository table: fixed layout caps the table at the panel width (never wider,
-   so the panel never scrolls horizontally), and every cell stays on one line,
-   truncating with an ellipsis instead of forcing the table wider. */
-.repo-table { table-layout: fixed; width: 100%; }
-/* Tighter horizontal padding than the default table cell so long values (the
-   endpoint URL especially) fit on one line without truncating. */
-.repo-table th, .repo-table td { padding-left: 6px; padding-right: 6px; }
-.repo-table th:first-child, .repo-table td:first-child { padding-left: 12px; }
-/* Data cells stay on one line. Only the long-content columns (Name, Endpoint)
-   truncate with an ellipsis; the rest keep overflow visible so the Security
-   icons' hover tooltip is not clipped by the cell. */
-.repo-table td { white-space: nowrap; }
-.repo-table td:nth-child(1), .repo-table td:nth-child(4) {
-  overflow: hidden; text-overflow: ellipsis;
-}
-/* Headers wrap instead of truncating, so column names are never cut to "...". */
-.repo-table th { white-space: normal; }
-/* The group name cell is a flex row (caret + name + count); let it shrink and
-   clip rather than push the column wider. */
-.repo-table td .inline { min-width: 0; }
-.repo-table td .inline a { overflow: hidden; text-overflow: ellipsis; }
 
 /* Approval detail: key/value metadata grid and the OSV advisory id list. */
 dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; }
@@ -624,16 +484,8 @@ ul.advisory-list li { font-family: var(--font-mono); font-size: 13px; break-insi
 .sev-pop-meta { font-size: 11px; color: var(--muted); border-top: 1px solid var(--border-strong); padding-top: 7px; }
 
 @media (max-width: 760px) {
-  .app { display: block; }
-  .sidebar {
-    position: static; width: 100%; height: auto; min-height: 0;
-    border-right: 0; border-bottom: 1px solid var(--border);
-  }
-  .brand-block { padding-bottom: 12px; }
-  .main { padding: 22px 16px; max-width: none; }
   .page-head { align-items: flex-start; flex-direction: column; }
   .row, .inline { flex-direction: column; align-items: stretch; }
-  .type-cards { flex-direction: column; }
   .tabs { overflow-x: auto; padding-bottom: 1px; }
   .tab { white-space: nowrap; }
   ul.advisory-list { columns: 1; }

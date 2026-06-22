@@ -12,7 +12,7 @@ import {
   TableCell,
   TableRow,
 } from "@/components/app-ui/table";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -330,12 +330,12 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
             </TableCell>
             <TableCell>{type ? <Badge>{type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
             <TableCell className="whitespace-nowrap text-right">
-              <button className={buttonVariants({ variant: "outline", size: "sm" })} type="button" disabled={i === 0}
-                title="Move up" onClick={() => move(i, -1)}>↑</button>{" "}
-              <button className={buttonVariants({ variant: "outline", size: "sm" })} type="button" disabled={i === members.length - 1}
-                title="Move down" onClick={() => move(i, 1)}>↓</button>{" "}
-              <button className={buttonVariants({ variant: "destructive", size: "sm" })} type="button" title="Remove member"
-                onClick={() => onChange(members.filter((m) => m !== name))}>×</button>
+              <Button variant="outline" size="sm" type="button" disabled={i === 0}
+                title="Move up" onClick={() => move(i, -1)}>↑</Button>{" "}
+              <Button variant="outline" size="sm" type="button" disabled={i === members.length - 1}
+                title="Move down" onClick={() => move(i, 1)}>↓</Button>{" "}
+              <Button variant="destructive" size="sm" type="button" title="Remove member"
+                onClick={() => onChange(members.filter((m) => m !== name))}>×</Button>
             </TableCell>
           </TableRow>
           );

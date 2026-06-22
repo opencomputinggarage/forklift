@@ -5,7 +5,7 @@ import { useAuth } from "../../../authContext";
 import { ConfirmModal } from "../../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
 import { Toggle } from "../../../components/toggle";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/users/$id/")({
   component: UserModifyRoute,
@@ -67,7 +67,9 @@ export function UserModify({ me }: { me: Me }) {
     <>
       <div className="page-head">
         <h1>{user.username} <span className="badge">{user.source}</span>{self && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</h1>
-        <Link className={buttonVariants({ variant: "outline" })} to="/users">Back to users</Link>
+        <Button render={<Link to="/users" />} nativeButton={false} variant="outline">
+          Back to users
+        </Button>
       </div>
       {error && <div className="error">{error}</div>}
 
@@ -124,10 +126,10 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
         <div className="inline" style={{ marginTop: 12, gap: 6 }}>
           <Select value={selected} onChange={setSelected} placeholder="add role…"
             options={assignable.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
-          <button className={buttonVariants({ variant: "outline" })} type="button" disabled={!selected}
+          <Button variant="outline" type="button" disabled={!selected}
             onClick={() => { run(api.assignRole(user.id, Number(selected))); setSelected(""); }}>
             Add
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -149,7 +151,14 @@ function TokensPanel({ user, tokens, canWrite, run }: {
         <h2 style={{ marginBottom: 0 }}>
           Access tokens <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· scoped credentials for package clients</span>
         </h2>
-        {canWrite && <Link className={buttonVariants()} to="/users/$id/tokens/new" params={{ id: String(user.id) }}>New token</Link>}
+        {canWrite && (
+          <Button
+            render={<Link to="/users/$id/tokens/new" params={{ id: String(user.id) }} />}
+            nativeButton={false}
+          >
+            New token
+          </Button>
+        )}
       </div>
       <table style={{ marginTop: 12 }}>
         <thead><tr><th>Name</th><th>Description</th><th>Permissions</th><th>Created</th><th>Expires</th><th>Last used</th>{canWrite && <th></th>}</tr></thead>
@@ -168,7 +177,7 @@ function TokensPanel({ user, tokens, canWrite, run }: {
               <td className="muted">{t.created_at?.slice(0, 10)}</td>
               <td className="muted">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</td>
               <td className="muted">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</td>
-              {canWrite && <td><button className={buttonVariants({ variant: "destructive" })} onClick={() => setRevokeId(t.id)}>Revoke</button></td>}
+              {canWrite && <td><Button variant="destructive" onClick={() => setRevokeId(t.id)}>Revoke</Button></td>}
             </tr>
           ))}
           {tokens.length === 0 && <tr><td colSpan={canWrite ? 7 : 6} className="muted">No tokens yet.</td></tr>}
@@ -216,7 +225,7 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
           aria-label={show ? "Hide password" : "Show password"}>{show ? "Hide" : "Show"}</button>
       </div>
       <div className="inline" style={{ marginTop: 12 }}>
-        <button className={buttonVariants()} type="button" disabled={!password} onClick={reset}>Reset password</button>
+        <Button type="button" disabled={!password} onClick={reset}>Reset password</Button>
         {saved && <span className="muted">Password updated.</span>}
       </div>
     </div>
@@ -243,10 +252,10 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
       {user.locked && (
         <div className="inline" style={{ marginTop: 14, gap: 10, alignItems: "center" }}>
           <span className="badge" style={{ background: "var(--danger)", color: "#fff" }}>Locked</span>
-          <button className={buttonVariants()} type="button"
+          <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>
             Unlock account
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -333,7 +342,7 @@ function DangerPanel({ user, self, onDeleted, onError }: {
         Deleting a user revokes all of their tokens and role assignments. This cannot be undone.
         {self && " You cannot delete your own account."}
       </p>
-      <button className={buttonVariants({ variant: "destructive" })} type="button" disabled={self} onClick={() => setConfirm(true)}>Delete user</button>
+      <Button variant="destructive" type="button" disabled={self} onClick={() => setConfirm(true)}>Delete user</Button>
       <ConfirmModal
         open={confirm}
         title={`Delete user "${user.username}"?`}

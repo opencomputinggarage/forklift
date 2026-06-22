@@ -4,6 +4,7 @@ import { Clock, ShieldCheck } from "lucide-react";
 import { api, humanSize, Me, repoEndpoint, Repository } from "../../api";
 import { useAuth } from "../../authContext";
 import { UpstreamStatus } from "../../components/upstream-status";
+import { Tooltip } from "../../components/tooltip";
 import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
@@ -15,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/app-ui/table";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/repositories/")({
@@ -78,14 +79,16 @@ function SecurityIcons({ repo }: { repo: Repository }) {
       : "Package approval is on. An admin must approve a package before this proxy serves it.";
   return (
     <span className="inline-flex items-center gap-2">
-      <span className={cn("tooltip inline-flex text-muted-foreground", age.enabled && "text-primary")}
-        data-tooltip={ageTip} role="img" aria-label={ageTip} tabIndex={0}>
-        <Clock className="size-4" aria-hidden="true" />
-      </span>
-      <span className={cn("tooltip inline-flex text-muted-foreground", approval.enabled && "text-primary")}
-        data-tooltip={approvalTip} role="img" aria-label={approvalTip} tabIndex={0}>
-        <ShieldCheck className="size-4" aria-hidden="true" />
-      </span>
+      <Tooltip text={ageTip}>
+        <span className={cn("inline-flex text-muted-foreground", age.enabled && "text-primary")}>
+          <Clock className="size-4" aria-hidden="true" />
+        </span>
+      </Tooltip>
+      <Tooltip text={approvalTip}>
+        <span className={cn("inline-flex text-muted-foreground", approval.enabled && "text-primary")}>
+          <ShieldCheck className="size-4" aria-hidden="true" />
+        </span>
+      </Tooltip>
     </span>
   );
 }
@@ -150,7 +153,11 @@ export function Repositories({ me }: { me: Me }) {
     <>
       <PageHeader
         title="Repositories"
-        actions={me.admin && <Link className={buttonVariants()} to="/repositories/new">New repository</Link>}
+        actions={me.admin && (
+          <Button render={<Link to="/repositories/new" />} nativeButton={false}>
+            New repository
+          </Button>
+        )}
       />
       <PageDescription>
         Host and proxy artifacts across Maven, npm, Cargo, Go, and PyPI. Configure

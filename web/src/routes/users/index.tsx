@@ -5,7 +5,7 @@ import { useAuth } from "../../authContext";
 import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -39,7 +39,11 @@ export function Users({ me }: { me: Me }) {
     <>
       <PageHeader
         title="Users"
-        actions={me.admin && <Link className={buttonVariants()} to="/users/new">Create user</Link>}
+        actions={me.admin && (
+          <Button render={<Link to="/users/new" />} nativeButton={false}>
+            Create user
+          </Button>
+        )}
       />
       <PageDescription>
         Local and OIDC accounts. Open a user to map roles, reset the password, or disable access.
@@ -65,7 +69,17 @@ export function Users({ me }: { me: Me }) {
                 <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1.5">
-                    {u.roles.map((r) => <Link key={r.id} className={buttonVariants({ variant: "outline", size: "xs" })} to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
+                    {u.roles.map((r) => (
+                      <Button
+                        key={r.id}
+                        variant="outline"
+                        size="xs"
+                        render={<Link to="/roles/$id" params={{ id: String(r.id) }} />}
+                        nativeButton={false}
+                      >
+                        {r.name}
+                      </Button>
+                    ))}
                     {u.roles.length === 0 && <span className="text-muted-foreground">none</span>}
                   </div>
                 </TableCell>
@@ -78,7 +92,13 @@ export function Users({ me }: { me: Me }) {
                   {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-right">
-                  <Link className={buttonVariants({ variant: "outline" })} to="/users/$id" params={{ id: String(u.id) }}>Modify</Link>
+                  <Button
+                    variant="outline"
+                    render={<Link to="/users/$id" params={{ id: String(u.id) }} />}
+                    nativeButton={false}
+                  >
+                    Modify
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

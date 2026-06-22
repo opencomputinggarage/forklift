@@ -2,7 +2,7 @@ import { ComponentProps, FormEvent, useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { api } from "../api";
 import { Logo } from "./logo";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -133,15 +133,14 @@ function LoginForm({
                   )}
                 </Button>
                 {oidcEnabled && (
-                  <a
-                    className={cn(
-                      buttonVariants({ variant: "outline" }),
-                      "h-11 w-full border-border bg-background/70"
-                    )}
-                    href="/auth/login"
+                  <Button
+                    render={<a href="/auth/login" />}
+                    nativeButton={false}
+                    variant="outline"
+                    className="h-11 w-full border-border bg-background/70"
                   >
                     Sign in with Keycloak
-                  </a>
+                  </Button>
                 )}
                 <FieldDescription className="text-center">
                   Access is limited by your assigned role.

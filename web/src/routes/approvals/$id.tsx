@@ -4,7 +4,7 @@ import { Approval, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ReviewModal, SeverityBar, SEV_COLOR } from "./index";
 import { Tooltip } from "../../components/tooltip";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/approvals/$id")({
   component: ApprovalDetailRoute,
@@ -43,8 +43,10 @@ export function ApprovalDetail() {
           {row.package} <span className={`badge approval-${row.status}`}>{row.status}</span>
         </h1>
         <div className="inline">
-          <button className={buttonVariants()} onClick={() => setReviewing(true)}>Review</button>
-          <Link className={buttonVariants({ variant: "outline" })} to="/approvals">Back to approvals</Link>
+          <Button onClick={() => setReviewing(true)}>Review</Button>
+          <Button render={<Link to="/approvals" />} nativeButton={false} variant="outline">
+            Back to approvals
+          </Button>
         </div>
       </div>
       {error && <div className="error">{error}</div>}
@@ -188,14 +190,12 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
     else { setKey(k); setDir("asc"); }
   };
   const SortBtn = ({ k, children }: { k: SortKey; children: ReactNode }) => (
-    <button
-      type="button"
-      className={buttonVariants({ variant: "ghost", size: "xs", className: "h-auto gap-1 p-0 text-xs uppercase text-inherit hover:bg-transparent hover:text-foreground" })}
+    <Button type="button" variant="ghost" size="xs" className="h-auto gap-1 p-0 text-xs uppercase text-inherit hover:bg-transparent hover:text-foreground"
       onClick={() => onSort(k)}
       aria-label={`Sort by ${k}`}>
       {children}
       <SortIcon state={key === k ? dir : null} />
-    </button>
+    </Button>
   );
 
   return (

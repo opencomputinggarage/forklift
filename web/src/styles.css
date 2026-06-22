@@ -259,30 +259,6 @@ h1 { font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: 0; mar
 .page-desc { color: var(--muted); font-size: 13px; line-height: 1.55; max-width: 820px; margin: -8px 0 22px; }
 h2 { font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: 0; margin: 0 0 12px; }
 
-/* Custom hover tooltip (in-app replacement for the native title attribute).
-   Put .tooltip on the trigger and the text in data-tooltip. Appears centered
-   below the trigger. */
-.tooltip { position: relative; }
-.tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute; top: calc(100% + 9px); left: 50%; transform: translateX(-50%);
-  width: max-content; max-width: 240px; white-space: normal;
-  background: var(--panel-3); color: var(--text);
-  border: 1px solid var(--border-strong); border-radius: var(--radius);
-  padding: 7px 10px; font-size: 12px; line-height: 1.35;
-  font-weight: 400; text-transform: none; letter-spacing: 0;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
-  opacity: 0; pointer-events: none; z-index: 100; transition: opacity 0.12s ease;
-}
-/* Upward arrow connecting the tooltip to its trigger. */
-.tooltip::before {
-  content: ""; position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
-  border: 5px solid transparent; border-bottom-color: var(--border-strong);
-  opacity: 0; pointer-events: none; z-index: 100; transition: opacity 0.12s ease;
-}
-.tooltip:hover::after, .tooltip:hover::before,
-.tooltip:focus-visible::after, .tooltip:focus-visible::before { opacity: 1; }
-
 /* Subtitle that groups related settings panels (e.g. Repository, Security). */
 .section-title {
   font-size: 12px; text-transform: uppercase; letter-spacing: 0;
@@ -430,7 +406,7 @@ ul.advisory-list li { font-family: var(--font-mono); font-size: 13px; break-insi
 
 /* Hover popover for the severity bar: a wider segmented bar plus a per-severity
    count breakdown. Fixed-positioned (coords set in JS) so a scrolling table
-   container never clips it. Matches the in-app .tooltip look. */
+   container never clips it. */
 .sev-bar { cursor: help; outline: none; }
 .sev-pop {
   position: fixed; transform: translateX(-50%); z-index: 200; width: max-content;

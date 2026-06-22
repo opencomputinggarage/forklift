@@ -4,7 +4,7 @@ import { api, Me, Role, User } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
 import { Combobox } from "../../components/combobox";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/roles/$id")({
   component: RoleModifyRoute,
@@ -58,7 +58,9 @@ export function RoleModify({ me }: { me: Me }) {
     <>
       <div className="page-head">
         <h1>{role.name}</h1>
-        <Link className={buttonVariants({ variant: "outline" })} to="/roles">Back to roles</Link>
+        <Button render={<Link to="/roles" />} nativeButton={false} variant="outline">
+          Back to roles
+        </Button>
       </div>
       {role.description && <p className="page-desc">{role.description}</p>}
       {role.managed && (
@@ -181,8 +183,8 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
               <span>{a}</span>
             </label>
           ))}
-          <button className={buttonVariants({ variant: "outline" })} type="button"
-            disabled={!pattern.trim() || actions.length === 0} onClick={add}>Add</button>
+          <Button variant="outline" type="button"
+            disabled={!pattern.trim() || actions.length === 0} onClick={add}>Add</Button>
         </div>
       )}
     </div>
@@ -205,7 +207,7 @@ function DangerPanel({ role, onDeleted, onError }: {
     <div className="panel danger" style={{ marginTop: 18 }}>
       <h2>Danger zone</h2>
       <p className="muted">Users and group mappings holding this role lose its permissions immediately. This cannot be undone.</p>
-      <button className={buttonVariants({ variant: "destructive" })} type="button" onClick={() => setConfirm(true)}>Delete role</button>
+      <Button variant="destructive" type="button" onClick={() => setConfirm(true)}>Delete role</Button>
       <ConfirmModal
         open={confirm}
         title={`Delete role "${role.name}"?`}

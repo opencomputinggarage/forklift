@@ -5,7 +5,7 @@ import { ConfirmModal } from "../../components/confirm-modal";
 import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/app-ui/table";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tokens/")({
   component: Tokens,
@@ -53,7 +52,11 @@ export function Tokens() {
     <>
       <PageHeader
         title="Personal access tokens"
-        actions={<Link className={buttonVariants()} to="/tokens/new">New token</Link>}
+        actions={
+          <Button render={<Link to="/tokens/new" />} nativeButton={false}>
+            New token
+          </Button>
+        }
       />
       <PageDescription>
         Scoped credentials for package clients, limited to chosen repositories and actions
@@ -82,7 +85,7 @@ export function Tokens() {
                 <TableCell className="text-muted-foreground">{t.created_at?.slice(0, 10)}</TableCell>
                 <TableCell className="text-muted-foreground">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</TableCell>
                 <TableCell className="text-muted-foreground">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</TableCell>
-                <TableCell><button className={cn(buttonVariants({ variant: "destructive" }))} onClick={() => setRevokeId(t.id)}>Revoke</button></TableCell>
+                <TableCell><Button variant="destructive" onClick={() => setRevokeId(t.id)}>Revoke</Button></TableCell>
               </TableRow>
             ))}
             {tokens.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No tokens yet.</TableCell></TableRow>}

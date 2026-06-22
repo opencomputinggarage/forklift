@@ -4,7 +4,7 @@ import { Approval, Repository, VersionDeny, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/approvals/")({
   component: ApprovalsRoute,
@@ -166,7 +166,7 @@ export function Approvals() {
     <>
       <div className="page-head">
         <h1>Approvals</h1>
-        <button className={buttonVariants()} onClick={() => setPreApproving(true)}>Add decision</button>
+        <Button onClick={() => setPreApproving(true)}>Add decision</Button>
       </div>
       <p className="page-desc">
         Quarantine queue for proxied packages. Approve or reject pending requests before a
@@ -250,10 +250,10 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
             modal (defaulting to the active filter), so it works from the global
             queue too. Hidden only when there are no proxy repos to target. */}
         {repoNames.length > 0 && (
-          <button className={buttonVariants()} style={{ marginLeft: "auto" }}
+          <Button style={{ marginLeft: "auto" }}
             disabled={pendingCount === 0}
             title={pendingCount === 0 ? "No pending approvals" : undefined}
-            onClick={() => setApprovingAll(true)}>Approve all pending</button>
+            onClick={() => setApprovingAll(true)}>Approve all pending</Button>
         )}
       </div>
       {error && <div className="error">{error}</div>}
@@ -286,7 +286,12 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
                     </span>
                   </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    <Link className={buttonVariants()} to="/approvals/$id" params={{ id: String(a.id) }}>Review</Link>
+                    <Button
+                      render={<Link to="/approvals/$id" params={{ id: String(a.id) }} />}
+                      nativeButton={false}
+                    >
+                      Review
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -296,10 +301,10 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
         )}
         {count > PAGE && (
           <div className="inline" style={{ marginTop: 12 }}>
-            <button className={buttonVariants({ variant: "outline" })} disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</button>
-            <button className={buttonVariants({ variant: "outline" })} disabled={offset + PAGE >= count}
-              onClick={() => setOffset(offset + PAGE)}>Older</button>
+            <Button variant="outline" disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
+            <Button variant="outline" disabled={offset + PAGE >= count}
+              onClick={() => setOffset(offset + PAGE)}>Older</Button>
             <span className="muted">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
           </div>
         )}
@@ -379,10 +384,10 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
             onChange={(e) => setNote(e.target.value)} />
           {error && <div className="error">{error}</div>}
           <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
-            <button className={buttonVariants({ variant: "outline" })} type="button" onClick={onCancel}>Cancel</button>
-            <button className={buttonVariants()} type="submit" disabled={busy || !repo || !pending}>
+            <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
+            <Button type="submit" disabled={busy || !repo || !pending}>
               {busy ? "Approving…" : pending ? `Approve ${pending}` : "Approve"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -433,14 +438,14 @@ export function ReviewModal({ row, onDone, onCancel }: {
           onChange={(e) => setNote(e.target.value)} />
         {error && <div className="error">{error}</div>}
         <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
-          <button className={buttonVariants({ variant: "outline" })} type="button" onClick={onCancel}>Cancel</button>
+          <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
           {row.status !== "rejected" && (
-            <button className={buttonVariants({ variant: "destructive" })} type="button" disabled={busy !== null}
-              onClick={() => decide("reject")}>{busy === "reject" ? "Rejecting…" : "Reject"}</button>
+            <Button variant="destructive" type="button" disabled={busy !== null}
+              onClick={() => decide("reject")}>{busy === "reject" ? "Rejecting…" : "Reject"}</Button>
           )}
           {row.status !== "approved" && (
-            <button className={buttonVariants()} type="button" disabled={busy !== null}
-              onClick={() => decide("approve")}>{busy === "approve" ? "Approving…" : "Approve"}</button>
+            <Button type="button" disabled={busy !== null}
+              onClick={() => decide("approve")}>{busy === "approve" ? "Approving…" : "Approve"}</Button>
           )}
         </div>
       </div>
@@ -491,7 +496,7 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
     <>
       <div className="page-head" style={{ marginTop: 32 }}>
         <h2 style={{ marginBottom: 0 }}>Version denies</h2>
-        <button className={buttonVariants({ variant: "destructive" })} onClick={() => setAdding(true)}>Deny version</button>
+        <Button variant="destructive" onClick={() => setAdding(true)}>Deny version</Button>
       </div>
       <p className="muted" style={{ marginTop: 4 }}>
         Blocks one exact version even when the package is approved. Applies
@@ -521,7 +526,7 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
                   <td>{d.created_by || <span className="muted">unknown</span>}</td>
                   <td className="muted">{new Date(d.created_at).toLocaleString()}</td>
                   <td style={{ textAlign: "right" }}>
-                    <button className={buttonVariants({ variant: "outline" })} onClick={() => setRemoving(d)}>Remove</button>
+                    <Button variant="outline" onClick={() => setRemoving(d)}>Remove</Button>
                   </td>
                 </tr>
               ))}
@@ -531,10 +536,10 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
         )}
         {count > PAGE && (
           <div className="inline" style={{ marginTop: 12 }}>
-            <button className={buttonVariants({ variant: "outline" })} disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</button>
-            <button className={buttonVariants({ variant: "outline" })} disabled={offset + PAGE >= count}
-              onClick={() => setOffset(offset + PAGE)}>Older</button>
+            <Button variant="outline" disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
+            <Button variant="outline" disabled={offset + PAGE >= count}
+              onClick={() => setOffset(offset + PAGE)}>Older</Button>
             <span className="muted">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
           </div>
         )}
@@ -608,10 +613,10 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
             onChange={(e) => setReason(e.target.value)} />
           {error && <div className="error">{error}</div>}
           <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
-            <button className={buttonVariants({ variant: "outline" })} type="button" onClick={onCancel}>Cancel</button>
-            <button className={buttonVariants({ variant: "destructive" })} type="submit" disabled={!repo || !pkg.trim() || !version.trim()}>
+            <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
+            <Button variant="destructive" type="submit" disabled={!repo || !pkg.trim() || !version.trim()}>
               Deny
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -663,8 +668,8 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
           <input value={note} onChange={(e) => setNote(e.target.value)} />
           {error && <div className="error">{error}</div>}
           <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
-            <button className={buttonVariants({ variant: "outline" })} type="button" onClick={onCancel}>Cancel</button>
-            <button className={buttonVariants()} type="submit" disabled={!repo || !pkg.trim()}>Save</button>
+            <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
+            <Button type="submit" disabled={!repo || !pkg.trim()}>Save</Button>
           </div>
         </form>
       </div>

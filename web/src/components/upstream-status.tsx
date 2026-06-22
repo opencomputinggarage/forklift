@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, UpstreamHealth } from "../api";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 // UpstreamStatus probes a proxy repository's upstream and renders a health
 // badge. compact shows only reachable/unreachable (list view); the full form
@@ -44,7 +44,7 @@ export function UpstreamStatus({
   return (
     <span className="inline" style={{ gap: 10 }}>
       {badge}
-      <button className={buttonVariants({ variant: "outline" })} type="button" onClick={check} disabled={loading}>Recheck</button>
+      <Button variant="outline" type="button" onClick={check} disabled={loading}>Recheck</Button>
     </span>
   );
 }

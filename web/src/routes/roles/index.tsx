@@ -5,7 +5,7 @@ import { useAuth } from "../../authContext";
 import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -38,7 +38,11 @@ export function Roles({ me }: { me: Me }) {
     <>
       <PageHeader
         title="Roles"
-        actions={me.admin && <Link className={buttonVariants()} to="/roles/new">Create role</Link>}
+        actions={me.admin && (
+          <Button render={<Link to="/roles/new" />} nativeButton={false}>
+            Create role
+          </Button>
+        )}
       />
       <PageDescription>
         Bundle repository permissions (read, write, delete, approve, audit, admin) over name patterns.
@@ -76,7 +80,13 @@ export function Roles({ me }: { me: Me }) {
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-right">
-                  <Link className={buttonVariants({ variant: "outline" })} to="/roles/$id" params={{ id: String(r.id) }}>Modify</Link>
+                  <Button
+                    variant="outline"
+                    render={<Link to="/roles/$id" params={{ id: String(r.id) }} />}
+                    nativeButton={false}
+                  >
+                    Modify
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

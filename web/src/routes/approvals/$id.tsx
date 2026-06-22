@@ -4,6 +4,7 @@ import { Approval, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ReviewModal, SeverityBar, SEV_COLOR } from "./index";
 import { Tooltip } from "../../components/tooltip";
+import { buttonVariants } from "@/components/ui/button";
 
 export const Route = createFileRoute("/approvals/$id")({
   component: ApprovalDetailRoute,
@@ -42,8 +43,8 @@ export function ApprovalDetail() {
           {row.package} <span className={`badge approval-${row.status}`}>{row.status}</span>
         </h1>
         <div className="inline">
-          <button className="btn" onClick={() => setReviewing(true)}>Review</button>
-          <Link className="btn secondary" to="/approvals">Back to approvals</Link>
+          <button className={buttonVariants()} onClick={() => setReviewing(true)}>Review</button>
+          <Link className={buttonVariants({ variant: "outline" })} to="/approvals">Back to approvals</Link>
         </div>
       </div>
       {error && <div className="error">{error}</div>}
@@ -187,7 +188,10 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
     else { setKey(k); setDir("asc"); }
   };
   const SortBtn = ({ k, children }: { k: SortKey; children: ReactNode }) => (
-    <button type="button" className="sort-btn" onClick={() => onSort(k)}
+    <button
+      type="button"
+      className={buttonVariants({ variant: "ghost", size: "xs", className: "h-auto gap-1 p-0 text-xs uppercase text-inherit hover:bg-transparent hover:text-foreground" })}
+      onClick={() => onSort(k)}
       aria-label={`Sort by ${k}`}>
       {children}
       <SortIcon state={key === k ? dir : null} />

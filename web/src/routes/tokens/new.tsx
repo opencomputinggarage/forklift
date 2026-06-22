@@ -1,13 +1,30 @@
 import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { api } from "../../api";
-import { Combobox } from "../../components/combobox";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Plus, X } from "lucide-react";
 
 export const Route = createFileRoute("/tokens/new")({
   component: TokenNew,
@@ -45,6 +62,9 @@ export function TokenNew() {
   // Scope add-row state.
   const [pattern, setPattern] = useState("");
   const [actions, setActions] = useState<string[]>(["read"]);
+  const [actionSearch, setActionSearch] = useState("");
+  const actionAnchorRef = useComboboxAnchor();
+  const actionOptions = ACTIONS.filter((action) => action.includes(actionSearch.trim().toLowerCase()));
 
   // Repository names for scope-pattern autocomplete. Available to any
   // authenticated user; "*" (all repositories) is offered as the first option.
@@ -63,14 +83,12 @@ export function TokenNew() {
   const minDate = new Date(today.getTime() + 24 * 3600 * 1000);
   const maxDate = new Date(today.getTime() + MAX_TTL_HOURS * 3600 * 1000);
 
-  const toggle = (a: string) =>
-    setActions((cur) => cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]);
-
   const addScope = () => {
     if (!pattern.trim() || actions.length === 0) return;
     setScopes((cur) => [...cur, { repo_pattern: pattern.trim(), actions: [...actions] }]);
     setPattern("");
     setActions(["read"]);
+    setActionSearch("");
   };
 
   const expiresIn = (): string => {
@@ -109,10 +127,12 @@ export function TokenNew() {
   if (created) {
     return (
       <>
-        <h1>Token created</h1>
+        <PageHeader title="Token created" />
+        <PageDescription>
+          Copy this token now. It will not be shown again.
+        </PageDescription>
         <Panel className="max-w-[40rem]">
           <PanelBody>
-            <p className="mb-3 text-sm text-muted-foreground">Copy this token now; it will not be shown again.</p>
             <Inline className="items-stretch max-sm:flex-col">
               <div className="min-h-8 flex-1 overflow-x-auto rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs">
                 {created}
@@ -130,53 +150,180 @@ export function TokenNew() {
 
   return (
     <>
-      <h1>{forUserId !== null ? "Create token for user" : "Create token"}</h1>
-      <Panel className="max-w-[40rem]">
+      <PageHeader title={forUserId !== null ? "Create token for user" : "Create token"} />
+      <PageDescription>
+        Issue a scoped access token with an expiration date and repository permissions.
+      </PageDescription>
+
+      <Panel className="max-w-[44rem]">
         <PanelBody>
-          <form onSubmit={submit} className="space-y-4">
-            <label className="block text-sm font-medium">Token name<span className="text-destructive">*</span></label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ci" autoFocus required
-              pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
+          <form onSubmit={submit} className="space-y-5">
+            <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="token-name">
+                  Token name<span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="token-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="ci"
+                  autoFocus
+                  required
+                  pattern="[A-Za-z0-9_-]{1,64}"
+                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                />
+                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+              </Field>
 
-            <label className="block text-sm font-medium">Token description<span className="text-destructive">*</span></label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this token is used for" required />
+              <Field>
+                <FieldLabel htmlFor="token-description">
+                  Token description<span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="token-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What this token is used for"
+                  required
+                />
+              </Field>
 
-            <div>
-              <label className="block text-sm font-medium">Permissions<span className="text-destructive">*</span></label>
-              <Inline className="mt-2 flex-wrap gap-1.5">
+              <Field>
+                <FieldLabel htmlFor="expires-on">
+                  Expires on<span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="expires-on"
+                  type="date"
+                  value={expiresOn}
+                  min={dateStr(minDate)}
+                  max={dateStr(maxDate)}
+                  onChange={(e) => setExpiresOn(e.target.value)}
+                  required
+                />
+                <FieldDescription>Tokens expire after at most one year.</FieldDescription>
+              </Field>
+            </FieldGroup>
+
+            <div className="space-y-3 border-t border-border pt-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="m-0 text-sm font-semibold">Permissions</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add repository patterns and allowed token actions.
+                  </p>
+                </div>
+                <Badge className="mt-0.5">{scopes.length}</Badge>
+              </div>
+
+              <div className="min-h-10 rounded-lg border border-border bg-muted/20 p-2">
+                <Inline className="flex-wrap gap-1.5">
                 {scopes.map((s, i) => (
-                  <Badge key={i} className="font-mono">
+                  <Badge key={`${s.repo_pattern}-${i}`} className="font-mono">
                     {s.repo_pattern}: {s.actions.join(",")}
-                    <button className="ml-1.5 cursor-pointer" type="button" title="Remove permission"
-                      onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}>x</button>
+                    <button
+                      className="ml-1.5 inline-flex cursor-pointer items-center text-muted-foreground hover:text-foreground"
+                      type="button"
+                      title="Remove permission"
+                      onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}
+                    >
+                      <X className="size-3" aria-hidden="true" />
+                    </button>
                   </Badge>
                 ))}
-                {scopes.length === 0 && <span className="text-sm text-muted-foreground">none yet - add at least one</span>}
-              </Inline>
-              <Inline className="mt-2 flex-wrap gap-2">
-                <Combobox style={{ width: 220 }} value={pattern} onChange={setPattern}
-                  options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
-                {ACTIONS.map((a) => (
-                  <label key={a} className="inline-flex items-center gap-1.5 text-xs">
-                    <Checkbox checked={actions.includes(a)} onCheckedChange={() => toggle(a)} />
-                    <span>{a}</span>
-                  </label>
-                ))}
-                <Button variant="outline" type="button" onClick={addScope}
-                  disabled={!pattern.trim() || actions.length === 0}>Add</Button>
-              </Inline>
-            </div>
+                  {scopes.length === 0 && (
+                    <span className="px-1 text-sm text-muted-foreground">No permissions added.</span>
+                  )}
+                </Inline>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium">Expires on<span className="text-destructive">*</span></label>
-              <Input type="date" value={expiresOn} min={dateStr(minDate)} max={dateStr(maxDate)}
-                onChange={(e) => setExpiresOn(e.target.value)} required />
-              <p className="mt-1.5 text-sm text-muted-foreground">Tokens expire after at most one year.</p>
+              <div className="rounded-lg border border-border/80 bg-background/40 p-3">
+                <FieldGroup className="gap-3">
+                  <Field>
+                    <FieldLabel>Repository pattern</FieldLabel>
+                    <Combobox
+                      items={repoOptions}
+                      inputValue={pattern}
+                      value={repoOptions.includes(pattern) ? pattern : null}
+                      onInputValueChange={setPattern}
+                      onValueChange={(next) => {
+                        if (typeof next === "string") setPattern(next);
+                      }}
+                    >
+                      <ComboboxInput placeholder="repo pattern (* or maven-*)" className="w-full" />
+                      <ComboboxContent>
+                        <ComboboxEmpty>No repositories found.</ComboboxEmpty>
+                        <ComboboxList>
+                          {repoOptions.map((option) => (
+                            <ComboboxItem key={option} value={option}>
+                              <span className="min-w-0 truncate">
+                                {option}
+                                {repoTypes[option] && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    {repoTypes[option]}
+                                  </span>
+                                )}
+                              </span>
+                            </ComboboxItem>
+                          ))}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Actions</FieldLabel>
+                    <Combobox
+                      multiple
+                      items={actionOptions}
+                      inputValue={actionSearch}
+                      value={actions}
+                      onInputValueChange={setActionSearch}
+                      onValueChange={(next) => {
+                        setActions(next);
+                        setActionSearch("");
+                      }}
+                    >
+                      <ComboboxChips ref={actionAnchorRef} className="w-full">
+                        {actions.map((action) => (
+                          <ComboboxChip key={action}>{action}</ComboboxChip>
+                        ))}
+                        <ComboboxChipsInput
+                          placeholder={actions.length ? "Add action" : "Select actions"}
+                        />
+                      </ComboboxChips>
+                      <ComboboxContent anchor={actionAnchorRef}>
+                        <ComboboxEmpty>No actions found.</ComboboxEmpty>
+                        <ComboboxList>
+                          {actionOptions.map((action) => (
+                            <ComboboxItem key={action} value={action}>
+                              {action}
+                            </ComboboxItem>
+                          ))}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                  </Field>
+
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={addScope}
+                      disabled={!pattern.trim() || actions.length === 0}
+                    >
+                      <Plus data-icon="inline-start" />
+                      Add permission
+                    </Button>
+                  </div>
+                </FieldGroup>
+              </div>
             </div>
 
             {error && <Alert>{error}</Alert>}
-            <Inline className="pt-1">
-              <Button type="submit" disabled={!valid}>Create</Button>
+            <Inline className="border-t border-border pt-4">
+              <Button type="submit" disabled={!valid}>Create token</Button>
               <Button variant="outline" type="button" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Cancel</Button>
             </Inline>
           </form>

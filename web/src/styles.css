@@ -242,13 +242,6 @@ a:hover { color: var(--accent); text-decoration: underline; }
 /* Inline help marker + custom tooltip (see components/Tooltip.tsx). The bubble
    is rendered in a body portal with position: fixed so it is never clipped. */
 .help { margin-left: 5px; color: var(--muted); font-size: 0.85em; }
-/* Sortable table header buttons. */
-.sort-btn {
-  background: none; border: none; padding: 0; cursor: pointer;
-  color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit;
-  display: inline-flex; align-items: center; gap: 5px;
-}
-.sort-btn:hover { color: var(--text); }
 .sort-icon { display: block; flex-shrink: 0; }
 /* Settings form wrapper: a borderless fieldset so disabled={true} (auditor)
    makes the whole form read-only for both mouse and keyboard. */
@@ -323,23 +316,7 @@ tbody tr { transition: background 0.12s ease; }
 tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
 tbody tr:last-child td { border-bottom: 0; }
 
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  background: var(--accent); color: #080a0d; border: 1px solid var(--accent); padding: 8px 14px;
-  border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1.2;
-  text-decoration: none;
-  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.08s ease;
-}
-.btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #080a0d; text-decoration: none; }
-.btn:active { transform: translateY(1px); background: var(--accent-pressed); border-color: var(--accent-pressed); }
-.btn.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
-.btn.secondary:hover { background: var(--panel-2); color: var(--text); border-color: var(--border-strong); }
-.btn.danger { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
-.btn.danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-
-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 5px; }
-.req { color: var(--accent); margin-left: 2px; }
+label:not([data-slot]) { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 5px; }
 
 /* Password input with a right-aligned show/hide toggle. */
 .password-field { position: relative; }

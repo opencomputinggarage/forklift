@@ -4,8 +4,14 @@ import { api, Role } from "../../api";
 import { useAuth } from "../../authContext";
 import { Select } from "@/components/app-ui/select";
 import { Alert } from "@/components/app-ui/alert";
-import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/users/new")({
@@ -57,57 +63,115 @@ export function UserNew() {
 
   return (
     <>
-      <h1>Create local user</h1>
-      <Panel className="max-w-[35rem]">
+      <PageHeader title="Create local user" />
+      <PageDescription>
+        Create a local account and optionally assign an initial role.
+      </PageDescription>
+
+      <Panel className="max-w-[44rem]">
         <PanelBody>
-          <form onSubmit={submit} className="space-y-4">
-            <label className="block text-sm font-medium">Username<span className="text-destructive">*</span></label>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus required
-              pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
+          <form onSubmit={submit} className="space-y-5">
+            <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="username">
+                  Username<span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoFocus
+                  required
+                  pattern="[A-Za-z0-9_-]{1,64}"
+                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                />
+                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+              </Field>
 
-            <div>
-              <label className="block text-sm font-medium">Password<span className="text-destructive">*</span></label>
-              <Inline>
-                <Input type={show ? "text" : "password"} value={password}
-                  onChange={(e) => setPassword(e.target.value)} required />
-                <Button type="button" variant="outline"
-                  onClick={() => setShow((s) => !s)}
-                  aria-label={show ? "Hide password" : "Show password"}>
-                  {show ? "Hide" : "Show"}
-                </Button>
-              </Inline>
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="optional"
+                />
+                <FieldDescription>
+                  OIDC users are created automatically at first login.
+                </FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="role">Role</FieldLabel>
+                <Select
+                  value={roleId}
+                  onChange={setRoleId}
+                  placeholder="no role"
+                  options={roles.map((r) => ({
+                    value: String(r.id),
+                    label: r.name,
+                    description: r.description || undefined,
+                  }))}
+                />
+                <FieldDescription>
+                  A user with no role cannot access repositories until one is assigned.
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+
+            <div className="space-y-3 border-t border-border pt-4">
+              <div>
+                <h2 className="m-0 text-sm font-semibold">Password</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Set an initial password for this local account.
+                </p>
+              </div>
+
+              <FieldGroup className="gap-4">
+                <Field>
+                  <FieldLabel htmlFor="password">
+                    Password<span className="text-destructive">*</span>
+                  </FieldLabel>
+                  <Inline className="items-stretch max-sm:flex-col">
+                    <Input
+                      id="password"
+                      type={show ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShow((s) => !s)}
+                      aria-label={show ? "Hide password" : "Show password"}
+                    >
+                      {show ? "Hide" : "Show"}
+                    </Button>
+                  </Inline>
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="confirm-password">
+                    Confirm password<span className="text-destructive">*</span>
+                  </FieldLabel>
+                  <Input
+                    id="confirm-password"
+                    type={show ? "text" : "password"}
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    required
+                    aria-invalid={mismatch}
+                  />
+                  {mismatch && <Alert>Passwords do not match.</Alert>}
+                </Field>
+              </FieldGroup>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium">Confirm password<span className="text-destructive">*</span></label>
-              <Inline>
-                <Input type={show ? "text" : "password"} value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)} required
-                  aria-invalid={mismatch} />
-                <Button type="button" variant="outline"
-                  onClick={() => setShow((s) => !s)}
-                  aria-label={show ? "Hide password" : "Show password"}>
-                  {show ? "Hide" : "Show"}
-                </Button>
-              </Inline>
-              {mismatch && <Alert className="mt-2">Passwords do not match.</Alert>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">Role</label>
-              <Select value={roleId} onChange={setRoleId} placeholder="no role"
-                options={roles.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
-              <p className="mt-1.5 text-sm text-muted-foreground">A local user with no role cannot access any repository until one is assigned.</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">Email</label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" />
-              <p className="mt-1.5 text-sm text-muted-foreground">OIDC users are created automatically at first login; their access comes from group mappings.</p>
-            </div>
             {error && <Alert>{error}</Alert>}
-            <Inline className="pt-1">
-              <Button type="submit" disabled={!canSubmit}>Create</Button>
+
+            <Inline className="border-t border-border pt-4">
+              <Button type="submit" disabled={!canSubmit}>Create user</Button>
               <Button variant="outline" type="button" onClick={() => navigate({ to: "/users" })}>Cancel</Button>
             </Inline>
           </form>

@@ -5,7 +5,7 @@ import { useAuth } from "../../authContext";
 import { Select } from "@/components/app-ui/select";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import {
   Table,
   TableBody,
@@ -14,6 +14,12 @@ import {
 } from "@/components/app-ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -107,87 +113,161 @@ export function RepositoryNew() {
 
   return (
     <>
-      <h1>New repository</h1>
-      <Panel className="max-w-[35rem]">
-      <PanelBody>
-      <form onSubmit={submit}>
-        <label>Name<span className="req">*</span></label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="maven-central" required
-          pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
-        <label>Format<span className="req">*</span></label>
-        <Select value={format} onChange={(v) => { setFormat(v); setMembers([]); }}
-          options={[
-            { value: "maven", label: "Maven / Gradle" },
-            { value: "npm", label: "npm" },
-            { value: "cargo", label: "Cargo" },
-            { value: "go", label: "Go Modules" },
-            { value: "pypi", label: "PyPI" },
-          ]} />
-        <label>Type<span className="req">*</span></label>
-        <div className="flex gap-2.5" role="radiogroup" aria-label="Repository type">
-          {REPO_TYPES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="radio"
-              aria-checked={type === t.value}
-              className={cn(
-                "flex-1 rounded-lg border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:border-border hover:bg-muted",
-                type === t.value && "border-primary bg-primary/10"
-              )}
-              onClick={() => setType(t.value)}
-            >
-              <div className={cn("mb-1 font-semibold", type === t.value && "text-primary")}>{t.title}</div>
-              <div className="text-xs leading-relaxed text-muted-foreground">{t.desc}</div>
-            </button>
-          ))}
-        </div>
-        {type === "proxy" && (
-          <>
-            <label>Upstream URL<span className="req">*</span></label>
-            <Input value={upstream} onChange={(e) => setUpstream(e.target.value)}
-              placeholder="https://repo1.maven.org/maven2" required />
-            <ConnectivityHint checking={checking} health={health} hasUrl={upstream.trim() !== ""} />
-          </>
-        )}
-        {type === "group" && (
-          <>
-            <label>Members (lookup order, first hit wins)<span className="req">*</span></label>
-            <MemberList members={members} onChange={setMembers}
-              repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
-              repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))} />
-            <Inline className="mt-2">
-              <Select value="" placeholder="add member…"
-                onChange={(v) => v && setMembers([...members, v])}
-                options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))} />
+      <PageHeader title="New repository" />
+      <PageDescription>
+        Register a hosted, proxy, or group repository for package delivery.
+      </PageDescription>
+
+      <Panel className="max-w-[44rem]">
+        <PanelBody>
+          <form onSubmit={submit} className="space-y-5">
+            <FieldGroup className="gap-4">
+              <Field>
+                <FieldLabel htmlFor="repository-name">
+                  Name<span className="text-destructive">*</span>
+                </FieldLabel>
+                <Input
+                  id="repository-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="maven-central"
+                  required
+                  autoFocus
+                  pattern="[A-Za-z0-9_-]{1,64}"
+                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                />
+                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel>Format<span className="text-destructive">*</span></FieldLabel>
+                <Select
+                  value={format}
+                  onChange={(v) => { setFormat(v); setMembers([]); }}
+                  options={[
+                    { value: "maven", label: "Maven / Gradle" },
+                    { value: "npm", label: "npm" },
+                    { value: "cargo", label: "Cargo" },
+                    { value: "go", label: "Go Modules" },
+                    { value: "pypi", label: "PyPI" },
+                  ]}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel>Type<span className="text-destructive">*</span></FieldLabel>
+                <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Repository type">
+                  {REPO_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={type === t.value}
+                      className={cn(
+                        "rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
+                        type === t.value && "border-primary bg-primary/10"
+                      )}
+                      onClick={() => setType(t.value)}
+                    >
+                      <div className={cn("mb-1 font-semibold", type === t.value && "text-primary")}>{t.title}</div>
+                      <div className="text-xs leading-relaxed text-muted-foreground">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </FieldGroup>
+
+            {type === "proxy" && (
+              <div className="space-y-3 border-t border-border pt-4">
+                <div>
+                  <h2 className="m-0 text-sm font-semibold">Proxy upstream</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Configure the remote registry and optional supply-chain cooldown.
+                  </p>
+                </div>
+
+                <FieldGroup className="gap-4">
+                  <Field>
+                    <FieldLabel htmlFor="upstream-url">
+                      Upstream URL<span className="text-destructive">*</span>
+                    </FieldLabel>
+                    <Input
+                      id="upstream-url"
+                      value={upstream}
+                      onChange={(e) => setUpstream(e.target.value)}
+                      placeholder="https://repo1.maven.org/maven2"
+                      required
+                    />
+                    <ConnectivityHint checking={checking} health={health} hasUrl={upstream.trim() !== ""} />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Age policy</FieldLabel>
+                    <label data-slot="checkbox-label" className="inline-flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3 py-2 text-sm">
+                      <Checkbox checked={ageEnabled} onCheckedChange={(checked) => setAgeEnabled(checked === true)} />
+                      <span>Block versions newer than a cooldown window</span>
+                    </label>
+                  </Field>
+
+                  {ageEnabled && (
+                    <Field>
+                      <FieldLabel htmlFor="minimum-age">
+                        Minimum age<span className="text-destructive">*</span>
+                      </FieldLabel>
+                      <Input
+                        id="minimum-age"
+                        value={minAge}
+                        onChange={(e) => setMinAge(e.target.value)}
+                        placeholder="3d"
+                        required
+                      />
+                      <FieldDescription>Examples: 3d, 72h, 2w.</FieldDescription>
+                    </Field>
+                  )}
+                </FieldGroup>
+              </div>
+            )}
+
+            {type === "group" && (
+              <div className="space-y-3 border-t border-border pt-4">
+                <div>
+                  <h2 className="m-0 text-sm font-semibold">Members</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Select member repositories in lookup order. The first hit wins.
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/80 bg-background/40 p-3">
+                  <MemberList
+                    members={members}
+                    onChange={setMembers}
+                    repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
+                    repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))}
+                  />
+                  <Inline className="mt-3">
+                    <Select
+                      value=""
+                      placeholder="add member..."
+                      onChange={(v) => v && setMembers([...members, v])}
+                      options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))}
+                    />
+                  </Inline>
+                  {candidates.length === 0 && members.length === 0 && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      No {format} repositories exist yet. Create the members first.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {error && <Alert>{error}</Alert>}
+            <Inline className="border-t border-border pt-4">
+              <Button type="submit" disabled={!valid}>Create repository</Button>
+              <Button variant="outline" type="button" onClick={() => navigate({ to: "/repositories" })}>Cancel</Button>
             </Inline>
-            {candidates.length === 0 && members.length === 0 && (
-              <p className="text-muted-foreground">No {format} repositories exist yet. Create the members first.</p>
-            )}
-          </>
-        )}
-        {type === "proxy" && (
-          <>
-            <h2>Age policy (supply-chain cooldown)</h2>
-            <div className="flex items-center gap-2">
-              <Checkbox checked={ageEnabled} onCheckedChange={(checked) => setAgeEnabled(checked === true)} />
-              <span>Block versions newer than a cooldown window</span>
-            </div>
-            {ageEnabled && (
-              <>
-                <label>Minimum age (e.g. 3d, 72h)<span className="req">*</span></label>
-                <Input value={minAge} onChange={(e) => setMinAge(e.target.value)} required />
-              </>
-            )}
-          </>
-        )}
-        {error && <Alert className="mt-4">{error}</Alert>}
-        <Inline className="mt-5">
-          <Button type="submit" disabled={!valid}>Create</Button>
-          <Button variant="outline" type="button" onClick={() => navigate({ to: "/repositories" })}>Cancel</Button>
-        </Inline>
-      </form>
-      </PanelBody>
+          </form>
+        </PanelBody>
       </Panel>
     </>
   );

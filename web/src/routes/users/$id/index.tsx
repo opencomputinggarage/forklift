@@ -4,6 +4,10 @@ import { api, Me, Role, Token, User } from "../../../api";
 import { useAuth } from "../../../authContext";
 import { ConfirmModal } from "../../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
+import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
+import { SourceBadge } from "@/components/app-ui/source-badge";
+import { StateBadge } from "@/components/app-ui/status-badge";
+import { UserBadge } from "@/components/app-ui/user-badge";
 import { Toggle } from "../../../components/toggle";
 import { Button } from "@/components/ui/button";
 
@@ -66,7 +70,7 @@ export function UserModify({ me }: { me: Me }) {
   return (
     <>
       <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
-        <h1>{user.username} <span className="badge">{user.source}</span>{self && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</h1>
+        <h1>{user.username} <SourceBadge source={user.source} />{self && <UserBadge username="you" className="ml-2">you</UserBadge>}</h1>
         <Button render={<Link to="/users" />} nativeButton={false} variant="outline">
           Back to users
         </Button>
@@ -112,13 +116,13 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
       <h2>Roles</h2>
       <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
         {user.roles.map((r) => (
-          <span key={r.id} className="badge">
+          <RoleBadge key={r.id}>
             {r.name}
             {canWrite && (
               <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove role"
                 onClick={() => run(api.removeRole(user.id, r.id))}>×</a>
             )}
-          </span>
+          </RoleBadge>
         ))}
         {user.roles.length === 0 && <span className="muted">No roles assigned.</span>}
       </div>
@@ -169,9 +173,9 @@ function TokensPanel({ user, tokens, canWrite, run }: {
               <td className="muted">{t.description}</td>
               <td>
                 {parseScopes(t.scopes_json).map((s, i) => (
-                  <span key={i} className="badge" style={{ fontFamily: "var(--font-mono)", marginRight: 4 }}>
+                  <PermissionBadge key={i} className="mr-1">
                     {s.repo_pattern}: {s.actions.join(",")}
-                  </span>
+                  </PermissionBadge>
                 ))}
               </td>
               <td className="muted">{t.created_at?.slice(0, 10)}</td>
@@ -251,7 +255,7 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
       />
       {user.locked && (
         <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 14, gap: 10, alignItems: "center" }}>
-          <span className="badge" style={{ background: "var(--danger)", color: "#fff" }}>Locked</span>
+          <StateBadge state="locked">Locked</StateBadge>
           <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>
             Unlock account
@@ -313,7 +317,7 @@ function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: 
       )}
       {user.locked && (
         <p style={{ marginTop: 12, marginBottom: 0 }}>
-          <span className="badge" style={{ background: "var(--danger)", color: "#fff" }}>Locked</span>
+          <StateBadge state="locked">Locked</StateBadge>
           <span className="muted" style={{ marginLeft: 8 }}>
             Locked after too many failed password attempts — unlock it in Account lockout.
           </span>

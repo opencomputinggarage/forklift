@@ -272,15 +272,4 @@ input[readonly], textarea[readonly] {
 input[readonly]:focus, textarea[readonly]:focus { border-color: var(--border); }
 textarea { font-family: inherit; resize: vertical; }
 
-.badge {
-  display: inline-flex; align-items: center; width: fit-content;
-  padding: 2px 8px; border-radius: 999px; font-size: 12px; line-height: 1.35;
-  background: var(--panel-2); color: var(--muted); border: 1px solid var(--border);
-}
-.badge.proxy, .badge.hosted, .badge.group { color: var(--text); }
-
-.badge.approval-pending { color: var(--accent); border-color: var(--accent); }
-.badge.approval-approved { color: var(--success); border-color: var(--success); }
-.badge.approval-rejected { color: var(--danger); border-color: var(--danger); }
-
 .muted { color: var(--muted); }

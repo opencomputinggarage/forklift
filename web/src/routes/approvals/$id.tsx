@@ -2,8 +2,11 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, Navigate, useParams } from "@tanstack/react-router";
 import { Approval, api } from "../../api";
 import { useAuth } from "../../authContext";
-import { ReviewModal, SeverityBar, SEV_COLOR } from "./index";
+import { ReviewModal, SeverityBar } from "./index";
 import { Tooltip } from "../../components/tooltip";
+import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
+import { SeverityBadge } from "@/components/app-ui/severity-badge";
+import { UserBadge } from "@/components/app-ui/user-badge";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/approvals/$id")({
@@ -40,7 +43,7 @@ export function ApprovalDetail() {
     <>
       <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
         <h1 style={{ fontFamily: "var(--font-mono)" }}>
-          {row.package} <span className={`badge approval-${row.status}`}>{row.status}</span>
+          {row.package} <ApprovalStatusBadge status={row.status} />
         </h1>
         <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch">
           <Button onClick={() => setReviewing(true)}>Review</Button>
@@ -221,7 +224,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
               <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
                 <a className="underline underline-offset-4 hover:no-underline" href={`https://osv.dev/${a.id}`} target="_blank" rel="noreferrer">{a.id}</a>
               </td>
-              <td><span className="badge" style={{ background: SEV_COLOR[a.severity] ?? "#9aa1ac", color: "#fff" }}>{a.severity}</span></td>
+              <td><SeverityBadge severity={a.severity} /></td>
               <td style={{ fontVariantNumeric: "tabular-nums" }}>{a.score || <span className="muted">n/a</span>}</td>
             </tr>
           ))}
@@ -244,7 +247,7 @@ function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
         <p className="muted" style={{ marginBottom: 0 }}>No users currently have approve permission for this repository.</p>
       ) : (
         <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 8 }}>
-          {reviewers.map((u) => <span key={u} className="badge">{u}</span>)}
+          {reviewers.map((u) => <UserBadge key={u} username={u} />)}
         </div>
       )}
     </div>

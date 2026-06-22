@@ -5,6 +5,10 @@ import { useAuth } from "../../../authContext";
 import { UpstreamStatus } from "../../../components/upstream-status";
 import { ConfirmModal } from "../../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
+import { ActionBadge } from "@/components/app-ui/action-badge";
+import { EventBadge } from "@/components/app-ui/event-badge";
+import { FormatBadge, RepoTypeBadge } from "@/components/app-ui/repo-type-badge";
+import { StateBadge } from "@/components/app-ui/status-badge";
 import { Toggle } from "../../../components/toggle";
 import { MemberList } from "../new";
 import { ApprovalList, SeverityBar, VersionDenies } from "../../approvals";
@@ -53,7 +57,7 @@ export function RepositoryDetail({ me }: { me: Me }) {
 
   return (
     <>
-      <h1>{repo.name} <span className={`badge ${repo.type}`}>{repo.type}</span> <span className="badge">{repo.format}</span></h1>
+      <h1>{repo.name} <RepoTypeBadge type={repo.type} /> <FormatBadge format={repo.format} /></h1>
 
       <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
         <h2>Client endpoint (forklift) <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· read-only</span></h2>
@@ -167,7 +171,7 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             }}
           />
         ) : (
-          <span className={`badge ${repo.disabled ? "" : ""}`}>{repo.disabled ? "Offline" : "Online"}</span>
+          <StateBadge state={repo.disabled ? "offline" : "online"}>{repo.disabled ? "Offline" : "Online"}</StateBadge>
         )}
       </div>
 
@@ -429,7 +433,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{p.repo_pattern}</td>
                   <td>
                     <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
-                      {p.actions.map((a) => <span key={a} className="badge">{a}</span>)}
+                      {p.actions.map((a) => <ActionBadge key={a} action={a} />)}
                     </div>
                   </td>
                   <td>{p.user_count}</td>
@@ -465,7 +469,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
                     <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
                       {t.unscoped
                         ? <span className="muted">per owner roles</span>
-                        : t.actions.map((a) => <span key={a} className="badge">{a}</span>)}
+                        : t.actions.map((a) => <ActionBadge key={a} action={a} />)}
                     </div>
                   </td>
                   <td className="muted">{t.expires_at ? new Date(t.expires_at).toLocaleDateString() : "never"}</td>
@@ -592,10 +596,10 @@ function AuditLogs({ repoId }: { repoId: number }) {
           {data?.logs.map((l) => (
             <tr key={l.id}>
               <td className="muted">{l.created_at?.slice(0, 19).replace("T", " ")}</td>
-              <td><span className="badge">{l.event}</span></td>
+              <td><EventBadge event={l.event} /></td>
               <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, wordBreak: "break-all" }}>{l.path || "-"}</td>
               <td>{l.username || <span className="muted">anonymous</span>}</td>
-              <td className={l.status >= 400 ? "status-err" : "muted"}>{l.status}</td>
+              <td className={l.status >= 400 ? "text-destructive" : "muted"}>{l.status}</td>
               <td className="muted">{l.client_ip}</td>
             </tr>
           ))}

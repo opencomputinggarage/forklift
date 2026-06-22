@@ -4,7 +4,9 @@ import { Approval, Repository, VersionDeny, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
+import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import { Button } from "@/components/ui/button";
+import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/approvals/")({
@@ -28,16 +30,12 @@ export function ApprovalVulnBadge({ severity, ids, scope }: { severity?: string;
   const suffix = pkgScope ? " · pkg" : "";
   const scopeTitle = pkgScope ? "package-level scan (requested version unknown)" : "scan for the requested version";
   if (severity === "none")
-    return <span className="badge" style={{ background: "#2ea043", color: "#fff" }} title={scopeTitle}>clean{suffix}</span>;
-  const bg: Record<string, string> = {
-    critical: "var(--danger)", high: "var(--danger)", medium: "#f5a623", low: "#9aa1ac",
-  };
+    return <SeverityBadge severity="none" title={scopeTitle}>clean{suffix}</SeverityBadge>;
   const count = ids?.length ?? 0;
   return (
-    <span className="badge" style={{ background: bg[severity] || "#9aa1ac", color: "#fff" }}
-      title={`${count ? ids!.join(", ") : severity} · ${scopeTitle}`}>
+    <SeverityBadge severity={severity} title={`${count ? ids!.join(", ") : severity} · ${scopeTitle}`}>
       {severity}{count > 1 ? ` ×${count}` : ""}{suffix}
-    </span>
+    </SeverityBadge>
   );
 }
 
@@ -85,7 +83,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
       onMouseEnter={open} onMouseLeave={() => setPop(null)}
       onFocus={open} onBlur={() => setPop(null)}>
       {clean ? (
-        <span className="badge" style={{ background: "#2ea043", color: "#fff" }}>clean{suffix}</span>
+        <SeverityBadge severity="none">clean{suffix}</SeverityBadge>
       ) : (
         <>
           <span
@@ -293,9 +291,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
                   <td>{a.request_count}</td>
                   <td className="muted">{new Date(a.last_requested_at).toLocaleString()}</td>
                   <td>
-                    <span className={`badge approval-${a.status}`} title={a.note ? `${a.decided_by}: ${a.note}` : a.decided_by}>
-                      {a.status}
-                    </span>
+                    <ApprovalStatusBadge status={a.status} title={a.note ? `${a.decided_by}: ${a.note}` : a.decided_by} />
                   </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     <Button

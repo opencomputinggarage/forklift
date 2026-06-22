@@ -4,6 +4,9 @@ import { api, Me, Role, User } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
 import { Combobox } from "../../components/combobox";
+import { CountBadge, StateBadge } from "@/components/app-ui/status-badge";
+import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
+import { SourceBadge } from "@/components/app-ui/source-badge";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/roles/$id")({
@@ -92,9 +95,9 @@ export function RoleModify({ me }: { me: Me }) {
 // itself is managed on each user's detail page, so this is read-only with links.
 function AssignedUsersPanel({ members }: { members: User[] }) {
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>
-        Assigned users <span className="badge" style={{ marginLeft: 6 }}>{members.length}</span>
+        Assigned users <CountBadge className="ml-1.5">{members.length}</CountBadge>
       </h2>
       {members.length === 0
         ? <p className="muted">No users have this role. Assign it from a user's detail page.</p>
@@ -109,18 +112,25 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
               {members.map((u) => (
                 <tr key={u.id}>
                   <td style={{ whiteSpace: "nowrap" }}><Link to="/users/$id" params={{ id: String(u.id) }}>{u.username}</Link></td>
-                  <td><span className="badge">{u.source}</span></td>
+                  <td><SourceBadge source={u.source} /></td>
                   <td className="muted">{u.email || "-"}</td>
                   <td>
                     <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
-                      {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
+                      {u.roles.map((r) => (
+                        <RoleBadge
+                          key={r.id}
+                          render={<Link to="/roles/$id" params={{ id: String(r.id) }} />}
+                        >
+                          {r.name}
+                        </RoleBadge>
+                      ))}
                       {u.roles.length === 0 && <span className="muted">none</span>}
                     </div>
                   </td>
                   <td>
                     {u.disabled
-                      ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-red-500 bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.7)]" /> disabled</span>
-                      : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-emerald-400 bg-emerald-400 shadow-[0_0_8px_color-mix(in_oklch,var(--success)_60%,transparent)]" /> active</span>}
+                      ? <StateBadge state="disabled">disabled</StateBadge>
+                      : <StateBadge state="active">active</StateBadge>}
                   </td>
                   <td className="muted" style={{ whiteSpace: "nowrap" }} title={u.last_login_at ?? undefined}>
                     {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
@@ -163,13 +173,13 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
       <h2>Permissions</h2>
       <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
         {role.permissions.map((p) => (
-          <span key={p.id} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
+          <PermissionBadge key={p.id}>
             {p.repo_pattern}: {p.actions.join(",")}
             {canWrite && (
               <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
                 onClick={() => run(api.deletePermission(role.id, p.id))}>×</a>
             )}
-          </span>
+          </PermissionBadge>
         ))}
         {role.permissions.length === 0 && <span className="muted">No permissions granted.</span>}
       </div>

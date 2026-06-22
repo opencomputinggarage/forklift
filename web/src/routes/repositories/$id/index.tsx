@@ -4,7 +4,7 @@ import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, RepoPermissio
 import { useAuth } from "../../../authContext";
 import { UpstreamStatus } from "../../../components/upstream-status";
 import { ConfirmModal } from "../../../components/confirm-modal";
-import { Select } from "../../../components/select";
+import { Select } from "@/components/app-ui/select";
 import { Toggle } from "../../../components/toggle";
 import { MemberList } from "../new";
 import { ApprovalList, SeverityBar, VersionDenies } from "../../approvals";

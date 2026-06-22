@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tansta
 import { api, Me, Role, Token, User } from "../../../api";
 import { useAuth } from "../../../authContext";
 import { ConfirmModal } from "../../../components/confirm-modal";
-import { Select } from "../../../components/select";
+import { Select } from "@/components/app-ui/select";
 import { Toggle } from "../../../components/toggle";
 
 export const Route = createFileRoute("/users/$id/")({

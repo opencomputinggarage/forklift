@@ -1,8 +1,22 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Clock, ShieldCheck } from "lucide-react";
 import { api, humanSize, Me, repoEndpoint, Repository } from "../../api";
 import { useAuth } from "../../authContext";
 import { UpstreamStatus } from "../../components/upstream-status";
+import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/app-ui/table";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/repositories/")({
   component: RepositoriesRoute,
@@ -22,10 +36,10 @@ function ArtifactCount({ repo }: { repo: Repository }) {
   const pending = repo.pending_approval_count ?? 0;
   const tip = `${pending.toLocaleString()} package${pending === 1 ? "" : "s"} awaiting approval`;
   return (
-    <span style={{ whiteSpace: "nowrap" }}>
-      <span className={`count-box${count === 0 ? " empty" : ""}`}>{count.toLocaleString()}</span>
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <Badge variant={count === 0 ? "outline" : "default"}>{count.toLocaleString()}</Badge>
       {pending > 0 && (
-        <span className="count-box pending" title={tip}>{pending.toLocaleString()}</span>
+        <Badge variant="warning" className="border-dashed" title={tip}>{pending.toLocaleString()}</Badge>
       )}
     </span>
   );
@@ -37,9 +51,9 @@ function RepoSize({ repo }: { repo: Repository }) {
   const size = repo.total_size ?? 0;
   const max = repo.config.cache.max_size_bytes;
   return (
-    <span className={size === 0 ? "muted" : undefined}>
+    <span className={size === 0 ? "text-muted-foreground" : undefined}>
       {humanSize(size)}
-      {repo.type === "proxy" && max > 0 && <span className="muted"> / {humanSize(max)}</span>}
+      {repo.type === "proxy" && max > 0 && <span className="text-muted-foreground"> / {humanSize(max)}</span>}
     </span>
   );
 }
@@ -48,7 +62,7 @@ function RepoSize({ repo }: { repo: Repository }) {
 // (age policy) and a shield (package approval), each lit when enabled and
 // carrying a concise tooltip. Non-proxy repos have no upstream to gate.
 function SecurityIcons({ repo }: { repo: Repository }) {
-  if (repo.type !== "proxy") return <span className="muted">—</span>;
+  if (repo.type !== "proxy") return <span className="text-muted-foreground">—</span>;
   const age = repo.config.age_policy;
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce" };
   const minAge = age.min_age || "0";
@@ -63,20 +77,14 @@ function SecurityIcons({ repo }: { repo: Repository }) {
       ? "Package approval is in audit mode. Requests are logged but packages are still served."
       : "Package approval is on. An admin must approve a package before this proxy serves it.";
   return (
-    <span className="sec-icons">
-      <span className={`sec-icon tooltip${age.enabled ? " on" : ""}`}
+    <span className="inline-flex items-center gap-2">
+      <span className={cn("tooltip inline-flex text-muted-foreground", age.enabled && "text-primary")}
         data-tooltip={ageTip} role="img" aria-label={ageTip} tabIndex={0}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
-        </svg>
+        <Clock className="size-4" aria-hidden="true" />
       </span>
-      <span className={`sec-icon tooltip${approval.enabled ? " on" : ""}`}
+      <span className={cn("tooltip inline-flex text-muted-foreground", approval.enabled && "text-primary")}
         data-tooltip={approvalTip} role="img" aria-label={approvalTip} tabIndex={0}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z" /><path d="M9 12l2 2 4-4" />
-        </svg>
+        <ShieldCheck className="size-4" aria-hidden="true" />
       </span>
     </span>
   );
@@ -87,18 +95,18 @@ function SecurityIcons({ repo }: { repo: Repository }) {
 function repoCells(r: Repository, canViewStatus: boolean) {
   return (
     <>
-      <td>{r.format}</td>
-      <td>{r.type}</td>
-      <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} title={repoEndpoint(r.format, r.name).url}>
+      <TableCell>{r.format}</TableCell>
+      <TableCell>{r.type}</TableCell>
+      <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs" title={repoEndpoint(r.format, r.name).url}>
         {repoEndpoint(r.format, r.name).url}
-        {r.type === "proxy" && !r.config.cache.enabled && <span className="muted"> (cache off)</span>}
-      </td>
-      <td style={{ whiteSpace: "nowrap" }}><ArtifactCount repo={r} /></td>
-      <td style={{ whiteSpace: "nowrap" }}><RepoSize repo={r} /></td>
+        {r.type === "proxy" && !r.config.cache.enabled && <span className="text-muted-foreground"> (cache off)</span>}
+      </TableCell>
+      <TableCell className="whitespace-nowrap"><ArtifactCount repo={r} /></TableCell>
+      <TableCell className="whitespace-nowrap"><RepoSize repo={r} /></TableCell>
       {/* Remote-health and supply-chain policy state are shown to admins and
           auditors (read-only), hidden from plain readers (Nexus parity). */}
-      <td>{canViewStatus && r.type === "proxy" ? <UpstreamStatus repoId={r.id} compact /> : <span className="muted">—</span>}</td>
-      <td>{canViewStatus ? <SecurityIcons repo={r} /> : <span className="muted">—</span>}</td>
+      <TableCell>{canViewStatus && r.type === "proxy" ? <UpstreamStatus repoId={r.id} compact /> : <span className="text-muted-foreground">—</span>}</TableCell>
+      <TableCell>{canViewStatus ? <SecurityIcons repo={r} /> : <span className="text-muted-foreground">—</span>}</TableCell>
     </>
   );
 }
@@ -140,17 +148,18 @@ export function Repositories({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Repositories</h1>
-        {me.admin && <Link className="btn" to="/repositories/new">New repository</Link>}
-      </div>
-      <p className="page-desc">
+      <PageHeader
+        title="Repositories"
+        actions={me.admin && <Link className={buttonVariants()} to="/repositories/new">New repository</Link>}
+      />
+      <PageDescription>
         Host and proxy artifacts across Maven, npm, Cargo, Go, and PyPI. Configure
         per-repository caching and supply-chain policies (age cooldown, package approval).
-      </p>
-      {error && <div className="error">{error}</div>}
-      <div className="panel">
-        <table className="repo-table">
+      </PageDescription>
+      {error && <Alert className="mb-4">{error}</Alert>}
+      <Panel>
+        <PanelBody>
+        <Table className="table-fixed">
           <colgroup>
             <col style={{ width: "16%" }} />
             <col style={{ width: "8%" }} />
@@ -161,59 +170,60 @@ export function Repositories({ me }: { me: Me }) {
             <col style={{ width: "11%" }} />
             <col style={{ width: "9%" }} />
           </colgroup>
-          <thead>
-            <tr><th>Name</th><th>Format</th><th>Type</th><th>Endpoint (forklift)</th><th>Artifacts</th><th>Size</th><th>Upstream</th><th>Security</th></tr>
-          </thead>
-          <tbody>
+          <TableHeader>
+            <TableRow><TableHead>Name</TableHead><TableHead>Format</TableHead><TableHead>Type</TableHead><TableHead>Endpoint (forklift)</TableHead><TableHead>Artifacts</TableHead><TableHead>Size</TableHead><TableHead>Upstream</TableHead><TableHead>Security</TableHead></TableRow>
+          </TableHeader>
+          <TableBody>
             {topLevel.flatMap((r) => {
               const isGroup = r.type === "group";
               const members = r.config.group?.members ?? [];
               const open = expanded.has(r.id);
               const rows = [
-                <tr key={`r-${r.id}`}>
-                  <td>
+                <TableRow key={`r-${r.id}`}>
+                  <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                     {isGroup ? (
-                      <span className="inline" style={{ gap: 4, alignItems: "center" }}>
-                        <button type="button" className="tree-caret" aria-expanded={open}
+                      <span className="flex min-w-0 items-center gap-1">
+                        <button type="button" className="px-0.5 text-xs text-muted-foreground hover:text-foreground" aria-expanded={open}
                           aria-label={open ? "Collapse group" : "Expand group"} onClick={() => toggle(r.id)}>
                           {open ? "▾" : "▸"}
                         </button>
                         {nameNode(r.id, r.name)}
-                        <span className="muted" style={{ fontSize: 12 }}>({members.length})</span>
+                        <span className="text-xs text-muted-foreground">({members.length})</span>
                       </span>
                     ) : (
                       nameNode(r.id, r.name)
                     )}
-                  </td>
+                  </TableCell>
                   {repoCells(r, canViewStatus)}
-                </tr>,
+                </TableRow>,
               ];
               if (isGroup && open) {
                 members.forEach((name, i) => {
                   const m = byName[name];
                   const last = i === members.length - 1;
                   rows.push(
-                    <tr key={`r-${r.id}-m-${name}`} className={`tree-child${last ? " last" : ""}`}>
-                      <td>
+                    <TableRow key={`r-${r.id}-m-${name}`} className={cn("bg-muted/20", last && "last")}>
+                      <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap pl-7">
                         {m
                           ? nameNode(m.id, name)
-                          : <span className="muted">{name}</span>}
-                      </td>
+                          : <span className="text-muted-foreground">{name}</span>}
+                      </TableCell>
                       {m
                         ? repoCells(m, canViewStatus)
-                        : <td colSpan={7} className="muted">member not found</td>}
-                    </tr>,
+                        : <TableCell colSpan={7} className="text-muted-foreground">member not found</TableCell>}
+                    </TableRow>,
                   );
                 });
               }
               return rows;
             })}
             {repos.length === 0 && (
-              <tr><td colSpan={8} className="muted">No repositories yet.</td></tr>
+              <TableRow><TableCell colSpan={8} className="text-muted-foreground">No repositories yet.</TableCell></TableRow>
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+        </PanelBody>
+      </Panel>
     </>
   );
 }

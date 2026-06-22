@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
-import { Select } from "../../components/select";
+import { Select } from "@/components/app-ui/select";
 
 export const Route = createFileRoute("/approvals/")({
   component: ApprovalsRoute,

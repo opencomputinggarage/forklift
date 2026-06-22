@@ -1,9 +1,11 @@
 import { CSSProperties, KeyboardEvent, useEffect, useRef, useState } from "react";
 
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
 // Combobox is an editable autocomplete input: it accepts free text (so wildcard
 // patterns like `*` or `maven-*` still work) while offering a filtered dropdown
-// of known values. It reuses the .select-* dropdown styling so it matches the
-// in-app Select component.
+// of known values.
 export function Combobox({ value, onChange, options, placeholder, style, hints }: {
   value: string;
   onChange: (value: string) => void;
@@ -70,22 +72,37 @@ export function Combobox({ value, onChange, options, placeholder, style, hints }
   };
 
   return (
-    <div ref={rootRef} className={`select${open ? " open" : ""}`} style={style}>
-      <input value={value} placeholder={placeholder}
+    <div ref={rootRef} className="relative" style={style}>
+      <Input value={value} placeholder={placeholder}
         role="combobox" aria-expanded={open} aria-autocomplete="list"
         onChange={(e) => { onChange(e.target.value); setOpen(true); setActive(-1); }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown} />
       {open && matches.length > 0 && (
-        <div ref={menuRef} className="select-menu" role="listbox">
+        <div
+          ref={menuRef}
+          className="absolute z-50 mt-1 max-h-64 w-full min-w-40 overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+          role="listbox"
+        >
           {matches.map((o, i) => (
             <div key={o} role="option" aria-selected={o === value}
-              className={`select-option${i === active ? " active" : ""}${o === value ? " selected" : ""}`}
+              className={cn(
+                "flex cursor-default items-center justify-between gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden select-none",
+                i === active && "bg-accent text-accent-foreground",
+                o === value && "text-primary"
+              )}
               onMouseEnter={() => setActive(i)}
               // mousedown (not click) so the option is picked before the input blurs.
               onMouseDown={(e) => { e.preventDefault(); pick(o); }}>
-              <span>{o}{hints?.[o] && <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>{hints[o]}</span>}</span>
-              {o === value && <span className="select-check">✓</span>}
+              <span className="min-w-0 truncate">
+                {o}
+                {hints?.[o] && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {hints[o]}
+                  </span>
+                )}
+              </span>
+              {o === value && <span>✓</span>}
             </div>
           ))}
         </div>

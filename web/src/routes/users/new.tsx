@@ -2,7 +2,11 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Role } from "../../api";
 import { useAuth } from "../../authContext";
-import { Select } from "../../components/select";
+import { Select } from "@/components/app-ui/select";
+import { Alert } from "@/components/app-ui/alert";
+import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/users/new")({
   component: UserNewRoute,
@@ -54,49 +58,61 @@ export function UserNew() {
   return (
     <>
       <h1>Create local user</h1>
-      <form className="panel" onSubmit={submit} style={{ maxWidth: 560 }}>
-        <label>Username<span className="req">*</span></label>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus required
-          pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
+      <Panel className="max-w-[35rem]">
+        <PanelBody>
+          <form onSubmit={submit} className="space-y-4">
+            <label className="block text-sm font-medium">Username<span className="text-destructive">*</span></label>
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus required
+              pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
 
-        <label>Password<span className="req">*</span></label>
-        <div className="password-field">
-          <input type={show ? "text" : "password"} value={password}
-            onChange={(e) => setPassword(e.target.value)} required />
-          <button type="button" className="password-toggle"
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Hide password" : "Show password"}>
-            {show ? "Hide" : "Show"}
-          </button>
-        </div>
+            <div>
+              <label className="block text-sm font-medium">Password<span className="text-destructive">*</span></label>
+              <Inline>
+                <Input type={show ? "text" : "password"} value={password}
+                  onChange={(e) => setPassword(e.target.value)} required />
+                <Button type="button" variant="outline"
+                  onClick={() => setShow((s) => !s)}
+                  aria-label={show ? "Hide password" : "Show password"}>
+                  {show ? "Hide" : "Show"}
+                </Button>
+              </Inline>
+            </div>
 
-        <label>Confirm password<span className="req">*</span></label>
-        <div className="password-field">
-          <input type={show ? "text" : "password"} value={confirm}
-            onChange={(e) => setConfirm(e.target.value)} required
-            aria-invalid={mismatch} />
-          <button type="button" className="password-toggle"
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Hide password" : "Show password"}>
-            {show ? "Hide" : "Show"}
-          </button>
-        </div>
-        {mismatch && <div className="error" style={{ marginTop: 8 }}>Passwords do not match.</div>}
+            <div>
+              <label className="block text-sm font-medium">Confirm password<span className="text-destructive">*</span></label>
+              <Inline>
+                <Input type={show ? "text" : "password"} value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)} required
+                  aria-invalid={mismatch} />
+                <Button type="button" variant="outline"
+                  onClick={() => setShow((s) => !s)}
+                  aria-label={show ? "Hide password" : "Show password"}>
+                  {show ? "Hide" : "Show"}
+                </Button>
+              </Inline>
+              {mismatch && <Alert className="mt-2">Passwords do not match.</Alert>}
+            </div>
 
-        <label>Role</label>
-        <Select value={roleId} onChange={setRoleId} placeholder="no role"
-          options={roles.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
-        <p className="muted">A local user with no role cannot access any repository until one is assigned.</p>
+            <div>
+              <label className="block text-sm font-medium">Role</label>
+              <Select value={roleId} onChange={setRoleId} placeholder="no role"
+                options={roles.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
+              <p className="mt-1.5 text-sm text-muted-foreground">A local user with no role cannot access any repository until one is assigned.</p>
+            </div>
 
-        <label>Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" />
-        <p className="muted">OIDC users are created automatically at first login; their access comes from group mappings.</p>
-        {error && <div className="error">{error}</div>}
-        <div style={{ marginTop: 18 }} className="inline">
-          <button className="btn" type="submit" disabled={!canSubmit}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/users" })}>Cancel</button>
-        </div>
-      </form>
+            <div>
+              <label className="block text-sm font-medium">Email</label>
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" />
+              <p className="mt-1.5 text-sm text-muted-foreground">OIDC users are created automatically at first login; their access comes from group mappings.</p>
+            </div>
+            {error && <Alert>{error}</Alert>}
+            <Inline className="pt-1">
+              <Button type="submit" disabled={!canSubmit}>Create</Button>
+              <Button variant="outline" type="button" onClick={() => navigate({ to: "/users" })}>Cancel</Button>
+            </Inline>
+          </form>
+        </PanelBody>
+      </Panel>
     </>
   );
 }

@@ -2,6 +2,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { api } from "../../api";
 import { Combobox } from "../../components/combobox";
+import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
+import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/tokens/new")({
   component: TokenNew,
@@ -104,18 +110,20 @@ export function TokenNew() {
     return (
       <>
         <h1>Token created</h1>
-        <div className="panel" style={{ maxWidth: 640 }}>
-          <div className="muted">Copy this token now; it will not be shown again.</div>
-          <div className="inline" style={{ marginTop: 10 }}>
-            <div className="token-value" style={{ flex: 1 }}>{created}</div>
-            <button className="btn secondary" type="button" onClick={copy}>
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-          <div style={{ marginTop: 18 }}>
-            <button className="btn" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Done</button>
-          </div>
-        </div>
+        <Panel className="max-w-[40rem]">
+          <PanelBody>
+            <p className="mb-3 text-sm text-muted-foreground">Copy this token now; it will not be shown again.</p>
+            <Inline className="items-stretch max-sm:flex-col">
+              <div className="min-h-8 flex-1 overflow-x-auto rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs">
+                {created}
+              </div>
+              <Button variant="outline" type="button" onClick={copy}>
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </Inline>
+            <Button className="mt-5" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Done</Button>
+          </PanelBody>
+        </Panel>
       </>
     );
   }
@@ -123,49 +131,57 @@ export function TokenNew() {
   return (
     <>
       <h1>{forUserId !== null ? "Create token for user" : "Create token"}</h1>
-      <form className="panel" onSubmit={submit} style={{ maxWidth: 640 }}>
-        <label>Token name<span className="req">*</span></label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ci" autoFocus required
-          pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
+      <Panel className="max-w-[40rem]">
+        <PanelBody>
+          <form onSubmit={submit} className="space-y-4">
+            <label className="block text-sm font-medium">Token name<span className="text-destructive">*</span></label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ci" autoFocus required
+              pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
 
-        <label>Token description<span className="req">*</span></label>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this token is used for" required />
+            <label className="block text-sm font-medium">Token description<span className="text-destructive">*</span></label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this token is used for" required />
 
-        <label>Permissions<span className="req">*</span></label>
-        <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
-          {scopes.map((s, i) => (
-            <span key={i} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
-              {s.repo_pattern}: {s.actions.join(",")}
-              <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
-                onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}>×</a>
-            </span>
-          ))}
-          {scopes.length === 0 && <span className="muted">none yet — add at least one</span>}
-        </div>
-        <div className="inline" style={{ marginTop: 8, flexWrap: "wrap", gap: 8 }}>
-          <Combobox style={{ width: 220 }} value={pattern} onChange={setPattern}
-            options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
-          {ACTIONS.map((a) => (
-            <label key={a} className="checkbox" style={{ margin: 0, fontSize: 12 }}>
-              <input type="checkbox" checked={actions.includes(a)} onChange={() => toggle(a)} />
-              <span>{a}</span>
-            </label>
-          ))}
-          <button className="btn secondary" type="button" onClick={addScope}
-            disabled={!pattern.trim() || actions.length === 0}>Add</button>
-        </div>
+            <div>
+              <label className="block text-sm font-medium">Permissions<span className="text-destructive">*</span></label>
+              <Inline className="mt-2 flex-wrap gap-1.5">
+                {scopes.map((s, i) => (
+                  <Badge key={i} className="font-mono">
+                    {s.repo_pattern}: {s.actions.join(",")}
+                    <button className="ml-1.5 cursor-pointer" type="button" title="Remove permission"
+                      onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}>x</button>
+                  </Badge>
+                ))}
+                {scopes.length === 0 && <span className="text-sm text-muted-foreground">none yet - add at least one</span>}
+              </Inline>
+              <Inline className="mt-2 flex-wrap gap-2">
+                <Combobox style={{ width: 220 }} value={pattern} onChange={setPattern}
+                  options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
+                {ACTIONS.map((a) => (
+                  <label key={a} className="inline-flex items-center gap-1.5 text-xs">
+                    <Checkbox checked={actions.includes(a)} onCheckedChange={() => toggle(a)} />
+                    <span>{a}</span>
+                  </label>
+                ))}
+                <Button variant="outline" type="button" onClick={addScope}
+                  disabled={!pattern.trim() || actions.length === 0}>Add</Button>
+              </Inline>
+            </div>
 
-        <label style={{ marginTop: 14 }}>Expires on<span className="req">*</span></label>
-        <input type="date" value={expiresOn} min={dateStr(minDate)} max={dateStr(maxDate)}
-          onChange={(e) => setExpiresOn(e.target.value)} required />
-        <p className="muted">Tokens expire after at most one year.</p>
+            <div>
+              <label className="block text-sm font-medium">Expires on<span className="text-destructive">*</span></label>
+              <Input type="date" value={expiresOn} min={dateStr(minDate)} max={dateStr(maxDate)}
+                onChange={(e) => setExpiresOn(e.target.value)} required />
+              <p className="mt-1.5 text-sm text-muted-foreground">Tokens expire after at most one year.</p>
+            </div>
 
-        {error && <div className="error">{error}</div>}
-        <div style={{ marginTop: 18 }} className="inline">
-          <button className="btn" type="submit" disabled={!valid}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Cancel</button>
-        </div>
-      </form>
+            {error && <Alert>{error}</Alert>}
+            <Inline className="pt-1">
+              <Button type="submit" disabled={!valid}>Create</Button>
+              <Button variant="outline" type="button" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Cancel</Button>
+            </Inline>
+          </form>
+        </PanelBody>
+      </Panel>
     </>
   );
 }

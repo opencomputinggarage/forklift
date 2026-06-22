@@ -2,7 +2,20 @@ import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Repository, UpstreamHealth } from "../../api";
 import { useAuth } from "../../authContext";
-import { Select } from "../../components/select";
+import { Select } from "@/components/app-ui/select";
+import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
+import { Inline, Panel, PanelBody } from "@/components/app-ui/page";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/app-ui/table";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/repositories/new")({
   component: RepositoryNewRoute,
@@ -95,9 +108,11 @@ export function RepositoryNew() {
   return (
     <>
       <h1>New repository</h1>
-      <form className="panel" onSubmit={submit} style={{ maxWidth: 560 }}>
+      <Panel className="max-w-[35rem]">
+      <PanelBody>
+      <form onSubmit={submit}>
         <label>Name<span className="req">*</span></label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="maven-central" required
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="maven-central" required
           pattern="[A-Za-z0-9_-]{1,64}" title="Letters, digits, '-' and '_' only (max 64 characters)" />
         <label>Format<span className="req">*</span></label>
         <Select value={format} onChange={(v) => { setFormat(v); setMembers([]); }}
@@ -109,25 +124,28 @@ export function RepositoryNew() {
             { value: "pypi", label: "PyPI" },
           ]} />
         <label>Type<span className="req">*</span></label>
-        <div className="type-cards" role="radiogroup" aria-label="Repository type">
+        <div className="flex gap-2.5" role="radiogroup" aria-label="Repository type">
           {REPO_TYPES.map((t) => (
             <button
               key={t.value}
               type="button"
               role="radio"
               aria-checked={type === t.value}
-              className={`type-card${type === t.value ? " selected" : ""}`}
+              className={cn(
+                "flex-1 rounded-lg border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:border-border hover:bg-muted",
+                type === t.value && "border-primary bg-primary/10"
+              )}
               onClick={() => setType(t.value)}
             >
-              <div className="type-title">{t.title}</div>
-              <div className="type-desc">{t.desc}</div>
+              <div className={cn("mb-1 font-semibold", type === t.value && "text-primary")}>{t.title}</div>
+              <div className="text-xs leading-relaxed text-muted-foreground">{t.desc}</div>
             </button>
           ))}
         </div>
         {type === "proxy" && (
           <>
             <label>Upstream URL<span className="req">*</span></label>
-            <input value={upstream} onChange={(e) => setUpstream(e.target.value)}
+            <Input value={upstream} onChange={(e) => setUpstream(e.target.value)}
               placeholder="https://repo1.maven.org/maven2" required />
             <ConnectivityHint checking={checking} health={health} hasUrl={upstream.trim() !== ""} />
           </>
@@ -138,37 +156,39 @@ export function RepositoryNew() {
             <MemberList members={members} onChange={setMembers}
               repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
               repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))} />
-            <div className="inline" style={{ marginTop: 8 }}>
+            <Inline className="mt-2">
               <Select value="" placeholder="add member…"
                 onChange={(v) => v && setMembers([...members, v])}
                 options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))} />
-            </div>
+            </Inline>
             {candidates.length === 0 && members.length === 0 && (
-              <p className="muted">No {format} repositories exist yet. Create the members first.</p>
+              <p className="text-muted-foreground">No {format} repositories exist yet. Create the members first.</p>
             )}
           </>
         )}
         {type === "proxy" && (
           <>
             <h2>Age policy (supply-chain cooldown)</h2>
-            <div className="checkbox">
-              <input type="checkbox" checked={ageEnabled} onChange={(e) => setAgeEnabled(e.target.checked)} />
+            <div className="flex items-center gap-2">
+              <Checkbox checked={ageEnabled} onCheckedChange={(checked) => setAgeEnabled(checked === true)} />
               <span>Block versions newer than a cooldown window</span>
             </div>
             {ageEnabled && (
               <>
                 <label>Minimum age (e.g. 3d, 72h)<span className="req">*</span></label>
-                <input value={minAge} onChange={(e) => setMinAge(e.target.value)} required />
+                <Input value={minAge} onChange={(e) => setMinAge(e.target.value)} required />
               </>
             )}
           </>
         )}
-        {error && <div className="error">{error}</div>}
-        <div style={{ marginTop: 18 }} className="inline">
-          <button className="btn" type="submit" disabled={!valid}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/repositories" })}>Cancel</button>
-        </div>
+        {error && <Alert className="mt-4">{error}</Alert>}
+        <Inline className="mt-5">
+          <Button type="submit" disabled={!valid}>Create</Button>
+          <Button variant="outline" type="button" onClick={() => navigate({ to: "/repositories" })}>Cancel</Button>
+        </Inline>
       </form>
+      </PanelBody>
+      </Panel>
     </>
   );
 }
@@ -180,18 +200,18 @@ function ConnectivityHint({ checking, health, hasUrl }: {
 }) {
   if (!hasUrl) return null;
   if (checking) {
-    return <p className="muted" style={{ marginTop: 6, fontSize: 13 }}>Checking connectivity…</p>;
+    return <p className="mt-1.5 text-sm text-muted-foreground">Checking connectivity…</p>;
   }
   if (!health) return null;
   if (health.reachable) {
     return (
-      <p style={{ marginTop: 6, fontSize: 13, color: "var(--ok, #2e7d32)" }}>
+      <p className="mt-1.5 text-sm text-emerald-300">
         ✓ Reachable — HTTP {health.status}{health.latency_ms != null && ` (${health.latency_ms} ms)`}
       </p>
     );
   }
   return (
-    <p style={{ marginTop: 6, fontSize: 13, color: "var(--danger, #c0392b)" }}>
+    <p className="mt-1.5 text-sm text-destructive">
       ✗ Unreachable{health.error ? ` — ${health.error}` : ""}
     </p>
   );
@@ -213,34 +233,34 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   };
-  if (members.length === 0) return <p className="muted">No members selected.</p>;
+  if (members.length === 0) return <p className="text-muted-foreground">No members selected.</p>;
   return (
-    <table>
-      <tbody>
+    <Table>
+      <TableBody>
         {members.map((name, i) => {
           const id = repoIndex?.[name];
           const type = repoTypes?.[name];
           return (
-          <tr key={name}>
-            <td className="muted" style={{ width: 24 }}>{i + 1}</td>
-            <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+          <TableRow key={name}>
+            <TableCell className="w-6 text-muted-foreground">{i + 1}</TableCell>
+            <TableCell className="font-mono text-xs">
               {id !== undefined
                 ? <Link to="/repositories/$id" params={{ id: String(id) }}>{name}</Link>
                 : name}
-            </td>
-            <td>{type ? <span className={`badge ${type}`}>{type}</span> : <span className="muted">—</span>}</td>
-            <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-              <button className="btn secondary" type="button" disabled={i === 0}
+            </TableCell>
+            <TableCell>{type ? <Badge>{type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+            <TableCell className="whitespace-nowrap text-right">
+              <button className={buttonVariants({ variant: "outline", size: "sm" })} type="button" disabled={i === 0}
                 title="Move up" onClick={() => move(i, -1)}>↑</button>{" "}
-              <button className="btn secondary" type="button" disabled={i === members.length - 1}
+              <button className={buttonVariants({ variant: "outline", size: "sm" })} type="button" disabled={i === members.length - 1}
                 title="Move down" onClick={() => move(i, 1)}>↓</button>{" "}
-              <button className="btn danger" type="button" title="Remove member"
+              <button className={buttonVariants({ variant: "destructive", size: "sm" })} type="button" title="Remove member"
                 onClick={() => onChange(members.filter((m) => m !== name))}>×</button>
-            </td>
-          </tr>
+            </TableCell>
+          </TableRow>
           );
         })}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }

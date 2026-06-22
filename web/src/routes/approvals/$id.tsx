@@ -53,7 +53,7 @@ export function ApprovalDetail() {
 
       <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
         <h2>Request</h2>
-        <dl className="kv">
+        <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
           <dt>Repository</dt><dd>{row.repo_name}</dd>
           <dt>Package</dt><dd style={{ fontFamily: "var(--font-mono)" }}>{row.package}</dd>
           <dt>Requested version</dt>
@@ -107,7 +107,7 @@ function OvsAnalysis({ row }: { row: Approval }) {
           <div style={{ margin: "8px 0 18px" }}>
             <SeverityBar severity={row.vuln_severity} counts={row.vuln_counts} scope={row.vuln_scope} source={row.vuln_source} scannedAt={row.vuln_scanned_at} size="lg" />
           </div>
-          <dl className="kv">
+          <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
             <dt>Data source</dt>
             <dd>
               {!row.vuln_source || row.vuln_source === "OSV"
@@ -126,7 +126,7 @@ function OvsAnalysis({ row }: { row: Approval }) {
           {advisories.length > 0 ? (
             <AdvisoryTable advisories={advisories} />
           ) : ids.length > 0 ? (
-            <ul className="advisory-list">
+            <ul className="mt-2.5 mb-0 columns-2 pl-[18px] [column-gap:28px] max-[760px]:columns-1 [&_li]:break-inside-avoid [&_li]:font-mono [&_li]:text-[13px]">
               {ids.map((vid) => (
                 <li key={vid}><a className="underline underline-offset-4 hover:no-underline" href={`https://osv.dev/${vid}`} target="_blank" rel="noreferrer">{vid}</a></li>
               ))}

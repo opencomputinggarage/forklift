@@ -5,6 +5,7 @@ import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/approvals/")({
   component: ApprovalsRoute,
@@ -77,41 +78,52 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
     setPop({ top: r.bottom + 8, left: r.left + r.width / 2 });
   };
   const segs = SEV_ORDER.map((s) => (c[s] ? (
-    <span key={s} className="sev-seg" style={{ flexGrow: c[s], background: SEV_COLOR[s] }} />
+    <span key={s} className="h-full min-w-[3px]" style={{ flexGrow: c[s], background: SEV_COLOR[s] }} />
   ) : null));
   return (
-    <span className={`sev-bar ${size}`} tabIndex={0}
+    <span className={cn("inline-flex cursor-help items-center gap-2 outline-none", size === "lg" && "gap-3")} tabIndex={0}
       onMouseEnter={open} onMouseLeave={() => setPop(null)}
       onFocus={open} onBlur={() => setPop(null)}>
       {clean ? (
         <span className="badge" style={{ background: "#2ea043", color: "#fff" }}>clean{suffix}</span>
       ) : (
         <>
-          <span className="sev-bar-track">{segs}</span>
-          <span className="sev-bar-count">{label}</span>
+          <span
+            className={cn(
+              "inline-flex overflow-hidden rounded bg-border",
+              size === "lg" ? "h-4 w-[280px] rounded-lg max-[760px]:w-[180px]" : "h-1.5 w-[54px]"
+            )}
+          >
+            {segs}
+          </span>
+          <span className={cn("text-xs text-muted-foreground tabular-nums", size === "lg" && "text-sm")}>{label}</span>
         </>
       )}
       {pop && (
-        <span className="sev-pop" role="tooltip" style={{ top: pop.top, left: pop.left }}>
-          <span className="sev-pop-title">
+        <span
+          className="pointer-events-none fixed z-[200] flex w-max -translate-x-1/2 flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+          role="tooltip"
+          style={{ top: pop.top, left: pop.left }}
+        >
+          <span className="text-xs font-semibold">
             {clean
               ? "No known advisories"
               : `${total} vulnerabilit${total === 1 ? "y" : "ies"}`}
             {scope === "package" ? " · package-level" : ""}
           </span>
-          {!clean && <span className="sev-pop-bar">{segs}</span>}
+          {!clean && <span className="inline-flex h-2.5 w-[200px] overflow-hidden rounded-[5px] bg-border">{segs}</span>}
           {!clean && (
-            <span className="sev-pop-rows">
+            <span className="flex min-w-[150px] flex-col gap-1">
               {SEV_ORDER.map((s) => (
-                <span key={s} className="sev-pop-row">
-                  <span className="sev-dot" style={{ background: SEV_COLOR[s] }} />
-                  <span className="sev-pop-label">{s}</span>
-                  <span className="sev-pop-num">{c[s] ?? 0}</span>
+                <span key={s} className="flex items-center gap-[9px] text-xs leading-[1.2]">
+                  <span className="size-[9px] shrink-0 rounded-[2px]" style={{ background: SEV_COLOR[s] }} />
+                  <span className="capitalize text-foreground">{s}</span>
+                  <span className="ml-auto font-semibold tabular-nums">{c[s] ?? 0}</span>
                 </span>
               ))}
             </span>
           )}
-          <span className="sev-pop-meta">
+          <span className="border-t border-border pt-[7px] text-[11px] text-muted-foreground">
             Source {source || "OSV"} · scanned {scannedAt ? new Date(scannedAt).toLocaleString() : "n/a"}
           </span>
         </span>

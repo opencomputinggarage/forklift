@@ -46,22 +46,28 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center px-4">
-      <Card className="w-full max-w-sm border-border bg-card text-card-foreground shadow-xl">
-        <CardHeader className="gap-4">
-          <div className="brand p-0"><Logo /><span className="brand-text">fork<span>lift</span></span></div>
-          <div>
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Access your repository proxy and package approvals.</CardDescription>
+    <div className="grid min-h-screen w-full place-items-center bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--accent)_12%,transparent),transparent_38%)] px-4 py-10">
+      <Card className="w-full max-w-[380px] border-border/90 bg-card/95 text-card-foreground shadow-2xl shadow-black/35">
+        <CardHeader className="gap-5 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="brand p-0"><Logo size={38} /><span className="brand-text">fork<span>lift</span></span></div>
+            <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              secure
+            </span>
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-xl">Sign in</CardTitle>
+            <CardDescription className="leading-relaxed">Access repository proxy controls, approvals, and personal tokens.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <form onSubmit={submit}>
             <FieldGroup>
               <Field data-invalid={Boolean(error)}>
                 <FieldLabel htmlFor="username">Username<span className="req">*</span></FieldLabel>
                 <Input
                   id="username"
+                  className="h-10"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
@@ -74,6 +80,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 <FieldLabel htmlFor="password">Password<span className="req">*</span></FieldLabel>
                 <Input
                   id="password"
+                  className="h-10"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -83,15 +90,15 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 />
                 {error && <FieldError>{error}</FieldError>}
               </Field>
-              <Button className="w-full" disabled={busy} type="submit">
+              <Button className="h-10 w-full" disabled={busy} type="submit">
                 {busy ? "Signing in…" : "Sign in"}
               </Button>
             </FieldGroup>
           </form>
-          {oidcEnabled && <FieldSeparator className="my-4">or</FieldSeparator>}
+          {oidcEnabled && <FieldSeparator className="my-5">or</FieldSeparator>}
           {oidcEnabled && (
             <a
-              className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 w-full")}
               href="/auth/login"
             >
               Sign in with Keycloak

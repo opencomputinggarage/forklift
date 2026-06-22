@@ -46,8 +46,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="login-wrap px-4">
-      <Card className="login-card w-full max-w-sm border-border bg-card text-card-foreground shadow-xl">
+    <div className="flex min-h-screen w-full items-center justify-center px-4">
+      <Card className="w-full max-w-sm border-border bg-card text-card-foreground shadow-xl">
         <CardHeader className="gap-4">
           <div className="brand p-0"><Logo /><span className="brand-text">fork<span>lift</span></span></div>
           <div>

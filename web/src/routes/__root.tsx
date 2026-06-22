@@ -19,7 +19,7 @@ function AppShell() {
     refresh().finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="login-wrap">Loading…</div>;
+  if (loading) return <div className="flex min-h-screen w-full items-center justify-center">Loading…</div>;
 
   if (!me?.authenticated) {
     return <Login onLogin={refresh} />;

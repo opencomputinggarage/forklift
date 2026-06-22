@@ -358,8 +358,6 @@ textarea { font-family: inherit; resize: vertical; }
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
-.login-wrap { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 100vh; }
-.login-card { width: 340px; }
 .checkbox { display: flex; align-items: center; gap: 8px; }
 .checkbox input { width: auto; }
 

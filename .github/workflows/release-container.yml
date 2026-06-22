@@ -14,7 +14,7 @@ on:
 
 env:
   GO_VERSION: "1.26.4"
-  NODE_VERSION: "22"
+  NODE_VERSION: "24"
   PNPM_VERSION: "11.8.0"
   COVERAGE_MIN: "70"
   REGISTRY: ghcr.io

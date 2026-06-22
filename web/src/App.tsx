@@ -1,23 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { api, Me } from "./api";
+import { AuthProvider } from "./authContext";
 import { Logo } from "./components/Logo";
-import { Login } from "./pages/Login";
-import { Repositories } from "./pages/Repositories";
-import { RepositoryNew } from "./pages/RepositoryNew";
-import { RepositoryDetail } from "./pages/RepositoryDetail";
-import { Tokens } from "./pages/Tokens";
-import { TokenNew } from "./pages/TokenNew";
-import { Approvals } from "./pages/Approvals";
-import { ApprovalDetail } from "./pages/ApprovalDetail";
-import { Users } from "./pages/Users";
-import { UserNew } from "./pages/UserNew";
-import { UserModify } from "./pages/UserModify";
-import { Roles } from "./pages/Roles";
-import { RoleNew } from "./pages/RoleNew";
-import { RoleModify } from "./pages/RoleModify";
+import { Login } from "./components/Login";
 
-export function App() {
+export function AppShell() {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,29 +22,14 @@ export function App() {
   }
 
   return (
-    <div className="app">
-      <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
-      <div className="main">
-        <Routes>
-          <Route path="/" element={<Navigate to="/repositories" replace />} />
-          <Route path="/repositories" element={<Repositories me={me} />} />
-          <Route path="/repositories/new" element={<RepositoryNew />} />
-          <Route path="/repositories/:id/:tab?" element={<RepositoryDetail me={me} />} />
-          <Route path="/tokens" element={<Tokens />} />
-          <Route path="/tokens/new" element={<TokenNew />} />
-          {(me.admin || me.approver) && <Route path="/approvals" element={<Approvals />} />}
-          {(me.admin || me.approver) && <Route path="/approvals/:id" element={<ApprovalDetail />} />}
-          {(me.admin || me.auditor) && <Route path="/users" element={<Users me={me} />} />}
-          {me.admin && <Route path="/users/new" element={<UserNew />} />}
-          {me.admin && <Route path="/users/:id/tokens/new" element={<TokenNew />} />}
-          {(me.admin || me.auditor) && <Route path="/users/:id" element={<UserModify me={me} />} />}
-          {(me.admin || me.auditor) && <Route path="/roles" element={<Roles me={me} />} />}
-          {me.admin && <Route path="/roles/new" element={<RoleNew />} />}
-          {(me.admin || me.auditor) && <Route path="/roles/:id" element={<RoleModify me={me} />} />}
-          <Route path="*" element={<Navigate to="/repositories" replace />} />
-        </Routes>
+    <AuthProvider value={{ me }}>
+      <div className="app">
+        <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
+        <div className="main">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </AuthProvider>
   );
 }
 
@@ -92,25 +65,25 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </span>
         )}
       </div>
-      <NavLink className="navlink nav-flex" to="/repositories">
+      <Link className="navlink nav-flex" activeProps={{ className: "navlink nav-flex active" }} to="/repositories">
         <span>Repositories</span>
         {repoCount !== null && <span className="count-badge">{repoCount}</span>}
-      </NavLink>
-      <NavLink className="navlink" to="/tokens">Access Tokens</NavLink>
+      </Link>
+      <Link className="navlink" activeProps={{ className: "navlink active" }} to="/tokens">Access Tokens</Link>
       {canApprove && (
-        <NavLink className="navlink nav-flex" to="/approvals">
+        <Link className="navlink nav-flex" activeProps={{ className: "navlink nav-flex active" }} to="/approvals">
           <span>Approvals</span>
           {pendingCount !== null && pendingCount > 0 && <span className="count-badge">{pendingCount}</span>}
-        </NavLink>
+        </Link>
       )}
-      {(me.admin || me.auditor) && <NavLink className="navlink" to="/users">Users</NavLink>}
-      {(me.admin || me.auditor) && <NavLink className="navlink" to="/roles">Roles</NavLink>}
+      {(me.admin || me.auditor) && <Link className="navlink" activeProps={{ className: "navlink active" }} to="/users">Users</Link>}
+      {(me.admin || me.auditor) && <Link className="navlink" activeProps={{ className: "navlink active" }} to="/roles">Roles</Link>}
       <div className="spacer" />
       <a className="navlink" href="/api-docs" target="_blank" rel="noreferrer">API Docs ↗</a>
       <div className="userbox">
         <div>{me.username} {me.admin ? "(admin)" : me.auditor ? "(auditor)" : ""}</div>
         <button type="button" className="btn secondary logout-btn"
-          onClick={() => { onLogout(); navigate("/"); }}>Log Out</button>
+          onClick={() => { onLogout(); navigate({ to: "/" }); }}>Log Out</button>
       </div>
     </div>
   );

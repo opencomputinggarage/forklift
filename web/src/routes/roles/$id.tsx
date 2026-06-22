@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, Me, Role, User } from "../api";
-import { ConfirmModal } from "../components/ConfirmModal";
-import { Combobox } from "../components/Combobox";
+import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
+import { api, Me, Role, User } from "../../api";
+import { useAuth } from "../../authContext";
+import { ConfirmModal } from "../../components/ConfirmModal";
+import { Combobox } from "../../components/Combobox";
+
+export const Route = createFileRoute("/roles/$id")({
+  component: RoleModifyRoute,
+});
+
+function RoleModifyRoute() {
+  const { me } = useAuth();
+  return me.admin || me.auditor ? <RoleModify me={me} /> : <Navigate to="/repositories" replace />;
+}
 
 const ACTIONS = ["read", "write", "delete", "approve", "audit", "admin"];
 
@@ -11,7 +21,7 @@ const ACTIONS = ["read", "write", "delete", "approve", "audit", "admin"];
 // read-only (no add/remove permission, no delete) for an auditor and for managed
 // roles, which are owned by the chart's declarative RBAC policy.
 export function RoleModify({ me }: { me: Me }) {
-  const { id } = useParams();
+  const { id } = useParams({ strict: false }) as { id?: string };
   const navigate = useNavigate();
   const roleId = Number(id);
   const [role, setRole] = useState<Role | null>(null);
@@ -70,7 +80,7 @@ export function RoleModify({ me }: { me: Me }) {
 
       <PermissionsPanel role={role} run={run} canWrite={editable} />
       <AssignedUsersPanel members={members} />
-      {editable && <DangerPanel role={role} onDeleted={() => navigate("/roles")} onError={setError} />}
+      {editable && <DangerPanel role={role} onDeleted={() => navigate({ to: "/roles" })} onError={setError} />}
     </>
   );
 }
@@ -95,12 +105,12 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
             <tbody>
               {members.map((u) => (
                 <tr key={u.id}>
-                  <td style={{ whiteSpace: "nowrap" }}><Link to={`/users/${u.id}`}>{u.username}</Link></td>
+                  <td style={{ whiteSpace: "nowrap" }}><Link to="/users/$id" params={{ id: String(u.id) }}>{u.username}</Link></td>
                   <td><span className="badge">{u.source}</span></td>
                   <td className="muted">{u.email || "-"}</td>
                   <td>
                     <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
-                      {u.roles.map((r) => <Link key={r.id} className="badge" to={`/roles/${r.id}`}>{r.name}</Link>)}
+                      {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
                       {u.roles.length === 0 && <span className="muted">none</span>}
                     </div>
                   </td>

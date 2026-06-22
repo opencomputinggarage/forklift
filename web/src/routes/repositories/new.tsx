@@ -1,7 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api, Repository, UpstreamHealth } from "../api";
-import { Select } from "../components/Select";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
+import { api, Repository, UpstreamHealth } from "../../api";
+import { useAuth } from "../../authContext";
+import { Select } from "../../components/Select";
+
+export const Route = createFileRoute("/repositories/new")({
+  component: RepositoryNewRoute,
+});
+
+function RepositoryNewRoute() {
+  const { me } = useAuth();
+  return me.admin ? <RepositoryNew /> : <Navigate to="/repositories" replace />;
+}
 
 const REPO_TYPES = [
   { value: "hosted", title: "Hosted", desc: "Store artifacts uploaded directly by your team" },
@@ -76,7 +86,7 @@ export function RepositoryNew() {
           ...(type === "group" ? { group: { members } } : {}),
         },
       });
-      navigate("/repositories");
+      navigate({ to: "/repositories" });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -156,7 +166,7 @@ export function RepositoryNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!valid}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate("/repositories")}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/repositories" })}>Cancel</button>
         </div>
       </form>
     </>
@@ -215,7 +225,7 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
             <td className="muted" style={{ width: 24 }}>{i + 1}</td>
             <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>
               {id !== undefined
-                ? <Link to={`/repositories/${id}`}>{name}</Link>
+                ? <Link to="/repositories/$id" params={{ id: String(id) }}>{name}</Link>
                 : name}
             </td>
             <td>{type ? <span className={`badge ${type}`}>{type}</span> : <span className="muted">—</span>}</td>

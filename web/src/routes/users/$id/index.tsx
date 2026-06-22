@@ -1,9 +1,19 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, Me, Role, Token, User } from "../api";
-import { ConfirmModal } from "../components/ConfirmModal";
-import { Select } from "../components/Select";
-import { Toggle } from "../components/Toggle";
+import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
+import { api, Me, Role, Token, User } from "../../../api";
+import { useAuth } from "../../../authContext";
+import { ConfirmModal } from "../../../components/ConfirmModal";
+import { Select } from "../../../components/Select";
+import { Toggle } from "../../../components/Toggle";
+
+export const Route = createFileRoute("/users/$id/")({
+  component: UserModifyRoute,
+});
+
+function UserModifyRoute() {
+  const { me } = useAuth();
+  return me.admin || me.auditor ? <UserModify me={me} /> : <Navigate to="/repositories" replace />;
+}
 
 interface Scope {
   repo_pattern: string;
@@ -22,7 +32,7 @@ function parseScopes(json: string): Scope[] {
 // Per-user modify page: role mapping, password reset, enable/disable, and the
 // danger zone (delete). The Users list is read-only; all edits happen here.
 export function UserModify({ me }: { me: Me }) {
-  const { id } = useParams();
+  const { id } = useParams({ strict: false }) as { id?: string };
   const navigate = useNavigate();
   const userId = Number(id);
   const [user, setUser] = useState<User | null>(null);
@@ -66,7 +76,7 @@ export function UserModify({ me }: { me: Me }) {
       {me.admin && user.source === "local" && <PasswordPanel user={user} onError={setError} />}
       {me.admin && user.source === "local" && <LockoutPanel user={user} run={run} />}
       {me.admin && <StatusPanel user={user} self={self} run={run} />}
-      {me.admin && <DangerPanel user={user} self={self} onDeleted={() => navigate("/users")} onError={setError} />}
+      {me.admin && <DangerPanel user={user} self={self} onDeleted={() => navigate({ to: "/users" })} onError={setError} />}
     </>
   );
 }
@@ -138,7 +148,7 @@ function TokensPanel({ user, tokens, canWrite, run }: {
         <h2 style={{ marginBottom: 0 }}>
           Access tokens <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· scoped credentials for package clients</span>
         </h2>
-        {canWrite && <Link className="btn" to={`/users/${user.id}/tokens/new`}>New token</Link>}
+        {canWrite && <Link className="btn" to="/users/$id/tokens/new" params={{ id: String(user.id) }}>New token</Link>}
       </div>
       <table style={{ marginTop: 12 }}>
         <thead><tr><th>Name</th><th>Description</th><th>Permissions</th><th>Created</th><th>Expires</th><th>Last used</th>{canWrite && <th></th>}</tr></thead>

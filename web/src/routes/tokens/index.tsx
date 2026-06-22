@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { api, Token } from "../api";
-import { ConfirmModal } from "../components/ConfirmModal";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { api, Token } from "../../api";
+import { ConfirmModal } from "../../components/ConfirmModal";
+
+export const Route = createFileRoute("/tokens/")({
+  component: Tokens,
+});
 
 interface Scope {
   repo_pattern: string;

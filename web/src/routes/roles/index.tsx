@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { api, Me, Role } from "../api";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { api, Me, Role } from "../../api";
+import { useAuth } from "../../authContext";
+
+export const Route = createFileRoute("/roles/")({
+  component: RolesRoute,
+});
+
+function RolesRoute() {
+  const { me } = useAuth();
+  return me.admin || me.auditor ? <Roles me={me} /> : <Navigate to="/repositories" replace />;
+}
 
 // Admin role directory (read-only). Roles and their permissions are defined on
 // /roles/new; this page only displays them.
@@ -53,7 +63,7 @@ export function Roles({ me }: { me: Me }) {
                   </div>
                 </td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <Link className="btn secondary" to={`/roles/${r.id}`}>Modify</Link>
+                  <Link className="btn secondary" to="/roles/$id" params={{ id: String(r.id) }}>Modify</Link>
                 </td>
               </tr>
             ))}

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api";
-import { Logo } from "../components/Logo";
+import { Logo } from "./Logo";
 
 export function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");

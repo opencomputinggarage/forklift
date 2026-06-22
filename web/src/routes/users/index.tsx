@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { api, Me, User } from "../api";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { api, Me, User } from "../../api";
+import { useAuth } from "../../authContext";
+
+export const Route = createFileRoute("/users/")({
+  component: UsersRoute,
+});
+
+function UsersRoute() {
+  const { me } = useAuth();
+  return me.admin || me.auditor ? <Users me={me} /> : <Navigate to="/repositories" replace />;
+}
 
 // Admin user directory (read-only). All edits (role mapping, password reset,
 // enable/disable, delete) happen on each user's Modify page; creation and its
@@ -42,7 +52,7 @@ export function Users({ me }: { me: Me }) {
                 <td className="muted">{u.email || "-"}</td>
                 <td>
                   <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
-                    {u.roles.map((r) => <Link key={r.id} className="badge" to={`/roles/${r.id}`}>{r.name}</Link>)}
+                    {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
                     {u.roles.length === 0 && <span className="muted">none</span>}
                   </div>
                 </td>
@@ -55,7 +65,7 @@ export function Users({ me }: { me: Me }) {
                   {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
                 </td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <Link className="btn secondary" to={`/users/${u.id}`}>Modify</Link>
+                  <Link className="btn secondary" to="/users/$id" params={{ id: String(u.id) }}>Modify</Link>
                 </td>
               </tr>
             ))}

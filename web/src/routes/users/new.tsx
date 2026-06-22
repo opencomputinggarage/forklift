@@ -1,7 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { api, Role } from "../api";
-import { Select } from "../components/Select";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { api, Role } from "../../api";
+import { useAuth } from "../../authContext";
+import { Select } from "../../components/Select";
+
+export const Route = createFileRoute("/users/new")({
+  component: UserNewRoute,
+});
+
+function UserNewRoute() {
+  const { me } = useAuth();
+  return me.admin ? <UserNew /> : <Navigate to="/repositories" replace />;
+}
 
 // Admin-only local user creation, reached from the Create button on /users.
 // OIDC users are never created here; they appear at first SSO login.
@@ -35,7 +45,7 @@ export function UserNew() {
         username, password, email: email || undefined,
         role_ids: roleId ? [Number(roleId)] : undefined,
       });
-      navigate("/users");
+      navigate({ to: "/users" });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -84,7 +94,7 @@ export function UserNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!canSubmit}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate("/users")}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/users" })}>Cancel</button>
         </div>
       </form>
     </>

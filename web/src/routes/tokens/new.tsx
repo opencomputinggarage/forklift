@@ -1,7 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../api";
-import { Combobox } from "../components/Combobox";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { api } from "../../api";
+import { Combobox } from "../../components/Combobox";
+
+export const Route = createFileRoute("/tokens/new")({
+  component: TokenNew,
+});
 
 const ACTIONS = ["read", "write", "delete"];
 const MAX_TTL_HOURS = 365 * 24;
@@ -22,9 +26,8 @@ function dateStr(d: Date): string {
 // fields are required; expiry is capped at one year by the API.
 export function TokenNew() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams({ strict: false });
   const forUserId = id ? Number(id) : null;
-  const backTo = forUserId ? `/users/${forUserId}` : "/tokens";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [scopes, setScopes] = useState<Scope[]>([]);
@@ -110,7 +113,7 @@ export function TokenNew() {
             </button>
           </div>
           <div style={{ marginTop: 18 }}>
-            <button className="btn" onClick={() => navigate(backTo)}>Done</button>
+            <button className="btn" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Done</button>
           </div>
         </div>
       </>
@@ -160,7 +163,7 @@ export function TokenNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!valid}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate(backTo)}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate(forUserId ? { to: "/users/$id", params: { id: String(forUserId) } } : { to: "/tokens" })}>Cancel</button>
         </div>
       </form>
     </>

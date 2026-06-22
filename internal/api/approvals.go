@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	repopkg "github.com/opencomputinggarage/forklift/internal/repo"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	repopkg "github.com/younsl/o/box/kubernetes/forklift/internal/repo"
 )
 
 // approvalDTO is the JSON shape for one package approval row.

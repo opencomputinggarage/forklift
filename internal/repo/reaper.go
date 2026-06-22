@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 // reapBatch bounds how many expired artifacts are deleted per repository per

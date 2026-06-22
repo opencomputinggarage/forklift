@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/opencomputinggarage/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
 )
 
 // RoleLabel is patched onto pods in replication mode so the main Service can

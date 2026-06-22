@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
 )
 
 // New requires in-cluster config; outside a cluster it must fail cleanly rather

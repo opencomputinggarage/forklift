@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // handleCargo serves the Cargo sparse-registry protocol. Paths under
@@ -60,6 +60,7 @@ func (m *Manager) handleCargo(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "store failed", http.StatusInternalServerError)
 			return
 		}
+		m.scanStored(res.repo, res.path)
 		w.WriteHeader(http.StatusCreated)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

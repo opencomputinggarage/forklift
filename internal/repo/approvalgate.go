@@ -6,10 +6,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 // pendingMarkTTL suppresses repeated pending-approval upserts for the same

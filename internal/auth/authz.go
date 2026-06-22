@@ -5,7 +5,7 @@ package auth
 import (
 	"strings"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // Action constants. "admin" implies all other actions. "approve" grants

@@ -17,7 +17,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
-	"github.com/opencomputinggarage/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
 )
 
 // Elector runs leader election against a Lease object.

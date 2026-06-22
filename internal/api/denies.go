@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // versionDenyDTO is the JSON shape for one version deny entry.

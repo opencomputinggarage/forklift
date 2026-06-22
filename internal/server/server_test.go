@@ -12,8 +12,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/opencomputinggarage/forklift/internal/config"
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 func newTestServer(t *testing.T) (*Server, *prometheus.Registry) {

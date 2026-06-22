@@ -15,9 +15,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
-	"github.com/opencomputinggarage/forklift/internal/storage"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/storage"
 )
 
 func newTestManager(t *testing.T) (*Manager, *Engine, *meta.Store) {

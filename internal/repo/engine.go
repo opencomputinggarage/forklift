@@ -14,9 +14,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
-	"github.com/opencomputinggarage/forklift/internal/storage"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/storage"
 )
 
 // kind classifies a request target, which selects the cache freshness policy.

@@ -1,4 +1,4 @@
-module github.com/opencomputinggarage/forklift
+module github.com/younsl/o/box/kubernetes/forklift
 
 go 1.26.4
 

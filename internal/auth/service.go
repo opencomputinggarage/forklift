@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // Options configures the auth Service.

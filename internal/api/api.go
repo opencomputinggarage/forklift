@@ -11,10 +11,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/version"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/version"
 )
 
 // Handler serves the management API.
@@ -121,6 +121,7 @@ func (h *Handler) Routes() chi.Router {
 		r.Get("/repositories/{id}/permissions", h.repositoryPermissions)
 		r.Get("/repositories/{id}/tokens", h.repositoryTokens)
 		r.Get("/users", h.listUsers)
+		r.Get("/users/{id}/tokens", h.listUserTokens)
 		r.Get("/roles", h.listRoles)
 		r.Get("/group-mappings", h.listGroupMappings)
 	})
@@ -143,6 +144,8 @@ func (h *Handler) Routes() chi.Router {
 		r.Delete("/users/{id}", h.deleteUser)
 		r.Post("/users/{id}/roles", h.assignRole)
 		r.Delete("/users/{id}/roles/{roleID}", h.removeRole)
+		r.Post("/users/{id}/tokens", h.createUserToken)
+		r.Delete("/users/{id}/tokens/{tokenID}", h.deleteUserToken)
 		r.Post("/roles", h.createRole)
 		r.Delete("/roles/{id}", h.deleteRole)
 		r.Post("/roles/{id}/permissions", h.addPermission)

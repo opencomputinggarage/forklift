@@ -14,7 +14,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 const bufferSize = 1024

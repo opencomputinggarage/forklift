@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 // newAuthzManager wires a Manager with a real auth.Service so the RBAC path in

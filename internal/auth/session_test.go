@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // mkLocalUser creates an enabled local user with the given password.

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // newTestServerWithStore is like newTestServer but exposes the store so tests

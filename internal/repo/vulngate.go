@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
-	"github.com/opencomputinggarage/forklift/internal/vuln"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/vuln"
 )
 
 // vulnGate enforces the per-repository vulnerability policy for proxy reads. It

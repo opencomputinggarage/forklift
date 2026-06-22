@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 // handleNpm serves the npm registry protocol. Paths under /npm/{repo}/:
@@ -280,6 +280,7 @@ func (m *Manager) npmPublish(w http.ResponseWriter, r *http.Request, res resolve
 				http.Error(w, "store tarball failed", http.StatusInternalServerError)
 				return
 			}
+			m.scanStored(res.repo, tarballPath)
 		}
 	}
 	delete(doc, "_attachments")

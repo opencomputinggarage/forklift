@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // Subject prefixes for grant (g) lines. A bare subject is treated as a user.

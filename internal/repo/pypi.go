@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 // pypiJSONType is the PEP 691 simple-index media type.
@@ -280,6 +280,7 @@ func (m *Manager) pypiUpload(w http.ResponseWriter, r *http.Request, res resolve
 		http.Error(w, "store failed", http.StatusInternalServerError)
 		return
 	}
+	m.scanStored(res.repo, p)
 	w.WriteHeader(http.StatusCreated)
 }
 

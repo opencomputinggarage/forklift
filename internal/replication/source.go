@@ -22,8 +22,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/storage"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/storage"
 )
 
 // defaultPageSize caps one blob digest listing response.

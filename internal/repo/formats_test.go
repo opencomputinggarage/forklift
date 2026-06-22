@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 func mkFormatRepo(t *testing.T, store *meta.Store, name, format, typ, upstream string, cfg repoconfig.Config) {

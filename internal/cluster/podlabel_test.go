@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
-	"github.com/opencomputinggarage/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
 )
 
 func testElector(objs ...any) *Elector {

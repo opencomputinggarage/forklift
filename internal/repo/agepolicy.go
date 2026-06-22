@@ -3,7 +3,7 @@ package repo
 import (
 	"time"
 
-	"github.com/opencomputinggarage/forklift/internal/repoconfig"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
 // ageDecision is the outcome of an age-policy evaluation.

@@ -17,21 +17,21 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/opencomputinggarage/forklift/internal/api"
-	"github.com/opencomputinggarage/forklift/internal/audit"
-	"github.com/opencomputinggarage/forklift/internal/auth"
-	"github.com/opencomputinggarage/forklift/internal/cluster"
-	"github.com/opencomputinggarage/forklift/internal/config"
-	"github.com/opencomputinggarage/forklift/internal/meta"
-	"github.com/opencomputinggarage/forklift/internal/metrics"
-	"github.com/opencomputinggarage/forklift/internal/openapi"
-	"github.com/opencomputinggarage/forklift/internal/replication"
-	"github.com/opencomputinggarage/forklift/internal/repo"
-	"github.com/opencomputinggarage/forklift/internal/server"
-	"github.com/opencomputinggarage/forklift/internal/storage"
-	"github.com/opencomputinggarage/forklift/internal/version"
-	"github.com/opencomputinggarage/forklift/internal/vuln"
-	"github.com/opencomputinggarage/forklift/internal/webui"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/api"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/cluster"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/metrics"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/openapi"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/replication"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repo"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/server"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/storage"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/version"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/vuln"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/webui"
 )
 
 func main() {
@@ -262,8 +262,10 @@ func run() error {
 		}
 		go engine.RunSweeper(leadCtx, 5*time.Minute)
 		go manager.RunIdleReaper(leadCtx, time.Hour)
-		// Vulnerability scan worker + periodic re-scanner (no-ops without a scanner).
+		// Vulnerability scan worker + backfill (scans already-stored artifacts) +
+		// periodic re-scanner (no-ops without a scanner).
 		go manager.RunVulnWorker(leadCtx)
+		go manager.RunVulnBackfill(leadCtx, cfg.Vuln.RescanInterval)
 		go manager.RunVulnRescanner(leadCtx, cfg.Vuln.RescanInterval, cfg.Vuln.TTL)
 		if recorder != nil && cfg.Audit.Retention > 0 {
 			go recorder.RunRetention(leadCtx, time.Hour, cfg.Audit.Retention)

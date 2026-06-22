@@ -15,8 +15,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/opencomputinggarage/forklift/internal/config"
-	"github.com/opencomputinggarage/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
 // Server holds HTTP server state.

@@ -1,10 +1,10 @@
 # Build the React UI first; its output is embedded into the Go binary.
 FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /web
-COPY web/package.json ./
-RUN npm install
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && pnpm install --frozen-lockfile
 COPY web/ ./
-RUN npm run build
+RUN pnpm run build
 
 # Statically linked Go binary on scratch. Cross-compilation happens inside the
 # builder stage (CGO disabled), so buildx needs no QEMU for the compile step.

@@ -57,7 +57,7 @@ tidy:
 
 ## web-build: build the React UI into internal/webui/dist (embedded into the binary)
 web-build:
-	cd web && npm install && npm run build
+	cd web && mise exec -- pnpm install --frozen-lockfile && mise exec -- pnpm run build
 
 ## creds: list local users and password hashes from the local DB (plaintext is bcrypt-hashed and unrecoverable; the generated admin password is only printed once in bootstrap logs)
 creds:

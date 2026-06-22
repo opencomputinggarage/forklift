@@ -13,6 +13,7 @@ cover.out
 # Node / Vite
 web/node_modules/
 web/.vite/
+/.pnpm-store/
 
 # Embedded UI build output: keep the committed placeholder index.html so the Go
 # binary always builds, but ignore compiled assets produced by `make web-build`.

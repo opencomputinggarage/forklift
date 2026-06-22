@@ -1,6 +1,23 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api";
 import { Logo } from "./Logo";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
@@ -29,27 +46,59 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="login-wrap">
-      <form className="panel login-card" onSubmit={submit}>
-        <div className="brand" style={{ padding: "0 0 16px" }}><Logo /><span className="brand-text">fork<span>lift</span></span></div>
-        <label>Username<span className="req">*</span></label>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} autoFocus required />
-        <label>Password<span className="req">*</span></label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        {error && <div className="error">{error}</div>}
-        <div style={{ marginTop: 16 }}>
-          <button className="btn" disabled={busy} style={{ width: "100%" }}>
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-        </div>
-        {oidcEnabled && (
-          <div style={{ marginTop: 12 }}>
-            <a className="btn secondary" href="/auth/login" style={{ display: "block", width: "100%", textAlign: "center", boxSizing: "border-box", padding: "10px 14px" }}>
+    <div className="login-wrap px-4">
+      <Card className="login-card w-full max-w-sm border-border bg-card text-card-foreground shadow-xl">
+        <CardHeader className="gap-4">
+          <div className="brand p-0"><Logo /><span className="brand-text">fork<span>lift</span></span></div>
+          <div>
+            <CardTitle>Sign in</CardTitle>
+            <CardDescription>Access your repository proxy and package approvals.</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit}>
+            <FieldGroup>
+              <Field data-invalid={Boolean(error)}>
+                <FieldLabel htmlFor="username">Username<span className="req">*</span></FieldLabel>
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  autoFocus
+                  required
+                  aria-invalid={Boolean(error)}
+                />
+              </Field>
+              <Field data-invalid={Boolean(error)}>
+                <FieldLabel htmlFor="password">Password<span className="req">*</span></FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  aria-invalid={Boolean(error)}
+                />
+                {error && <FieldError>{error}</FieldError>}
+              </Field>
+              <Button className="w-full" disabled={busy} type="submit">
+                {busy ? "Signing in…" : "Sign in"}
+              </Button>
+            </FieldGroup>
+          </form>
+          {oidcEnabled && <FieldSeparator className="my-4">or</FieldSeparator>}
+          {oidcEnabled && (
+            <a
+              className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+              href="/auth/login"
+            >
               Sign in with Keycloak
             </a>
-          </div>
-        )}
-      </form>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

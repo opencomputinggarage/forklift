@@ -28,7 +28,10 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   const [oidcEnabled, setOidcEnabled] = useState(false);
 
   useEffect(() => {
-    api.version().then((v) => setOidcEnabled(v.oidc_enabled)).catch(() => setOidcEnabled(false));
+    api
+      .version()
+      .then((v) => setOidcEnabled(v.oidc_enabled))
+      .catch(() => setOidcEnabled(false));
   }, []);
 
   const submit = async (e: FormEvent) => {
@@ -46,25 +49,31 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="grid min-h-screen w-full place-items-center bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--accent)_12%,transparent),transparent_38%)] px-4 py-10">
-      <Card className="w-full max-w-[380px] border-border/90 bg-card/95 text-card-foreground shadow-2xl shadow-black/35">
-        <CardHeader className="gap-5 pb-2">
+    <div className="grid min-h-svh w-full place-items-start bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--accent)_12%,transparent),transparent_38%)] px-3 py-6 sm:place-items-center sm:px-4 sm:py-10">
+      <Card className="w-full max-w-[24rem] border-border/90 bg-card/95 text-card-foreground shadow-2xl shadow-black/35">
+        <CardHeader className="gap-4 px-4 pb-2 sm:gap-5 sm:px-6">
           <div className="flex items-center justify-between">
-            <div className="brand p-0"><Logo size={38} /><span className="brand-text">fork<span>lift</span></span></div>
-            <span className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-              secure
-            </span>
+            <div className="flex min-w-0 items-center gap-3 font-bold text-[21px] tracking-[0.5px] text-foreground sm:text-[23px]">
+              <Logo size={36} />
+              <span className="brand-text truncate">
+                fork<span>lift</span>
+              </span>
+            </div>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-xl">Sign in</CardTitle>
-            <CardDescription className="leading-relaxed">Access repository proxy controls, approvals, and personal tokens.</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Sign in</CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Access repository proxy controls, approvals, and personal tokens.
+            </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="px-4 pt-2 sm:px-6">
           <form onSubmit={submit}>
             <FieldGroup>
               <Field data-invalid={Boolean(error)}>
-                <FieldLabel htmlFor="username">Username<span className="req">*</span></FieldLabel>
+                <FieldLabel htmlFor="username">
+                  Username<span className="req">*</span>
+                </FieldLabel>
                 <Input
                   id="username"
                   className="h-10"
@@ -77,7 +86,9 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 />
               </Field>
               <Field data-invalid={Boolean(error)}>
-                <FieldLabel htmlFor="password">Password<span className="req">*</span></FieldLabel>
+                <FieldLabel htmlFor="password">
+                  Password<span className="req">*</span>
+                </FieldLabel>
                 <Input
                   id="password"
                   className="h-10"
@@ -98,7 +109,10 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           {oidcEnabled && <FieldSeparator className="my-5">or</FieldSeparator>}
           {oidcEnabled && (
             <a
-              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 w-full")}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "lg" }),
+                "h-10 w-full",
+              )}
               href="/auth/login"
             >
               Sign in with Keycloak

@@ -164,11 +164,11 @@ export function Approvals() {
 
   return (
     <>
-      <div className="page-head">
+      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
         <h1>Approvals</h1>
         <Button onClick={() => setPreApproving(true)}>Add decision</Button>
       </div>
-      <p className="page-desc">
+      <p className="-mt-2 mb-[22px] max-w-[820px] text-[13px] leading-[1.55] text-muted-foreground">
         Quarantine queue for proxied packages. Approve or reject pending requests before a
         proxy serves them, and block specific poisoned versions outright.
       </p>
@@ -237,7 +237,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
 
   return (
     <>
-      <div className="inline" style={{ marginBottom: 14 }}>
+      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginBottom: 14 }}>
         <Select style={{ width: 160 }} value={status}
           onChange={(v) => { setStatus(v); setOffset(0); }}
           options={[
@@ -256,12 +256,12 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
             onClick={() => setApprovingAll(true)}>Approve all pending</Button>
         )}
       </div>
-      {error && <div className="error">{error}</div>}
-      <div className="panel">
+      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
         {rows.length === 0 ? (
           <p className="muted">No {status || "approval"} requests.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="overflow-x-auto rounded-lg">
           <table>
             <thead>
               <tr>
@@ -300,7 +300,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
           </div>
         )}
         {count > PAGE && (
-          <div className="inline" style={{ marginTop: 12 }}>
+          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12 }}>
             <Button variant="outline" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
             <Button variant="outline" disabled={offset + PAGE >= count}
@@ -361,8 +361,8 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
 
   const single = repoNames.length === 1;
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
+      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
         <h2>Approve all pending</h2>
         <form onSubmit={submit}>
           <label>Proxy repository</label>
@@ -382,8 +382,8 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
           <label>Note (optional)</label>
           <input value={note} autoFocus placeholder="reason for the record"
             onChange={(e) => setNote(e.target.value)} />
-          {error && <div className="error">{error}</div>}
-          <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+          {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={busy || !repo || !pending}>
               {busy ? "Approving…" : pending ? `Approve ${pending}` : "Approve"}
@@ -422,22 +422,22 @@ export function ReviewModal({ row, onDone, onCancel }: {
   };
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
+      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
         <h2>Review "{row.package}"</h2>
         <p className="muted">
           Approve to serve all versions from {row.repo_name} (age policy still
           applies); reject to block the package, including already-cached content.
         </p>
-        <div className="inline" style={{ marginBottom: 12 }}>
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginBottom: 12 }}>
           <span className="muted">Vulnerabilities:</span>
           <ApprovalVulnBadge severity={row.vuln_severity} ids={row.vuln_ids} scope={row.vuln_scope} />
         </div>
         <label>Note (optional)</label>
         <input value={note} autoFocus placeholder="reason for the record"
           onChange={(e) => setNote(e.target.value)} />
-        {error && <div className="error">{error}</div>}
-        <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+        {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
           <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
           {row.status !== "rejected" && (
             <Button variant="destructive" type="button" disabled={busy !== null}
@@ -494,7 +494,7 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
 
   return (
     <>
-      <div className="page-head" style={{ marginTop: 32 }}>
+      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0" style={{ marginTop: 32 }}>
         <h2 style={{ marginBottom: 0 }}>Version denies</h2>
         <Button variant="destructive" onClick={() => setAdding(true)}>Deny version</Button>
       </div>
@@ -502,12 +502,12 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
         Blocks one exact version even when the package is approved. Applies
         immediately, including already-cached copies.
       </p>
-      {error && <div className="error">{error}</div>}
-      <div className="panel">
+      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
         {rows.length === 0 ? (
           <p className="muted">No denied versions.</p>
         ) : (
-          <div className="table-wrap">
+          <div className="overflow-x-auto rounded-lg">
           <table>
             <thead>
               <tr>
@@ -535,7 +535,7 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
           </div>
         )}
         {count > PAGE && (
-          <div className="inline" style={{ marginTop: 12 }}>
+          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12 }}>
             <Button variant="outline" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
             <Button variant="outline" disabled={offset + PAGE >= count}
@@ -591,8 +591,8 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
   };
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
+      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
         <h2>Deny version</h2>
         <p className="muted">
           Only this exact version is blocked; other versions keep flowing.
@@ -611,8 +611,8 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
           <label>Reason (optional)</label>
           <input value={reason} placeholder="CVE, IOC, incident reference…"
             onChange={(e) => setReason(e.target.value)} />
-          {error && <div className="error">{error}</div>}
-          <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+          {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button variant="destructive" type="submit" disabled={!repo || !pkg.trim() || !version.trim()}>
               Deny
@@ -648,8 +648,8 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
   };
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
+      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
         <h2>Add decision</h2>
         <form onSubmit={submit}>
           <label>Proxy repository</label>
@@ -666,8 +666,8 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
             ]} />
           <label>Note (optional)</label>
           <input value={note} onChange={(e) => setNote(e.target.value)} />
-          {error && <div className="error">{error}</div>}
-          <div className="inline" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+          {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={!repo || !pkg.trim()}>Save</Button>
           </div>

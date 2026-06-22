@@ -29,20 +29,20 @@ export function UpstreamStatus({
   useEffect(check, [repoId]);
 
   let badge;
-  if (loading) badge = <span className="status"><span className="dot" /> checking…</span>;
-  else if (!h || !h.applicable) badge = <span className="status">—</span>;
+  if (loading) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-muted-foreground bg-transparent" /> checking…</span>;
+  else if (!h || !h.applicable) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">—</span>;
   else if (h.reachable)
     badge = (
-      <span className="status">
-        <span className="dot ok" /> reachable{!compact && <> · {h.status} · {h.latency_ms}ms</>}
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="inline-block size-[9px] rounded-full border border-emerald-400 bg-emerald-400 shadow-[0_0_8px_color-mix(in_oklch,var(--success)_60%,transparent)]" /> reachable{!compact && <> · {h.status} · {h.latency_ms}ms</>}
       </span>
     );
   else
-    badge = <span className="status" title={h.error}><span className="dot bad" /> unreachable</span>;
+    badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-red-500 bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.7)]" /> unreachable</span>;
 
   if (!withButton) return badge;
   return (
-    <span className="inline" style={{ gap: 10 }}>
+    <span className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ gap: 10 }}>
       {badge}
       <Button variant="outline" type="button" onClick={check} disabled={loading}>Recheck</Button>
     </span>

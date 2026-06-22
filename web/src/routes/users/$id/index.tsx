@@ -53,7 +53,7 @@ export function UserModify({ me }: { me: Me }) {
       .catch((e) => setError(e.message));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId]);
 
-  if (error && !user) return <div className="error">{error}</div>;
+  if (error && !user) return <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>;
   if (!user) return <div>Loading…</div>;
 
   const self = user.username === me.username;
@@ -65,13 +65,13 @@ export function UserModify({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="page-head">
+      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
         <h1>{user.username} <span className="badge">{user.source}</span>{self && <span className="badge" style={{ marginLeft: 8 }}>you</span>}</h1>
         <Button render={<Link to="/users" />} nativeButton={false} variant="outline">
           Back to users
         </Button>
       </div>
-      {error && <div className="error">{error}</div>}
+      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
 
       <AccountPanel user={user} />
       <RolesPanel user={user} roles={roles} run={run} canWrite={!!me.admin} />
@@ -89,7 +89,7 @@ export function UserModify({ me }: { me: Me }) {
 // editable here — only displayed.
 function AccountPanel({ user }: { user: User }) {
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Account</h2>
       <label>Username</label>
       <input type="text" value={user.username} readOnly />
@@ -108,9 +108,9 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
   const assignable = roles.filter((r) => !user.roles.some((ur) => ur.id === r.id));
 
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Roles</h2>
-      <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
+      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
         {user.roles.map((r) => (
           <span key={r.id} className="badge">
             {r.name}
@@ -123,7 +123,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
         {user.roles.length === 0 && <span className="muted">No roles assigned.</span>}
       </div>
       {canWrite && assignable.length > 0 && (
-        <div className="inline" style={{ marginTop: 12, gap: 6 }}>
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12, gap: 6 }}>
           <Select value={selected} onChange={setSelected} placeholder="add role…"
             options={assignable.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
           <Button variant="outline" type="button" disabled={!selected}
@@ -146,8 +146,8 @@ function TokensPanel({ user, tokens, canWrite, run }: {
   const [revokeId, setRevokeId] = useState<number | null>(null);
 
   return (
-    <div className="panel">
-      <div className="inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <h2 style={{ marginBottom: 0 }}>
           Access tokens <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· scoped credentials for package clients</span>
         </h2>
@@ -215,16 +215,16 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
   };
 
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Password</h2>
       <label>New password</label>
-      <div className="password-field">
+      <div className="relative [&_input]:pr-[58px]">
         <input type={show ? "text" : "password"} value={password}
           onChange={(e) => { setPassword(e.target.value); setSaved(false); }} />
-        <button type="button" className="password-toggle" onClick={() => setShow((s) => !s)}
+        <button type="button" className="absolute top-px right-px bottom-px flex cursor-pointer items-center rounded-r-[var(--radius)] border-0 bg-transparent px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setShow((s) => !s)}
           aria-label={show ? "Hide password" : "Show password"}>{show ? "Hide" : "Show"}</button>
       </div>
-      <div className="inline" style={{ marginTop: 12 }}>
+      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12 }}>
         <Button type="button" disabled={!password} onClick={reset}>Reset password</Button>
         {saved && <span className="muted">Password updated.</span>}
       </div>
@@ -237,7 +237,7 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
 // it can never be locked out of the only guaranteed admin account.
 function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) => void }) {
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Account lockout</h2>
       <p className="muted">
         When enabled, the account is locked after 5 consecutive failed password attempts and must be
@@ -250,7 +250,7 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
         onChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
       />
       {user.locked && (
-        <div className="inline" style={{ marginTop: 14, gap: 10, alignItems: "center" }}>
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 14, gap: 10, alignItems: "center" }}>
           <span className="badge" style={{ background: "var(--danger)", color: "#fff" }}>Locked</span>
           <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>
@@ -266,7 +266,7 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
 // managed-role notice. Used to explain why an edit control is locked.
 function LockNote({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="panel" style={{ borderColor: "var(--accent)", marginTop: 14, marginBottom: 0 }}>
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]" style={{ borderColor: "var(--accent)", marginTop: 14, marginBottom: 0 }}>
       <h2 style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 15 }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
@@ -284,7 +284,7 @@ function LockNote({ title, children }: { title: string; children: ReactNode }) {
 function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: Promise<unknown>) => void }) {
   const lockedFromEditing = self || user.protected;
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Status</h2>
       <p className="muted">
         An <strong>active</strong> account can sign in to Forklift and use its credentials to pull and publish
@@ -336,7 +336,7 @@ function DangerPanel({ user, self, onDeleted, onError }: {
     }
   };
   return (
-    <div className="panel danger" style={{ marginTop: 18 }}>
+    <div className="mb-[18px] rounded-[10px] border border-destructive bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] [&_h2]:text-destructive" style={{ marginTop: 18 }}>
       <h2>Danger zone</h2>
       <p className="muted">
         Deleting a user revokes all of their tokens and role assignments. This cannot be undone.

@@ -40,7 +40,7 @@ export function RoleModify({ me }: { me: Me }) {
       .catch((e) => setError(e.message));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [roleId]);
 
-  if (error && !role) return <div className="error">{error}</div>;
+  if (error && !role) return <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>;
   if (!role) return <div>Loading…</div>;
 
   const run = (p: Promise<unknown>) => {
@@ -56,15 +56,15 @@ export function RoleModify({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="page-head">
+      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
         <h1>{role.name}</h1>
         <Button render={<Link to="/roles" />} nativeButton={false} variant="outline">
           Back to roles
         </Button>
       </div>
-      {role.description && <p className="page-desc">{role.description}</p>}
+      {role.description && <p className="-mt-2 mb-[22px] max-w-[820px] text-[13px] leading-[1.55] text-muted-foreground">{role.description}</p>}
       {role.managed && (
-        <div className="panel" style={{ borderColor: "var(--accent)" }}>
+        <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]" style={{ borderColor: "var(--accent)" }}>
           <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
@@ -79,7 +79,7 @@ export function RoleModify({ me }: { me: Me }) {
           </p>
         </div>
       )}
-      {error && <div className="error">{error}</div>}
+      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
 
       <PermissionsPanel role={role} run={run} canWrite={editable} />
       <AssignedUsersPanel members={members} />
@@ -92,7 +92,7 @@ export function RoleModify({ me }: { me: Me }) {
 // itself is managed on each user's detail page, so this is read-only with links.
 function AssignedUsersPanel({ members }: { members: User[] }) {
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>
         Assigned users <span className="badge" style={{ marginLeft: 6 }}>{members.length}</span>
       </h2>
@@ -112,15 +112,15 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                   <td><span className="badge">{u.source}</span></td>
                   <td className="muted">{u.email || "-"}</td>
                   <td>
-                    <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
+                    <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
                       {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
                       {u.roles.length === 0 && <span className="muted">none</span>}
                     </div>
                   </td>
                   <td>
                     {u.disabled
-                      ? <span className="status"><span className="dot bad" /> disabled</span>
-                      : <span className="status"><span className="dot ok" /> active</span>}
+                      ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-red-500 bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.7)]" /> disabled</span>
+                      : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-emerald-400 bg-emerald-400 shadow-[0_0_8px_color-mix(in_oklch,var(--success)_60%,transparent)]" /> active</span>}
                   </td>
                   <td className="muted" style={{ whiteSpace: "nowrap" }} title={u.last_login_at ?? undefined}>
                     {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
@@ -159,9 +159,9 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
   };
 
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Permissions</h2>
-      <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
+      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
         {role.permissions.map((p) => (
           <span key={p.id} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
             {p.repo_pattern}: {p.actions.join(",")}
@@ -174,11 +174,11 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
         {role.permissions.length === 0 && <span className="muted">No permissions granted.</span>}
       </div>
       {canWrite && (
-        <div className="inline" style={{ marginTop: 12, flexWrap: "wrap", gap: 8 }}>
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12, flexWrap: "wrap", gap: 8 }}>
           <Combobox style={{ width: 200 }} value={pattern} onChange={setPattern}
             options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
           {ACTIONS.map((a) => (
-            <label key={a} className="checkbox" style={{ margin: 0, fontSize: 12 }}>
+            <label key={a} className="flex items-center gap-2 [&_input]:w-auto" style={{ margin: 0, fontSize: 12 }}>
               <input type="checkbox" checked={actions.includes(a)} onChange={() => toggle(a)} />
               <span>{a}</span>
             </label>
@@ -204,7 +204,7 @@ function DangerPanel({ role, onDeleted, onError }: {
     }
   };
   return (
-    <div className="panel danger" style={{ marginTop: 18 }}>
+    <div className="mb-[18px] rounded-[10px] border border-destructive bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] [&_h2]:text-destructive" style={{ marginTop: 18 }}>
       <h2>Danger zone</h2>
       <p className="muted">Users and group mappings holding this role lose its permissions immediately. This cannot be undone.</p>
       <Button variant="destructive" type="button" onClick={() => setConfirm(true)}>Delete role</Button>

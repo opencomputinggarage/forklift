@@ -33,25 +33,25 @@ export function ApprovalDetail() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (error && !row) return <div className="error">{error}</div>;
+  if (error && !row) return <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>;
   if (!row) return <div>Loading…</div>;
 
   return (
     <>
-      <div className="page-head">
+      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
         <h1 style={{ fontFamily: "var(--font-mono)" }}>
           {row.package} <span className={`badge approval-${row.status}`}>{row.status}</span>
         </h1>
-        <div className="inline">
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch">
           <Button onClick={() => setReviewing(true)}>Review</Button>
           <Button render={<Link to="/approvals" />} nativeButton={false} variant="outline">
             Back to approvals
           </Button>
         </div>
       </div>
-      {error && <div className="error">{error}</div>}
+      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
 
-      <div className="panel">
+      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
         <h2>Request</h2>
         <dl className="kv">
           <dt>Repository</dt><dd>{row.repo_name}</dd>
@@ -95,7 +95,7 @@ function OvsAnalysis({ row }: { row: Approval }) {
   const pkgScope = row.vuln_scope === "package";
   const clean = row.vuln_severity === "none";
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>Vulnerability analysis</h2>
       {row.vuln_severity === undefined ? (
         <p className="muted" style={{ marginBottom: 0 }}>
@@ -151,7 +151,7 @@ function SortIcon({ state }: { state: "asc" | "desc" | null }) {
   const up = state === "asc" ? "var(--accent)" : state === "desc" ? "var(--border)" : "var(--muted)";
   const down = state === "desc" ? "var(--accent)" : state === "asc" ? "var(--border)" : "var(--muted)";
   return (
-    <svg className="sort-icon" width="11" height="14" viewBox="0 0 11 14" aria-hidden="true" focusable="false">
+    <svg className="block shrink-0" width="11" height="14" viewBox="0 0 11 14" aria-hidden="true" focusable="false">
       <path d="M2 5 L5.5 1.5 L9 5" fill="none" stroke={up} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M2 9 L5.5 12.5 L9 9" fill="none" stroke={down} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -199,7 +199,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
   );
 
   return (
-    <div className="table-wrap" style={{ marginTop: 16 }}>
+    <div className="overflow-x-auto rounded-lg" style={{ marginTop: 16 }}>
       <table>
         <thead>
           <tr>
@@ -209,7 +209,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
             <th>
               <SortBtn k="cvss">CVSS</SortBtn>
               <Tooltip text="This is the CVSS version 3.x base score, which ranges from 0 to 10 and is calculated from the advisory's CVSS vector. A higher number means a more severe vulnerability. A score of 9.0 or above is critical, 7.0 or above is high, 4.0 or above is medium, and anything above 0 is low.">
-                <span className="help">ⓘ</span>
+                <span className="ml-[5px] text-[0.85em] text-muted-foreground">ⓘ</span>
               </Tooltip>
             </th>
           </tr>
@@ -236,14 +236,14 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
 // in are not enumerable and so are not shown.
 function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
   return (
-    <div className="panel">
+    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
       <h2>
         Reviewers <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· users who can approve this repository</span>
       </h2>
       {!reviewers || reviewers.length === 0 ? (
         <p className="muted" style={{ marginBottom: 0 }}>No users currently have approve permission for this repository.</p>
       ) : (
-        <div className="inline" style={{ flexWrap: "wrap", gap: 8 }}>
+        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 8 }}>
           {reviewers.map((u) => <span key={u} className="badge">{u}</span>)}
         </div>
       )}

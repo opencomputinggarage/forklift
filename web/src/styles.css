@@ -239,49 +239,9 @@ a:hover { color: var(--accent); text-decoration: underline; }
     animation: none;
   }
 }
-/* Inline help marker + custom tooltip (see components/Tooltip.tsx). The bubble
-   is rendered in a body portal with position: fixed so it is never clipped. */
-.help { margin-left: 5px; color: var(--muted); font-size: 0.85em; }
-.sort-icon { display: block; flex-shrink: 0; }
-/* Settings form wrapper: a borderless fieldset so disabled={true} (auditor)
-   makes the whole form read-only for both mouse and keyboard. */
-.settings-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
-.settings-fields[disabled] { opacity: 0.65; }
 h1 { font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: 0; margin: 0 0 18px; }
-/* Section titles always sit flush with their container's top padding (panels,
-   modals, section groups). margin-top: 0 is the standard; bottom margin keeps
-   the gap to the body below. */
-/* List-page header: title left, action button right, vertically centered.
-   The h1 margin moves to the row so the button doesn't sag below the title. */
-.page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 18px; }
-.page-head h1 { margin: 0; }
-/* One-line page summary shown under the page heading. */
-.page-desc { color: var(--muted); font-size: 13px; line-height: 1.55; max-width: 820px; margin: -8px 0 22px; }
 h2 { font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: 0; margin: 0 0 12px; }
 
-/* Subtitle that groups related settings panels (e.g. Repository, Security). */
-.section-title {
-  font-size: 12px; text-transform: uppercase; letter-spacing: 0;
-  color: var(--muted); font-weight: 600;
-  margin: 24px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--border);
-}
-.section-title .muted { text-transform: none; letter-spacing: 0; font-weight: 400; }
-.panel {
-  background: linear-gradient(180deg, color-mix(in oklch, var(--panel) 96%, #fff 4%), var(--panel));
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  margin-bottom: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
-}
-.panel.danger { border-color: var(--danger); }
-.panel.danger h2 { color: var(--danger); }
-
-/* Horizontal scroll container for tables that can exceed the panel width
-   (long unbreakable monospace package/version strings). Keeps the table inside
-   the panel instead of bleeding out; not on .panel itself so the tooltip and
-   select dropdowns rendered inside panels elsewhere are never clipped. */
-.table-wrap { overflow-x: auto; border-radius: 8px; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--border); }
 th {
@@ -294,16 +254,6 @@ tbody tr:last-child td { border-bottom: 0; }
 
 label:not([data-slot]) { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 5px; }
 
-/* Password input with a right-aligned show/hide toggle. */
-.password-field { position: relative; }
-.password-field input { padding-right: 58px; }
-.password-toggle {
-  position: absolute; top: 1px; right: 1px; bottom: 1px;
-  display: flex; align-items: center;
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 12px; padding: 0 10px; border-radius: 0 var(--radius) var(--radius) 0;
-}
-.password-toggle:hover { color: var(--text); }
 input, textarea {
   width: 100%; padding: 8px 10px; background: var(--input-bg); color: var(--text);
   border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px;
@@ -322,22 +272,6 @@ input[readonly], textarea[readonly] {
 input[readonly]:focus, textarea[readonly]:focus { border-color: var(--border); }
 textarea { font-family: inherit; resize: vertical; }
 
-.row { display: flex; gap: 14px; }
-.row > * { flex: 1; }
-.inline { display: flex; gap: 10px; align-items: center; }
-
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-.tab {
-  padding: 9px 14px; color: var(--muted); font-size: 14px;
-  border: 1px solid transparent; border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0; margin-bottom: -1px;
-}
-.tab:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
-.tab.active {
-  color: var(--accent); background: var(--panel);
-  border-color: var(--border); border-bottom: 1px solid var(--panel);
-}
-
 .badge {
   display: inline-flex; align-items: center; width: fit-content;
   padding: 2px 8px; border-radius: 999px; font-size: 12px; line-height: 1.35;
@@ -349,42 +283,7 @@ textarea { font-family: inherit; resize: vertical; }
 .badge.approval-approved { color: var(--success); border-color: var(--success); }
 .badge.approval-rejected { color: var(--danger); border-color: var(--danger); }
 
-.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: transparent; border: 1px solid var(--muted); }
-.dot.ok { background: var(--success); border-color: var(--success); box-shadow: 0 0 8px color-mix(in oklch, var(--success) 60%, transparent); }
-.dot.bad { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.7); }
-
-.error {
-  color: var(--text); margin: 10px 0; padding: 9px 11px;
-  border: 1px solid color-mix(in oklch, var(--danger) 48%, var(--border));
-  border-radius: var(--radius);
-  background: color-mix(in oklch, var(--panel-2) 88%, var(--danger) 12%);
-}
-/* Inline error emphasis (e.g. an audit status >= 400): just colour, no box. */
-.status-err { color: var(--danger); }
-.code-field {
-  flex: 1; font-family: var(--font-mono); font-size: 13px;
-  background: var(--input-bg); color: var(--muted);
-  border: 1px dashed var(--border); border-radius: var(--radius);
-  padding: 8px 10px; overflow-x: auto; white-space: nowrap;
-  user-select: all; cursor: text;
-}
-
 .muted { color: var(--muted); }
-
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72);
-  display: flex; align-items: center; justify-content: center; z-index: 100;
-  backdrop-filter: blur(3px);
-}
-.modal {
-  background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px;
-  padding: 22px; width: 380px; max-width: 90vw;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
-}
-
-.checkbox { display: flex; align-items: center; gap: 8px; }
-.checkbox input { width: auto; }
 
 /* Approval detail: key/value metadata grid and the OSV advisory id list. */
 dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; }
@@ -428,10 +327,6 @@ ul.advisory-list li { font-family: var(--font-mono); font-size: 13px; break-insi
 .sev-pop-meta { font-size: 11px; color: var(--muted); border-top: 1px solid var(--border-strong); padding-top: 7px; }
 
 @media (max-width: 760px) {
-  .page-head { align-items: flex-start; flex-direction: column; }
-  .row, .inline { flex-direction: column; align-items: stretch; }
-  .tabs { overflow-x: auto; padding-bottom: 1px; }
-  .tab { white-space: nowrap; }
   ul.advisory-list { columns: 1; }
   .sev-bar.lg .sev-bar-track { width: 180px; }
 }

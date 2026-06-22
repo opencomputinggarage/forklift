@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, RepoPermission, RepoToken, repoEndpoint, Repository } from "../api";
 import { UpstreamStatus } from "../components/UpstreamStatus";
 import { ConfirmModal } from "../components/ConfirmModal";
@@ -8,8 +8,7 @@ import { Toggle } from "../components/Toggle";
 import { MemberList } from "./RepositoryNew";
 import { ApprovalList, VersionDenies } from "./Approvals";
 
-export function RepositoryDetail({ me }: { me: Me }) {
-  const { id, tab = "artifacts" } = useParams();
+export function RepositoryDetail({ me, id, tab = "artifacts" }: { me: Me; id: string; tab?: string }) {
   const [repo, setRepo] = useState<Repository | null>(null);
   const [error, setError] = useState("");
 
@@ -33,7 +32,7 @@ export function RepositoryDetail({ me }: { me: Me }) {
   ];
 
   if (!tabs.some((t) => t.key === tab)) {
-    return <Navigate to={`/repositories/${id}/artifacts`} replace />;
+    return <Navigate to="/repositories/$id/$tab" params={{ id, tab: "artifacts" }} replace />;
   }
 
   const endpoint = repoEndpoint(repo.format, repo.name);
@@ -55,7 +54,7 @@ export function RepositoryDetail({ me }: { me: Me }) {
       <nav className="tabs">
         {tabs.map((t) => (
           <Link key={t.key} className={`tab ${tab === t.key ? "active" : ""}`}
-            to={`/repositories/${id}/${t.key}`}>{t.label}</Link>
+            to="/repositories/$id/$tab" params={{ id, tab: t.key }}>{t.label}</Link>
         ))}
       </nav>
 
@@ -107,7 +106,7 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
 
   const del = async () => {
     await api.deleteRepository(repo.id);
-    navigate("/repositories");
+    navigate({ to: "/repositories" });
   };
 
   const cache = repo.config.cache;
@@ -432,7 +431,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
             <tbody>
               {perms.map((p, i) => (
                 <tr key={`${p.role_id}-${i}`}>
-                  <td><Link to={`/roles/${p.role_id}`}>{p.role}</Link></td>
+                  <td><Link to="/roles/$id" params={{ id: String(p.role_id) }}>{p.role}</Link></td>
                   <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{p.repo_pattern}</td>
                   <td>
                     <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>

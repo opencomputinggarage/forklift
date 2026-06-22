@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { api, Me, User } from "../api";
 
 // Admin user directory (read-only). All edits (role mapping, password reset,
@@ -42,7 +42,7 @@ export function Users({ me }: { me: Me }) {
                 <td className="muted">{u.email || "-"}</td>
                 <td>
                   <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
-                    {u.roles.map((r) => <Link key={r.id} className="badge" to={`/roles/${r.id}`}>{r.name}</Link>)}
+                    {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
                     {u.roles.length === 0 && <span className="muted">none</span>}
                   </div>
                 </td>
@@ -55,7 +55,7 @@ export function Users({ me }: { me: Me }) {
                   {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
                 </td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <Link className="btn secondary" to={`/users/${u.id}`}>Modify</Link>
+                  <Link className="btn secondary" to="/users/$id" params={{ id: String(u.id) }}>Modify</Link>
                 </td>
               </tr>
             ))}

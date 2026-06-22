@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { api, Me, Role, User } from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { Combobox } from "../components/Combobox";
@@ -10,8 +10,7 @@ const ACTIONS = ["read", "write", "delete", "approve", "audit", "admin"];
 // (delete). The Roles list is read-only; all edits happen here. The page is
 // read-only (no add/remove permission, no delete) for an auditor and for managed
 // roles, which are owned by the chart's declarative RBAC policy.
-export function RoleModify({ me }: { me: Me }) {
-  const { id } = useParams();
+export function RoleModify({ me, id }: { me: Me; id: string }) {
   const navigate = useNavigate();
   const roleId = Number(id);
   const [role, setRole] = useState<Role | null>(null);
@@ -70,7 +69,7 @@ export function RoleModify({ me }: { me: Me }) {
 
       <PermissionsPanel role={role} run={run} canWrite={editable} />
       <AssignedUsersPanel members={members} />
-      {editable && <DangerPanel role={role} onDeleted={() => navigate("/roles")} onError={setError} />}
+      {editable && <DangerPanel role={role} onDeleted={() => navigate({ to: "/roles" })} onError={setError} />}
     </>
   );
 }
@@ -99,7 +98,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                   <td className="muted">{u.email || "-"}</td>
                   <td>
                     <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
-                      {u.roles.map((r) => <Link key={r.id} className="badge" to={`/roles/${r.id}`}>{r.name}</Link>)}
+                      {u.roles.map((r) => <Link key={r.id} className="badge" to="/roles/$id" params={{ id: String(r.id) }}>{r.name}</Link>)}
                       {u.roles.length === 0 && <span className="muted">none</span>}
                     </div>
                   </td>
@@ -112,7 +111,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                     {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
                   </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    <Link className="btn secondary" to={`/users/${u.id}`}>Modify</Link>
+                    <Link className="btn secondary" to="/users/$id" params={{ id: String(u.id) }}>Modify</Link>
                   </td>
                 </tr>
               ))}

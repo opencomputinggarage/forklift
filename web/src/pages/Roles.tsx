@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { api, Me, Role } from "../api";
 
 // Admin role directory (read-only). Roles and their permissions are defined on
@@ -53,7 +53,7 @@ export function Roles({ me }: { me: Me }) {
                   </div>
                 </td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                  <Link className="btn secondary" to={`/roles/${r.id}`}>Modify</Link>
+                  <Link className="btn secondary" to="/roles/$id" params={{ id: String(r.id) }}>Modify</Link>
                 </td>
               </tr>
             ))}

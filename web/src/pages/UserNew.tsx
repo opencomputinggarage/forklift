@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { api, Role } from "../api";
 import { Select } from "../components/Select";
 
@@ -35,7 +35,7 @@ export function UserNew() {
         username, password, email: email || undefined,
         role_ids: roleId ? [Number(roleId)] : undefined,
       });
-      navigate("/users");
+      navigate({ to: "/users" });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -84,7 +84,7 @@ export function UserNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!canSubmit}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate("/users")}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/users" })}>Cancel</button>
         </div>
       </form>
     </>

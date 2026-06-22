@@ -1,9 +1,16 @@
 import { defineConfig } from "vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 
 // The build output is embedded into the Go binary (internal/webui/dist).
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,
+    }),
+    react(),
+  ],
   build: {
     outDir: "../internal/webui/dist",
     emptyOutDir: true,

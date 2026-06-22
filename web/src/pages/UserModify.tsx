@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { api, Me, Role, User } from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { Select } from "../components/Select";
@@ -7,8 +7,7 @@ import { Toggle } from "../components/Toggle";
 
 // Per-user modify page: role mapping, password reset, enable/disable, and the
 // danger zone (delete). The Users list is read-only; all edits happen here.
-export function UserModify({ me }: { me: Me }) {
-  const { id } = useParams();
+export function UserModify({ me, id }: { me: Me; id: string }) {
   const navigate = useNavigate();
   const userId = Number(id);
   const [user, setUser] = useState<User | null>(null);
@@ -49,7 +48,7 @@ export function UserModify({ me }: { me: Me }) {
       {me.admin && user.source === "local" && <PasswordPanel user={user} onError={setError} />}
       {me.admin && user.source === "local" && <LockoutPanel user={user} run={run} />}
       {me.admin && <StatusPanel user={user} self={self} run={run} />}
-      {me.admin && <DangerPanel user={user} self={self} onDeleted={() => navigate("/users")} onError={setError} />}
+      {me.admin && <DangerPanel user={user} self={self} onDeleted={() => navigate({ to: "/users" })} onError={setError} />}
     </>
   );
 }

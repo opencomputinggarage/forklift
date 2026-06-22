@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { api } from "../api";
 import { Combobox } from "../components/Combobox";
 
@@ -54,7 +54,7 @@ export function RoleNew() {
         description: description || undefined,
         permissions: permissions.length ? permissions : undefined,
       });
-      navigate("/roles");
+      navigate({ to: "/roles" });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -99,7 +99,7 @@ export function RoleNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!name.trim()}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate("/roles")}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/roles" })}>Cancel</button>
         </div>
       </form>
     </>

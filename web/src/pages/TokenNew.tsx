@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { api } from "../api";
 import { Combobox } from "../components/Combobox";
 
@@ -101,7 +101,7 @@ export function TokenNew() {
             </button>
           </div>
           <div style={{ marginTop: 18 }}>
-            <button className="btn" onClick={() => navigate("/tokens")}>Done</button>
+            <button className="btn" onClick={() => navigate({ to: "/tokens" })}>Done</button>
           </div>
         </div>
       </>
@@ -151,7 +151,7 @@ export function TokenNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!valid}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate("/tokens")}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/tokens" })}>Cancel</button>
         </div>
       </form>
     </>

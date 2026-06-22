@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "../api";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { Select } from "../components/Select";
@@ -71,7 +71,7 @@ export function SeverityBar({ severity, counts, scope, size = "sm" }: {
 // repositories, and the detail page is admin-only anyway).
 function repoLink(name: string, ids: Record<string, number>): ReactNode {
   const id = ids[name];
-  return id ? <Link to={`/repositories/${id}/approvals`}>{name}</Link> : name;
+  return id ? <Link to="/repositories/$id/$tab" params={{ id: String(id), tab: "approvals" }}>{name}</Link> : name;
 }
 
 const PAGE = 50;
@@ -232,7 +232,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
                     </span>
                   </td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    <Link className="btn" to={`/approvals/${a.id}`}>Review</Link>
+                    <Link className="btn" to="/approvals/$id" params={{ id: String(a.id) }}>Review</Link>
                   </td>
                 </tr>
               ))}

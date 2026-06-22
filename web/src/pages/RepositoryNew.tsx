@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { api, Repository, UpstreamHealth } from "../api";
 import { Select } from "../components/Select";
 
@@ -76,7 +76,7 @@ export function RepositoryNew() {
           ...(type === "group" ? { group: { members } } : {}),
         },
       });
-      navigate("/repositories");
+      navigate({ to: "/repositories" });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -155,7 +155,7 @@ export function RepositoryNew() {
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }} className="inline">
           <button className="btn" type="submit" disabled={!valid}>Create</button>
-          <button className="btn secondary" type="button" onClick={() => navigate("/repositories")}>Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => navigate({ to: "/repositories" })}>Cancel</button>
         </div>
       </form>
     </>
@@ -212,7 +212,7 @@ export function MemberList({ members, onChange, repoIndex }: {
             <td className="muted" style={{ width: 24 }}>{i + 1}</td>
             <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>
               {id !== undefined
-                ? <Link to={`/repositories/${id}`}>{name}</Link>
+                ? <Link to="/repositories/$id" params={{ id: String(id) }}>{name}</Link>
                 : name}
             </td>
             <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>

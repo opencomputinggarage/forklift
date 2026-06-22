@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { Approval, api } from "../api";
 import { ReviewModal, SeverityBar, SEV_COLOR } from "./Approvals";
 import { Tooltip } from "../components/Tooltip";
@@ -7,8 +7,7 @@ import { Tooltip } from "../components/Tooltip";
 // ApprovalDetail is the per-request review screen: it shows the full approval
 // metadata and the OSV vulnerability analysis (OVS) so a reviewer can judge the
 // package before deciding. The decision itself is made in the shared ReviewModal.
-export function ApprovalDetail() {
-  const { id } = useParams();
+export function ApprovalDetail({ id }: { id: string }) {
   const approvalId = Number(id);
   const [row, setRow] = useState<Approval | null>(null);
   const [error, setError] = useState("");

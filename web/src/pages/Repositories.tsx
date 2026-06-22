@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@tanstack/react-router";
 import { api, humanSize, Me, repoEndpoint, Repository } from "../api";
 import { UpstreamStatus } from "../components/UpstreamStatus";
 
@@ -87,7 +87,7 @@ export function Repositories({ me }: { me: Me }) {
   const [error, setError] = useState("");
   // Detail is read-only browsable by any authenticated user, so every name links
   // into it; admin-only controls are hidden inside the detail page itself.
-  const nameNode = (id: number, name: string) => <Link to={`/repositories/${id}`}>{name}</Link>;
+  const nameNode = (id: number, name: string) => <Link to="/repositories/$id" params={{ id: String(id) }}>{name}</Link>;
   // Upstream health and security policy columns are visible to admins and
   // auditors (read-only); plain readers see a muted dash.
   const canViewStatus = Boolean(me.admin || me.auditor);

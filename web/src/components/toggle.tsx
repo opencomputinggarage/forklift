@@ -1,5 +1,5 @@
-// Toggle is a switch-style boolean control: a pill track with a sliding knob.
-// The optional label sits to the right; the whole row is clickable.
+import { Switch } from "@/components/ui/switch";
+
 export function Toggle({ checked, onChange, disabled, label }: {
   checked: boolean;
   onChange: (v: boolean) => void;
@@ -7,19 +7,14 @@ export function Toggle({ checked, onChange, disabled, label }: {
   label?: string;
 }) {
   return (
-    <div className="switch-row">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
+    <label className="inline-flex items-center gap-2 text-sm">
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
         aria-label={label}
         disabled={disabled}
-        className={`switch${checked ? " on" : ""}`}
-        onClick={() => onChange(!checked)}
-      >
-        <span className="switch-knob" />
-      </button>
-      {label && <span className="switch-text">{label}</span>}
-    </div>
+      />
+      {label && <span>{label}</span>}
+    </label>
   );
 }

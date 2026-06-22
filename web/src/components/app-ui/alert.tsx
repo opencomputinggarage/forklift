@@ -1,14 +1,14 @@
 import * as React from "react"
 
+import { Alert as ShadcnAlert } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 
 function Alert({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      role="alert"
-      data-slot="alert"
+    <ShadcnAlert
+      variant="destructive"
       className={cn(
-        "rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-foreground",
+        "border-destructive/50 bg-destructive/10 text-foreground",
         className
       )}
       {...props}

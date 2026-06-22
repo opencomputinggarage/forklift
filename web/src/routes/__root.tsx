@@ -6,6 +6,7 @@ import { Login } from "../components/login";
 import { Logo } from "../components/logo";
 import { Badge } from "@/components/app-ui/badge";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export const Route = createRootRoute({
@@ -30,12 +31,14 @@ function AppShell() {
 
   return (
     <AuthProvider value={{ me }}>
-      <div className="flex min-h-screen items-start max-md:block">
-        <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
-        <div className="min-w-0 flex-1 px-9 py-8 md:max-w-[1180px] max-md:px-4 max-md:py-6">
-          <Outlet />
+      <TooltipProvider>
+        <div className="flex min-h-screen items-start max-md:block">
+          <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
+          <div className="min-w-0 flex-1 px-9 py-8 md:max-w-[1180px] max-md:px-4 max-md:py-6">
+            <Outlet />
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
     </AuthProvider>
   );
 }

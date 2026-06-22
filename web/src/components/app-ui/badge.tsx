@@ -1,6 +1,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
+import { Badge as ShadcnBadge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
@@ -26,9 +27,9 @@ function Badge({
   className,
   variant,
   ...props
-}: React.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+}: Omit<React.ComponentProps<typeof ShadcnBadge>, "variant"> & VariantProps<typeof badgeVariants>) {
   return (
-    <span
+    <ShadcnBadge
       data-slot="badge"
       className={cn(badgeVariants({ variant }), className)}
       {...props}

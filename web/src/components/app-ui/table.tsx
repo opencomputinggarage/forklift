@@ -1,5 +1,13 @@
 import * as React from "react"
 
+import {
+  Table as ShadcnTable,
+  TableBody as ShadcnTableBody,
+  TableCell as ShadcnTableCell,
+  TableHead as ShadcnTableHead,
+  TableHeader as ShadcnTableHeader,
+  TableRow as ShadcnTableRow,
+} from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
 function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
@@ -14,28 +22,28 @@ function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <table
+    <ShadcnTable
       data-slot="table"
-      className={cn("w-full border-collapse text-sm", className)}
+      className={cn("border-collapse", className)}
       {...props}
     />
   )
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead data-slot="table-header" className={className} {...props} />
+  return <ShadcnTableHeader data-slot="table-header" className={className} {...props} />
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return <tbody data-slot="table-body" className={className} {...props} />
+  return <ShadcnTableBody data-slot="table-body" className={className} {...props} />
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
-    <tr
+    <ShadcnTableRow
       data-slot="table-row"
       className={cn(
-        "border-b border-border transition-colors last:border-0 hover:bg-muted/35",
+        "border-border last:border-0 hover:bg-muted/35",
         className
       )}
       {...props}
@@ -45,10 +53,10 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
-    <th
+    <ShadcnTableHead
       data-slot="table-head"
       className={cn(
-        "bg-card/70 px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase",
+        "h-auto bg-card/70 px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase",
         className
       )}
       {...props}
@@ -58,9 +66,9 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
-    <td
+    <ShadcnTableCell
       data-slot="table-cell"
-      className={cn("px-3 py-2.5 align-middle", className)}
+      className={cn("px-3 py-2.5", className)}
       {...props}
     />
   )

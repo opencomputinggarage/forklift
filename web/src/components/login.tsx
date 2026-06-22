@@ -31,8 +31,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       <div className="relative z-10 flex w-full max-w-[24rem] flex-col gap-5">
         <div className="flex min-w-0 items-center justify-center gap-3">
           <Logo size={32} />
-          <span className="brand-text truncate text-xl font-bold tracking-normal text-foreground">
-            fork<span>lift</span>
+          <span className="truncate text-xl font-bold tracking-normal text-foreground">
+            fork<span className="text-primary">lift</span>
           </span>
         </div>
         <LoginForm onLogin={onLogin} />

@@ -7,7 +7,10 @@ import logoUrl from "../assets/forklift-logo.svg";
 // dark sidebar.
 export function Logo({ size = 34 }: { size?: number }) {
   return (
-    <span className="logo-chip" style={{ width: size, height: size }}>
+    <span
+      className="inline-flex shrink-0 items-center justify-center rounded-md bg-[#f2f3f5]"
+      style={{ width: size, height: size }}
+    >
       <img src={logoUrl} alt="" width={Math.round(size * 0.8)} height={Math.round(size * 0.8)} />
     </span>
   );

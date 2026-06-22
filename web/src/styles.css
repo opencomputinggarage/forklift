@@ -158,10 +158,10 @@
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
-
 body {
   margin: 0;
+  min-width: 0;
+  overflow-x: hidden;
   font-family: var(--font-sans);
   background:
     radial-gradient(circle at 50% -10%, color-mix(in oklch, var(--accent) 8%, transparent), transparent 34%),
@@ -174,14 +174,6 @@ body {
 
 a { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
 a:hover { color: var(--accent); text-decoration: underline; }
-/* External (new-tab) links: always underlined and marked with a trailing ↗ so
-   it's clear they leave the app. Button-styled links are exempt. */
-a[target="_blank"]:not(.btn) { text-decoration: underline; }
-a[target="_blank"]:not(.btn)::after {
-  content: "\2197"; margin-left: 3px; font-size: 0.85em; display: inline-block; text-decoration: none;
-}
-/* Buttons read as buttons, never underlined. */
-.btn:hover { text-decoration: none; }
 
 .login-bg-base {
   background:
@@ -262,8 +254,6 @@ a[target="_blank"]:not(.btn)::after {
    makes the whole form read-only for both mouse and keyboard. */
 .settings-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
 .settings-fields[disabled] { opacity: 0.65; }
-.logo-chip { display: inline-flex; align-items: center; justify-content: center; background: #f2f3f5; border-radius: 6px; flex-shrink: 0; }
-.brand-text span { color: var(--accent); }
 h1 { font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: 0; margin: 0 0 18px; }
 /* Section titles always sit flush with their container's top padding (panels,
    modals, section groups). margin-top: 0 is the standard; bottom margin keeps
@@ -337,9 +327,10 @@ tbody tr:last-child td { border-bottom: 0; }
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   background: var(--accent); color: #080a0d; border: 1px solid var(--accent); padding: 8px 14px;
   border-radius: var(--radius); cursor: pointer; font-size: 14px; font-weight: 600; line-height: 1.2;
+  text-decoration: none;
   transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease, transform 0.08s ease;
 }
-.btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #080a0d; }
+.btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: #080a0d; text-decoration: none; }
 .btn:active { transform: translateY(1px); background: var(--accent-pressed); border-color: var(--accent-pressed); }
 .btn.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
 .btn.secondary:hover { background: var(--panel-2); color: var(--text); border-color: var(--border-strong); }

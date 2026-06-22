@@ -32,11 +32,11 @@ function AppShell() {
   return (
     <AuthProvider value={{ me }}>
       <TooltipProvider>
-        <div className="flex min-h-screen items-start max-md:block">
+        <div className="min-h-screen lg:flex lg:items-start">
           <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
-          <div className="min-w-0 flex-1 px-9 py-8 md:max-w-[1180px] max-md:px-4 max-md:py-6">
+          <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-8 xl:px-10">
             <Outlet />
-          </div>
+          </main>
         </div>
       </TooltipProvider>
     </AuthProvider>
@@ -64,24 +64,24 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
 
   const navLinkClass = (active = false) =>
     cn(
-      "flex items-center rounded-lg border px-2.5 py-2 text-sm transition-colors hover:no-underline",
+      "flex shrink-0 items-center rounded-lg border px-2.5 py-2 text-sm transition-colors hover:no-underline",
       active
         ? "border-border bg-muted text-primary"
         : "border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
     );
 
   return (
-    <div className="sticky top-0 flex h-screen w-[236px] flex-col gap-1 overflow-y-auto border-r border-border bg-card px-2.5 py-4 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] max-md:static max-md:h-auto max-md:w-full max-md:border-r-0 max-md:border-b">
-      <div className="px-2 pb-5">
+    <aside className="sticky top-0 z-40 flex h-screen w-[244px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-card px-2.5 py-4 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] lg:self-start max-lg:h-auto max-lg:w-full max-lg:overflow-visible max-lg:border-r-0 max-lg:border-b max-lg:px-3 max-lg:py-3">
+      <div className="px-2 pb-5 max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:pb-3">
         <Link
           to="/repositories"
           className="flex items-center gap-2.5 text-[22px] font-bold text-foreground hover:no-underline hover:opacity-85"
         >
           <Logo />
-          <span className="brand-text">fork<span>lift</span></span>
+          <span>fork<span className="text-primary">lift</span></span>
         </Link>
         {version && (
-          <span className="ml-11 mt-0.5 block text-xs font-medium text-muted-foreground">
+          <span className="ml-11 mt-0.5 block shrink-0 text-xs font-medium text-muted-foreground max-lg:m-0">
             {version.version}
             {version.commit && version.commit !== "none" && (
               <span className="opacity-65"> ({version.commit.slice(0, 7)})</span>
@@ -89,32 +89,36 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </span>
         )}
       </div>
-      <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/repositories">
-        <span>Repositories</span>
-        {repoCount !== null && <Badge className="ml-auto min-w-5 justify-center px-1.5">{repoCount}</Badge>}
-      </Link>
-      <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/tokens">Access Tokens</Link>
-      {canApprove && (
-        <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/approvals">
-          <span>Approvals</span>
-          {pendingCount !== null && pendingCount > 0 && <Badge className="ml-auto min-w-5 justify-center bg-primary text-primary-foreground">{pendingCount}</Badge>}
+      <nav className="-mx-1 flex flex-col gap-1 px-1 max-lg:flex-row max-lg:overflow-x-auto max-lg:pb-1">
+        <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/repositories">
+          <span>Repositories</span>
+          {repoCount !== null && <Badge className="ml-2 min-w-5 justify-center px-1.5 lg:ml-auto">{repoCount}</Badge>}
         </Link>
-      )}
-      {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/users">Users</Link>}
-      {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/roles">Roles</Link>}
+        <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/tokens">Access Tokens</Link>
+        {canApprove && (
+          <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/approvals">
+            <span>Approvals</span>
+            {pendingCount !== null && pendingCount > 0 && <Badge className="ml-2 min-w-5 justify-center bg-primary text-primary-foreground lg:ml-auto">{pendingCount}</Badge>}
+          </Link>
+        )}
+        {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/users">Users</Link>}
+        {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/roles">Roles</Link>}
+      </nav>
       <div className="flex-1" />
-      <a className={navLinkClass()} href="/api-docs" target="_blank" rel="noreferrer">API Docs ↗</a>
-      <div className="border-t border-border px-2 py-3 text-xs text-muted-foreground">
-        <div>{me.username} {me.admin ? "(admin)" : me.auditor ? "(auditor)" : ""}</div>
-        <Button
-          className="mt-2 w-full"
-          variant="outline"
-          type="button"
-          onClick={() => { onLogout(); navigate({ to: "/" }); }}
-        >
-          Log Out
-        </Button>
+      <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3 max-lg:mt-2 max-lg:flex-row max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:overflow-x-auto max-lg:pt-2">
+        <a className={navLinkClass()} href="/api-docs" target="_blank" rel="noreferrer">API Docs</a>
+        <div className="min-w-0 px-2 text-xs text-muted-foreground max-lg:flex max-lg:items-center max-lg:gap-2 max-lg:px-0">
+          <div className="truncate">{me.username} {me.admin ? "(admin)" : me.auditor ? "(auditor)" : ""}</div>
+          <Button
+            className="mt-2 w-full max-lg:mt-0 max-lg:w-auto"
+            variant="outline"
+            type="button"
+            onClick={() => { onLogout(); navigate({ to: "/" }); }}
+          >
+            Log Out
+          </Button>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 }

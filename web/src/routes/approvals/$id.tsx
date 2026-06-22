@@ -108,7 +108,7 @@ function OvsAnalysis({ row }: { row: Approval }) {
             <dt>Data source</dt>
             <dd>
               {!row.vuln_source || row.vuln_source === "OSV"
-                ? <a href="https://osv.dev" target="_blank" rel="noreferrer">OSV (osv.dev)</a>
+                ? <a className="underline underline-offset-4 hover:no-underline" href="https://osv.dev" target="_blank" rel="noreferrer">OSV (osv.dev)</a>
                 : row.vuln_source}
             </dd>
             <dt>Result</dt>
@@ -125,7 +125,7 @@ function OvsAnalysis({ row }: { row: Approval }) {
           ) : ids.length > 0 ? (
             <ul className="advisory-list">
               {ids.map((vid) => (
-                <li key={vid}><a href={`https://osv.dev/${vid}`} target="_blank" rel="noreferrer">{vid}</a></li>
+                <li key={vid}><a className="underline underline-offset-4 hover:no-underline" href={`https://osv.dev/${vid}`} target="_blank" rel="noreferrer">{vid}</a></li>
               ))}
             </ul>
           ) : (
@@ -215,7 +215,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
             <tr key={a.id}>
               <td className="muted">{i + 1}</td>
               <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
-                <a href={`https://osv.dev/${a.id}`} target="_blank" rel="noreferrer">{a.id}</a>
+                <a className="underline underline-offset-4 hover:no-underline" href={`https://osv.dev/${a.id}`} target="_blank" rel="noreferrer">{a.id}</a>
               </td>
               <td><span className="badge" style={{ background: SEV_COLOR[a.severity] ?? "#9aa1ac", color: "#fff" }}>{a.severity}</span></td>
               <td style={{ fontVariantNumeric: "tabular-nums" }}>{a.score || <span className="muted">n/a</span>}</td>

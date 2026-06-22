@@ -30,20 +30,21 @@ export function Select({
   style?: CSSProperties;
   size?: "sm";
 }) {
-  const selected = options.find((o) => o.value === value);
+  const hasEmptyOption = options.some((o) => o.value === "");
+  const selectValue = value === "" && !hasEmptyOption ? null : value;
 
   return (
-    <SelectRoot value={value || null} onValueChange={(next) => onChange(next ?? "")}>
+    <SelectRoot
+      items={options}
+      value={selectValue}
+      onValueChange={(next) => onChange(next ?? "")}
+    >
       <SelectTrigger
         size={size ?? "default"}
         style={style}
         className={cn("w-full", style?.width && "w-auto")}
       >
-        <SelectValue>
-          {selected ? selected.label : (
-            <span className="text-muted-foreground">{placeholder ?? ""}</span>
-          )}
-        </SelectValue>
+        <SelectValue placeholder={placeholder ?? ""} />
       </SelectTrigger>
       <SelectContent align="start">
         {options.map((o) => (

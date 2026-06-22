@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
+import { ComponentProps, FormEvent, useEffect, useState } from "react";
+import { KeyRound } from "lucide-react";
 import { api } from "../api";
 import { Logo } from "./Logo";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -11,15 +12,40 @@ import {
 } from "@/components/ui/card";
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export function Login({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div className="relative isolate grid min-h-svh w-full place-items-center overflow-hidden bg-background px-4 py-8 sm:px-6">
+      <div className="login-bg-base pointer-events-none absolute inset-0 z-0" />
+      <div className="login-bg-grid pointer-events-none absolute inset-0 z-0" />
+      <div className="login-bg-wave pointer-events-none absolute inset-0 z-0" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-48 border-b border-border/35" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10 bg-primary/[0.035] blur-3xl" />
+      <div className="relative z-10 flex w-full max-w-[24rem] flex-col gap-5">
+        <div className="flex min-w-0 items-center justify-center gap-3">
+          <Logo size={32} />
+          <span className="brand-text truncate text-xl font-bold tracking-normal text-foreground">
+            fork<span>lift</span>
+          </span>
+        </div>
+        <LoginForm onLogin={onLogin} />
+      </div>
+    </div>
+  );
+}
+
+function LoginForm({
+  onLogin,
+  className,
+  ...props
+}: ComponentProps<"div"> & { onLogin: () => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -49,34 +75,27 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="grid min-h-svh w-full place-items-start bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--accent)_12%,transparent),transparent_38%)] px-3 py-6 sm:place-items-center sm:px-4 sm:py-10">
-      <Card className="w-full max-w-[24rem] border-border/90 bg-card/95 text-card-foreground shadow-2xl shadow-black/35">
-        <CardHeader className="gap-4 px-4 pb-2 sm:gap-5 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex min-w-0 items-center gap-3 font-bold text-[21px] tracking-[0.5px] text-foreground sm:text-[23px]">
-              <Logo size={36} />
-              <span className="brand-text truncate">
-                fork<span>lift</span>
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <CardTitle className="text-lg sm:text-xl">Sign in</CardTitle>
-            <CardDescription className="text-sm leading-relaxed">
-              Access repository proxy controls, approvals, and personal tokens.
-            </CardDescription>
-          </div>
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
+      <Card className="border-border/90 bg-card/95 text-card-foreground shadow-2xl shadow-black/30 backdrop-blur">
+        <CardHeader className="gap-2 px-5 pt-5 sm:px-6 sm:pt-6">
+          <CardTitle className="text-2xl font-semibold tracking-normal">
+            Sign in to forklift
+          </CardTitle>
+          <CardDescription className="leading-6">
+            Manage repository policies, approvals, and scoped tokens.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="px-4 pt-2 sm:px-6">
+        <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
           <form onSubmit={submit}>
-            <FieldGroup>
+            <FieldGroup className="gap-5">
               <Field data-invalid={Boolean(error)}>
                 <FieldLabel htmlFor="username">
-                  Username<span className="req">*</span>
+                  Username
                 </FieldLabel>
                 <Input
                   id="username"
-                  className="h-10"
+                  className="h-11 border-border bg-background/70"
+                  placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
@@ -87,12 +106,13 @@ export function Login({ onLogin }: { onLogin: () => void }) {
               </Field>
               <Field data-invalid={Boolean(error)}>
                 <FieldLabel htmlFor="password">
-                  Password<span className="req">*</span>
+                  Password
                 </FieldLabel>
                 <Input
                   id="password"
-                  className="h-10"
+                  className="h-11 border-border bg-background/70"
                   type="password"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -101,23 +121,34 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                 />
                 {error && <FieldError>{error}</FieldError>}
               </Field>
-              <Button className="h-10 w-full" disabled={busy} type="submit">
-                {busy ? "Signing in…" : "Sign in"}
-              </Button>
+              <Field className="gap-3 pt-1">
+                <Button className="h-11 w-full" disabled={busy} type="submit">
+                  {busy ? (
+                    "Signing in..."
+                  ) : (
+                    <>
+                      <KeyRound data-icon="inline-start" aria-hidden="true" />
+                      Sign in
+                    </>
+                  )}
+                </Button>
+                {oidcEnabled && (
+                  <a
+                    className={cn(
+                      buttonVariants({ variant: "outline" }),
+                      "h-11 w-full border-border bg-background/70"
+                    )}
+                    href="/auth/login"
+                  >
+                    Sign in with Keycloak
+                  </a>
+                )}
+                <FieldDescription className="text-center">
+                  Access is limited by your assigned role.
+                </FieldDescription>
+              </Field>
             </FieldGroup>
           </form>
-          {oidcEnabled && <FieldSeparator className="my-5">or</FieldSeparator>}
-          {oidcEnabled && (
-            <a
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "h-10 w-full",
-              )}
-              href="/auth/login"
-            >
-              Sign in with Keycloak
-            </a>
-          )}
         </CardContent>
       </Card>
     </div>

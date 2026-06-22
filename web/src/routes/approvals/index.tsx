@@ -273,8 +273,8 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
               {rows.map((a) => (
                 <tr key={a.id}>
                   {showRepo && <td>{repoLink(a.repo_name, repoIds)}</td>}
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{a.package}</td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{a.last_requested_version || <span className="muted">unknown</span>}</td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{a.package}</td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{a.last_requested_version || <span className="muted">unknown</span>}</td>
                   <td><SeverityBar severity={a.vuln_severity} counts={a.vuln_counts} scope={a.vuln_scope} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></td>
                   <td>{a.requested_by || <span className="muted">anonymous</span>}</td>
                   <td>{a.request_count}</td>
@@ -514,8 +514,8 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
               {rows.map((d) => (
                 <tr key={d.id}>
                   {showRepo && <td>{repoLink(d.repo_name, repoIds)}</td>}
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{d.package}</td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{d.version}</td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{d.package}</td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{d.version}</td>
                   <td>{d.reason || <span className="muted">none</span>}</td>
                   <td>{d.created_by || <span className="muted">unknown</span>}</td>
                   <td className="muted">{new Date(d.created_at).toLocaleString()}</td>

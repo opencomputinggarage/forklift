@@ -84,7 +84,7 @@ export function RoleNew() {
         <label>Permissions</label>
         <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
           {permissions.map((p, i) => (
-            <span key={i} className="badge" style={{ fontFamily: "ui-monospace, monospace" }}>
+            <span key={i} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
               {p.repo_pattern}: {p.actions.join(",")}
               <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
                 onClick={() => setPermissions((cur) => cur.filter((_, j) => j !== i))}>×</a>

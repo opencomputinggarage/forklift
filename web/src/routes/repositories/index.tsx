@@ -89,7 +89,7 @@ function repoCells(r: Repository, canViewStatus: boolean) {
     <>
       <td>{r.format}</td>
       <td>{r.type}</td>
-      <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }} title={repoEndpoint(r.format, r.name).url}>
+      <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} title={repoEndpoint(r.format, r.name).url}>
         {repoEndpoint(r.format, r.name).url}
         {r.type === "proxy" && !r.config.cache.enabled && <span className="muted"> (cache off)</span>}
       </td>

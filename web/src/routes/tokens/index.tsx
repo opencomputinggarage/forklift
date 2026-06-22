@@ -60,7 +60,7 @@ export function Tokens() {
                 <td className="muted">{t.description}</td>
                 <td>
                   {parseScopes(t.scopes_json).map((s, i) => (
-                    <span key={i} className="badge" style={{ fontFamily: "ui-monospace, monospace", marginRight: 4 }}>
+                    <span key={i} className="badge" style={{ fontFamily: "var(--font-mono)", marginRight: 4 }}>
                       {s.repo_pattern}: {s.actions.join(",")}
                     </span>
                   ))}

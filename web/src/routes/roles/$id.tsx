@@ -160,7 +160,7 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
       <h2>Permissions</h2>
       <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
         {role.permissions.map((p) => (
-          <span key={p.id} className="badge" style={{ fontFamily: "ui-monospace, monospace" }}>
+          <span key={p.id} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
             {p.repo_pattern}: {p.actions.join(",")}
             {canWrite && (
               <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"

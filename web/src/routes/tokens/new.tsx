@@ -134,7 +134,7 @@ export function TokenNew() {
         <label>Permissions<span className="req">*</span></label>
         <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
           {scopes.map((s, i) => (
-            <span key={i} className="badge" style={{ fontFamily: "ui-monospace, monospace" }}>
+            <span key={i} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
               {s.repo_pattern}: {s.actions.join(",")}
               <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
                 onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}>×</a>

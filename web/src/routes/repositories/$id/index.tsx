@@ -424,7 +424,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
               {perms.map((p, i) => (
                 <tr key={`${p.role_id}-${i}`}>
                   <td><Link to="/roles/$id" params={{ id: String(p.role_id) }}>{p.role}</Link></td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>{p.repo_pattern}</td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{p.repo_pattern}</td>
                   <td>
                     <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
                       {p.actions.map((a) => <span key={a} className="badge">{a}</span>)}
@@ -454,7 +454,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
                 <tr key={t.token_id}>
                   <td>{t.name}</td>
                   <td>{t.owner || <span className="muted">unknown</span>}</td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
                     {t.unscoped
                       ? <span className="muted" title="Unscoped token: inherits the owner's role access to every repository.">unscoped (inherits roles)</span>
                       : t.repo_pattern}
@@ -518,7 +518,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
         <tbody>
           {data?.artifacts.map((a) => (
             <tr key={a.path}>
-              <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, wordBreak: "break-all" }}>{a.path}</td>
+              <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, wordBreak: "break-all" }}>{a.path}</td>
               <td>{a.version || "—"}</td>
               <td><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></td>
               <td className="muted">{humanSize(a.size)}</td>
@@ -591,7 +591,7 @@ function AuditLogs({ repoId }: { repoId: number }) {
             <tr key={l.id}>
               <td className="muted">{l.created_at?.slice(0, 19).replace("T", " ")}</td>
               <td><span className="badge">{l.event}</span></td>
-              <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, wordBreak: "break-all" }}>{l.path || "-"}</td>
+              <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, wordBreak: "break-all" }}>{l.path || "-"}</td>
               <td>{l.username || <span className="muted">anonymous</span>}</td>
               <td className={l.status >= 400 ? "status-err" : "muted"}>{l.status}</td>
               <td className="muted">{l.client_ip}</td>

@@ -55,7 +55,7 @@ export function Roles({ me }: { me: Me }) {
                 <td>
                   <div className="inline" style={{ flexWrap: "wrap", gap: 6 }}>
                     {r.permissions.map((p) => (
-                      <span key={p.id} className="badge" style={{ fontFamily: "ui-monospace, monospace" }}>
+                      <span key={p.id} className="badge" style={{ fontFamily: "var(--font-mono)" }}>
                         {p.repo_pattern}: {p.actions.join(",")}
                       </span>
                     ))}

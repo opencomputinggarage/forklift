@@ -38,7 +38,7 @@ export function ApprovalDetail() {
   return (
     <>
       <div className="page-head">
-        <h1 style={{ fontFamily: "ui-monospace, monospace" }}>
+        <h1 style={{ fontFamily: "var(--font-mono)" }}>
           {row.package} <span className={`badge approval-${row.status}`}>{row.status}</span>
         </h1>
         <div className="inline">
@@ -52,9 +52,9 @@ export function ApprovalDetail() {
         <h2>Request</h2>
         <dl className="kv">
           <dt>Repository</dt><dd>{row.repo_name}</dd>
-          <dt>Package</dt><dd style={{ fontFamily: "ui-monospace, monospace" }}>{row.package}</dd>
+          <dt>Package</dt><dd style={{ fontFamily: "var(--font-mono)" }}>{row.package}</dd>
           <dt>Requested version</dt>
-          <dd style={{ fontFamily: "ui-monospace, monospace" }}>
+          <dd style={{ fontFamily: "var(--font-mono)" }}>
             {row.last_requested_version || <span className="muted">unknown (metadata request blocked before a version was resolved)</span>}
           </dd>
           <dt>Requested by</dt><dd>{row.requested_by || <span className="muted">anonymous</span>}</dd>
@@ -214,7 +214,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
           {sorted.map(({ a, i }) => (
             <tr key={a.id}>
               <td className="muted">{i + 1}</td>
-              <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>
+              <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
                 <a href={`https://osv.dev/${a.id}`} target="_blank" rel="noreferrer">{a.id}</a>
               </td>
               <td><span className="badge" style={{ background: SEV_COLOR[a.severity] ?? "#9aa1ac", color: "#fff" }}>{a.severity}</span></td>

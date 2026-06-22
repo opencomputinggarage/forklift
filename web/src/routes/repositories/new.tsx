@@ -223,7 +223,7 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
           return (
           <tr key={name}>
             <td className="muted" style={{ width: 24 }}>{i + 1}</td>
-            <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 13 }}>
+            <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
               {id !== undefined
                 ? <Link to="/repositories/$id" params={{ id: String(id) }}>{name}</Link>
                 : name}

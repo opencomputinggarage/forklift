@@ -23,13 +23,13 @@ type AuditLog struct {
 
 // Audit event constants.
 const (
-	EventDownload   = "download"
-	EventUpload     = "upload"
-	EventDelete     = "delete"
-	EventRepoCreate = "repo.create"
-	EventRepoUpdate = "repo.update"
-	EventRepoDelete = "repo.delete"
-	EventTTLExpire  = "ttl.expire" // artifact auto-deleted by the idle retention reaper
+	EventDownload     = "download"
+	EventUpload       = "upload"
+	EventDelete       = "delete"
+	EventRepoCreate   = "repo.create"
+	EventRepoUpdate   = "repo.update"
+	EventRepoDelete   = "repo.delete"
+	EventTTLExpire    = "ttl.expire"    // artifact auto-deleted by the idle retention reaper
 	EventVulnBlock    = "vuln.block"    // request blocked by the vulnerability policy
 	EventLicenseBlock = "license.block" // request blocked by the license policy
 )

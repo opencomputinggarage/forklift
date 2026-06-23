@@ -30,7 +30,8 @@ const (
 	EventRepoUpdate = "repo.update"
 	EventRepoDelete = "repo.delete"
 	EventTTLExpire  = "ttl.expire" // artifact auto-deleted by the idle retention reaper
-	EventVulnBlock  = "vuln.block" // request blocked by the vulnerability policy
+	EventVulnBlock    = "vuln.block"    // request blocked by the vulnerability policy
+	EventLicenseBlock = "license.block" // request blocked by the license policy
 )
 
 // InsertAuditLog appends one audit log entry. CreatedAt defaults to now when

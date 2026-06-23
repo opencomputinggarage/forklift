@@ -18,9 +18,10 @@ Lightweight, Kubernetes-native artifact repository. A single static Go binary th
 - Package approval (quarantine): require an explicit admin decision before a proxy serves a package, with a pending-request queue, audit-only mode and auto-approve patterns
 - Version denies: block one exact package version (poisoned release, IOC) while the package stays approved, revoking cached copies immediately
 - Vulnerability policy: scan requested versions against OSV and block, warn, or audit by severity threshold, with periodic re-scanning so newly disclosed advisories surface (direct dependency coordinate match)
+- License policy: resolve each version's SPDX license from deps.dev and block, warn, or audit by per-repository deny/allow lists, with background resolution and periodic refresh ([guide](docs/license-scanning.md))
 - Per-repository audit log: every download, upload, delete and config change with user, status and client IP
 - React UI and OpenAPI 3.1 docs, both served by the binary
-- Active/standby HA via Kubernetes Lease leader election, on a shared RWX volume or with PV-based replication (per-pod RWO volumes, no RWX storage required)
+- Active/standby HA via Kubernetes Lease leader election, on a shared RWX volume, with PV-based replication (per-pod RWO volumes, no RWX storage required), or fully on S3 (no EBS/RWX volume at all)
 - CGO-free scratch image, low memory footprint, Prometheus metrics
 
 ## Architecture
@@ -32,9 +33,10 @@ forklift runs as one process serving everything on port 8080 (metrics on 8081):
 - A content-addressed blob store on a PersistentVolume holds artifact bytes (deduplicated by SHA-256).
 - Embedded SQLite holds metadata: repositories, the artifact index, users, roles, and tokens.
 - Package-format handlers translate each ecosystem's native protocol into blob store and metadata operations.
-- For HA, a Kubernetes Lease elects a single leader; only the leader serves traffic and writes to SQLite, which keeps a single writer. The standby takes over on failover. Two storage layouts are supported:
+- For HA, a Kubernetes Lease elects a single leader; only the leader serves traffic and writes to SQLite, which keeps a single writer. The standby takes over on failover. Three storage layouts are supported:
   - Shared volume (default): both pods mount one ReadWriteMany volume; only the leader is Ready, so the Service routes to it.
   - PV-based replication (`replication.enabled=true`): each pod owns a ReadWriteOnce volume; the standby pulls the leader's SQLite snapshot and blobs every interval over token-authenticated internal endpoints and promotes that copy when it wins the election. Traffic follows the `forklift.io/role=leader` pod label. Replication is asynchronous, so writes within one interval can be lost on failover.
+  - S3 backend (`storage.backend=s3`): blobs live directly in a shared S3 bucket (content-addressed and immutable, so every pod reads and writes it safely with no coordination), and the leader snapshots the SQLite database to S3 each interval while standbys restore it on promotion. Pods run as a Deployment with only an `emptyDir` for the live SQLite working file — no EBS or RWX volume. Metadata replication is asynchronous, so writes within one interval can be lost on failover. Mutually exclusive with PV-based replication.
 
 ```
 shared RWX volume mode:
@@ -49,6 +51,12 @@ client  ->  Service (role=leader)  ->  leader pod   [SQLite + blobs on own RWO P
                                             ^
                                             | pull snapshot + blobs every interval
                                        standby pod  [own RWO PV, promotes on failover]
+
+S3 backend mode (Deployment, emptyDir only):
+client  ->  Service  ->  leader pod ---- blobs (read/write) ----> S3 bucket
+                              |          metadata snapshot up ---^   |
+                         standby pod  <-- metadata snapshot down ----'
+                         (restores snapshot, promotes on failover)
 ```
 
 ## Installation
@@ -72,6 +80,20 @@ helm install forklift oci://ghcr.io/younsl/charts/forklift \
   --set auth.bootstrap.adminPassword=change-me
 ```
 
+For the S3 backend (no EBS/RWX volume at all), set `storage.backend=s3` and a bucket; the chart renders a Deployment with an `emptyDir`. Credentials come from the AWS default chain — annotate the ServiceAccount for EKS IRSA (or associate an EKS Pod Identity), no keys in the chart:
+
+```bash
+helm install forklift oci://ghcr.io/younsl/charts/forklift \
+  --namespace forklift --create-namespace \
+  --set storage.backend=s3 \
+  --set storage.s3.bucket=my-forklift-bucket \
+  --set storage.s3.region=ap-northeast-2 \
+  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::123456789012:role/forklift \
+  --set auth.bootstrap.adminPassword=change-me
+```
+
+The IAM role needs `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` and `s3:ListBucket` on the bucket and its prefix. Enabling bucket versioning is recommended for metadata-snapshot point-in-time recovery. For an S3-compatible store (e.g. MinIO) set `storage.s3.endpoint` and `storage.s3.forcePathStyle=true`, and supply static keys via `storage.s3.existingSecret` (keys `access-key-id`, `secret-access-key`).
+
 List chart versions with [crane](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md):
 
 ```bash
@@ -84,7 +106,13 @@ All settings are environment variables (the Helm chart maps values to them).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FORKLIFT_DATA_DIR` | `/data` | Root of the SQLite DB and blob store (PV mount) |
+| `FORKLIFT_DATA_DIR` | `/data` | Root of the SQLite DB and (fs backend) blob store; `emptyDir` in s3 mode |
+| `FORKLIFT_STORAGE_BACKEND` | `fs` | Blob + metadata backend: `fs` (PV) or `s3` (shared bucket, no EBS/RWX) |
+| `FORKLIFT_STORAGE_S3_BUCKET` | (none) | S3 bucket (required when backend is `s3`) |
+| `FORKLIFT_STORAGE_S3_PREFIX` / `_REGION` / `_ENDPOINT` | | Key prefix, AWS region, custom endpoint (MinIO) |
+| `FORKLIFT_STORAGE_S3_FORCE_PATH_STYLE` | `false` | Path-style addressing (required by MinIO) |
+| `FORKLIFT_STORAGE_S3_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | (default chain) | Static keys; empty uses IRSA / EKS Pod Identity |
+| `FORKLIFT_STORAGE_META_SYNC_INTERVAL` | `30s` | s3-mode metadata snapshot cadence (failover data-loss window) |
 | `FORKLIFT_HTTP_ADDR` | `:8080` | API, UI and package endpoints |
 | `FORKLIFT_METRICS_ADDR` | `:8081` | Prometheus metrics |
 | `FORKLIFT_EXTERNAL_URL` | (request-derived) | Base URL for URLs synthesised in package metadata; set behind a reverse proxy instead of relying on `X-Forwarded-*` |
@@ -211,6 +239,24 @@ curl -u admin:change-me -X PUT http://forklift/api/v1/repositories/<id> \
 - Configure `FORKLIFT_OSV_URL` (default `https://api.osv.dev`; empty disables scanning), `FORKLIFT_VULN_RESCAN_INTERVAL` (default `6h`), `FORKLIFT_VULN_TTL` (default `24h`).
 - Blocks are counted in `forklift_vuln_blocked_total{repo,action}` and scans in `forklift_vuln_scans_total{result}`; blocks land in the audit log as `vuln.block` events. Per-version severity shows in the repository's Artifacts tab.
 
+### License policy (deps.dev)
+
+A proxy can gate package versions by their declared SPDX license, resolved from [deps.dev](https://deps.dev):
+
+```bash
+curl -u admin:change-me -X PUT http://forklift/api/v1/repositories/<id> \
+  -H 'Content-Type: application/json' \
+  -d '{"upstream_url":"https://registry.npmjs.org",
+       "config":{"license":{"enabled":true,"action":"block","deny":["GPL-3.0","AGPL-3.0"],"allow":["MIT","Apache-2.0"]}}}'
+```
+
+- Resolution runs out of the serving path: a requested coordinate (system, package, version) is looked up against deps.dev by a background worker and cached; the request-time gate consults only the stored result. A backfill resolves already-stored artifacts and a periodic re-resolver refreshes stale results.
+- `action`: `block` (403, refuse to serve), `warn` or `audit` (serve, record). A version carrying any license in `deny` is gated; when `allow` is non-empty, a version carrying any license outside it is also gated (allow-list mode). Matching is case-insensitive.
+- A not-yet-resolved version is served while its resolution is queued, unless `block_unresolved` is set under an enforcing (`block`) posture. Applies to proxy repositories; hosted uploads are resolved for display only.
+- Scope: direct dependency coordinate match only; the SPDX value is whatever deps.dev reports. Transitive dependencies and artifact integrity are out of scope.
+- Configure `FORKLIFT_DEPSDEV_URL` (default `https://api.deps.dev`; empty disables resolution), `FORKLIFT_LICENSE_RESCAN_INTERVAL` (default `24h`), `FORKLIFT_LICENSE_TTL` (default `7d`).
+- Blocks are counted in `forklift_license_blocked_total{repo,action}` and resolutions in `forklift_license_resolves_total{result}`; blocks land in the audit log as `license.block` events. Per-version licenses show in the repository's Artifacts tab. See [docs/license-scanning.md](docs/license-scanning.md).
+
 API reference: `http://forklift/api-docs` (Scalar) and `http://forklift/openapi.yaml`.
 
 ## Metrics
@@ -236,8 +282,11 @@ Prometheus metrics are exposed on `FORKLIFT_METRICS_ADDR` (`:8081` by default) a
 | `forklift_version_deny_blocked_total` | counter | `repo` | Version deny gate blocks |
 | `forklift_vuln_blocked_total` | counter | `repo`, `action` | Vulnerability policy blocks/warns/audits |
 | `forklift_vuln_scans_total` | counter | `result` | OSV scans by result (clean/vulnerable/error) |
+| `forklift_license_blocked_total` | counter | `repo`, `action` | License policy blocks/warns/audits |
+| `forklift_license_resolves_total` | counter | `result` | deps.dev resolutions by result (resolved/unknown/error) |
 | `forklift_audit_events_dropped_total` | counter | | Audit events dropped (recorder queue full) |
 | `forklift_replication_*` | counter/gauge | | PV-based replication progress (when `replication.enabled`) |
+| `forklift_objstore_meta_*` | counter/gauge | `result` | S3 metadata snapshot upload/download progress (when `storage.backend=s3`) |
 
 See [docs/metrics.md](docs/metrics.md) for per-metric meaning, labels, and example PromQL queries.
 

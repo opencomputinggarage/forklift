@@ -115,6 +115,7 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   // Older repos may predate the approval config section.
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
   const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
+  const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
 
   return (
     <>
@@ -300,6 +301,55 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             <span>Block versions not yet scanned (block action only)</span>
           </div>
           <p className="muted">Coordinate match against OSV (direct dependency only); transitive deps and artifact integrity are out of scope. Newly disclosed advisories surface on the next re-scan.</p>
+        </div>
+      )}
+
+      {repo.type === "proxy" && (
+        <div className="panel">
+          <h2>License policy <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· deps.dev</span></h2>
+          <div className="checkbox">
+            <input type="checkbox" checked={license.enabled}
+              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, enabled: e.target.checked } } })} />
+            <span>Gate packages by their declared license</span>
+          </div>
+          <div className="row">
+            <div><label>Action</label>
+              <Select value={license.action || "audit"}
+                onChange={(v) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, action: v } } })}
+                options={[
+                  { value: "block", label: "block (refuse to serve)" },
+                  { value: "warn", label: "warn (serve, log)" },
+                  { value: "audit", label: "audit (serve, log)" },
+                ]} /></div>
+          </div>
+          <label>Deny licenses (SPDX id, one per line)</label>
+          <textarea rows={3} style={{ width: "100%" }}
+            value={(license.deny ?? []).join("\n")}
+            placeholder={"GPL-3.0\nAGPL-3.0"}
+            onChange={(e) => setRepo({
+              ...repo,
+              config: {
+                ...repo.config,
+                license: { ...license, deny: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) },
+              },
+            })} />
+          <label>Allow licenses (SPDX id, one per line; empty = allow all but denied)</label>
+          <textarea rows={3} style={{ width: "100%" }}
+            value={(license.allow ?? []).join("\n")}
+            placeholder={"MIT\nApache-2.0\nBSD-3-Clause"}
+            onChange={(e) => setRepo({
+              ...repo,
+              config: {
+                ...repo.config,
+                license: { ...license, allow: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) },
+              },
+            })} />
+          <div className="checkbox" style={{ marginTop: 8 }}>
+            <input type="checkbox" checked={!!license.block_unresolved}
+              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, block_unresolved: e.target.checked } } })} />
+            <span>Block versions not yet resolved (block action only)</span>
+          </div>
+          <p className="muted">Licenses resolved per version from deps.dev (SPDX, direct coordinate). A denied license, or any license outside a non-empty allow list, triggers the action. Matching is case-insensitive.</p>
         </div>
       )}
 
@@ -502,7 +552,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       {error && <div className="error">{error}</div>}
       <table style={{ marginTop: 12 }}>
         <thead>
-          <tr><th>Path</th><th>Version</th><th>Vuln</th><th>Size</th><th>Type</th><th>Last accessed</th>{canDelete && <th></th>}</tr>
+          <tr><th>Path</th><th>Version</th><th>Vuln</th><th>License</th><th>Size</th><th>Type</th><th>Last accessed</th>{canDelete && <th></th>}</tr>
         </thead>
         <tbody>
           {data?.artifacts.map((a) => (
@@ -510,6 +560,11 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, wordBreak: "break-all" }}>{a.path}</td>
               <td>{a.version || "—"}</td>
               <td><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></td>
+              <td>{a.licenses && a.licenses.length > 0
+                ? a.licenses.map((l) => (
+                    <span key={l} className="badge" style={{ marginRight: 4, fontSize: 11 }}>{l}</span>
+                  ))
+                : <span className="muted">—</span>}</td>
               <td className="muted">{humanSize(a.size)}</td>
               <td className="muted">{a.content_type}</td>
               <td className="muted">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</td>
@@ -521,7 +576,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
             </tr>
           ))}
           {data && data.artifacts.length === 0 && (
-            <tr><td colSpan={canDelete ? 7 : 6} className="muted">No cached artifacts yet. Pull through the endpoint above to populate the cache.</td></tr>
+            <tr><td colSpan={canDelete ? 8 : 7} className="muted">No cached artifacts yet. Pull through the endpoint above to populate the cache.</td></tr>
           )}
         </tbody>
       </table>

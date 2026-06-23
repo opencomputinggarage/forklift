@@ -213,6 +213,30 @@ Vulnerability scans performed by the background worker against OSV. `error`
 growth means OSV lookups are failing (unreachable endpoint, rate limit), in
 which case unscanned coordinates fail open unless `block_unscanned` is set.
 
+### forklift_license_blocked_total
+
+- Type: Counter
+- Labels: `repo`, `action`
+
+Requests counted by the license policy: blocked when `action=block`, or
+recorded-only when `action=warn`/`audit`. The policy matches the requested
+package version's resolved SPDX license(s) against the per-repository `deny` and
+`allow` lists (direct coordinate only). A spike indicates clients pulling
+versions whose license is denied (or outside a non-empty allow list). See
+[License scanning](license-scanning.md).
+
+### forklift_license_resolves_total
+
+- Type: Counter
+- Labels: `result` (`resolved`, `unknown`, `error`)
+
+License resolutions performed by the background worker against deps.dev.
+`resolved` means at least one SPDX license was returned, `unknown` means the
+source reported none (the coordinate is still recorded so it is not re-queried
+every request), and `error` growth means deps.dev lookups are failing
+(unreachable endpoint, rate limit), in which case unresolved coordinates fail
+open unless `block_unresolved` is set.
+
 ### forklift_audit_events_dropped_total
 
 - Type: Counter
@@ -332,7 +356,8 @@ The metrics answer a few core questions about a forklift deployment:
 - Are proxies caching and reaching upstreams? `cache_*`, `upstream_errors_total`
 - Are the supply-chain gates doing their job? `age_policy_violations_total`,
   `approval_blocked_total`, `approval_pending`, `version_deny_blocked_total`,
-  `vuln_blocked_total`, `vuln_scans_total`
+  `vuln_blocked_total`, `vuln_scans_total`, `license_blocked_total`,
+  `license_resolves_total`
 - Is auditing complete? `audit_events_dropped_total`
 - In HA, are standbys keeping up? `replication_*`
 

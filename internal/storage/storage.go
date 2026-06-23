@@ -31,6 +31,16 @@ type BlobStore interface {
 	Delete(ctx context.Context, digest string) error
 }
 
+// WalkableStore is a BlobStore that can also enumerate its digests in
+// lexicographic order. Replication needs the ordering to diff against a peer's
+// cursor-paged listing; ordinary blob consumers only need BlobStore.
+type WalkableStore interface {
+	BlobStore
+	// WalkDigests calls fn for every stored blob digest in lexicographic order,
+	// stopping at the first error fn returns.
+	WalkDigests(ctx context.Context, fn func(digest string) error) error
+}
+
 // FSStore is a filesystem-backed BlobStore laid out as <root>/blobs/aa/bb/<digest>.
 type FSStore struct {
 	root string

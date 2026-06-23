@@ -14,12 +14,13 @@ import (
 
 // Config is the per-repository config payload.
 type Config struct {
-	Cache     CacheConfig      `json:"cache"`
-	AgePolicy AgePolicyConfig  `json:"age_policy"`
-	Approval  ApprovalConfig   `json:"approval"`
-	Retention RetentionConfig  `json:"retention"`
-	Vuln      VulnPolicyConfig `json:"vuln"`
-	Group     GroupConfig      `json:"group"`
+	Cache     CacheConfig         `json:"cache"`
+	AgePolicy AgePolicyConfig     `json:"age_policy"`
+	Approval  ApprovalConfig      `json:"approval"`
+	Retention RetentionConfig     `json:"retention"`
+	Vuln      VulnPolicyConfig    `json:"vuln"`
+	License   LicensePolicyConfig `json:"license"`
+	Group     GroupConfig         `json:"group"`
 }
 
 // Vulnerability policy actions and severity labels.
@@ -62,6 +63,29 @@ func (v VulnPolicyConfig) EffectiveThreshold() string {
 		return SeverityHigh
 	}
 	return v.Threshold
+}
+
+// LicensePolicyConfig gates proxy packages by their resolved SPDX license(s).
+// When enabled, a requested version is evaluated against Deny and Allow: a
+// version carrying any license in Deny is blocked/warned/audited per Action;
+// if Allow is non-empty, a version carrying any license outside Allow is also
+// gated (allow-list mode). BlockUnresolved gates a not-yet-resolved version
+// (enforce posture); otherwise the request is served and the coordinate is
+// resolved asynchronously. License identifiers are matched case-insensitively.
+type LicensePolicyConfig struct {
+	Enabled         bool     `json:"enabled"`
+	Action          string   `json:"action,omitempty"` // block|warn|audit (default audit)
+	Deny            []string `json:"deny,omitempty"`
+	Allow           []string `json:"allow,omitempty"`
+	BlockUnresolved bool     `json:"block_unresolved,omitempty"`
+}
+
+// EffectiveAction returns Action with the audit default applied.
+func (l LicensePolicyConfig) EffectiveAction() string {
+	if l.Action == "" {
+		return VulnActionAudit
+	}
+	return l.Action
 }
 
 // RetentionConfig auto-deletes artifacts that have been idle (not served) for
@@ -212,6 +236,11 @@ func (c Config) Validate() error {
 	case "", SeverityCritical, SeverityHigh, SeverityMedium, SeverityLow:
 	default:
 		return fmt.Errorf("unsupported vuln threshold %q", c.Vuln.Threshold)
+	}
+	switch c.License.Action {
+	case "", VulnActionBlock, VulnActionWarn, VulnActionAudit:
+	default:
+		return fmt.Errorf("unsupported license action %q", c.License.Action)
 	}
 	return nil
 }

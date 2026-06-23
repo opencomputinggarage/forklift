@@ -31,6 +31,13 @@ export interface RepoConfig {
     ignore?: string[];
     block_unscanned?: boolean;
   };
+  license?: {
+    enabled: boolean;
+    action?: string;
+    deny?: string[];
+    allow?: string[];
+    block_unresolved?: boolean;
+  };
   group: {
     members?: string[];
   };
@@ -122,6 +129,9 @@ export interface Artifact {
   vuln_counts?: Record<string, number>;
   vuln_source?: string;
   vuln_scanned_at?: string | null;
+  licenses?: string[];
+  license_source?: string;
+  license_resolved_at?: string | null;
 }
 
 export interface ArtifactList {

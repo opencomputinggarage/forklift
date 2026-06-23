@@ -1,4 +1,4 @@
-{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) (not .Values.replication.enabled) }}
+{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) (not .Values.replication.enabled) (ne (include "forklift.s3Enabled" .) "true") }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

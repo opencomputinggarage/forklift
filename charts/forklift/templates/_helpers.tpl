@@ -277,13 +277,28 @@ credential chain (EKS IRSA / Pod Identity).
   value: /etc/forklift/accounts
 {{- end }}
 {{- end }}
-- name: FORKLIFT_OSV_URL
-  value: {{ .Values.vuln.osvUrl | quote }}
 {{- with .Values.externalUrl }}
 - name: FORKLIFT_EXTERNAL_URL
   value: {{ . | quote }}
 {{- end }}
 {{- with .Values.extraEnv }}
+{{ toYaml . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Container args: vulnerability (OSV) and license (deps.dev) scanning are
+configured via CLI flags rather than env. An empty URL is still passed so it
+explicitly disables the corresponding scanner (overriding the binary default).
+*/}}
+{{- define "forklift.args" -}}
+- --osv-url={{ .Values.vuln.osvUrl }}
+- --vuln-rescan-interval={{ .Values.vuln.rescanInterval }}
+- --vuln-ttl={{ .Values.vuln.ttl }}
+- --deps-dev-url={{ .Values.license.depsDevUrl }}
+- --license-rescan-interval={{ .Values.license.rescanInterval }}
+- --license-ttl={{ .Values.license.ttl }}
+{{- with .Values.extraArgs }}
 {{ toYaml . }}
 {{- end }}
 {{- end }}

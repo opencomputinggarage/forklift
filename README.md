@@ -236,7 +236,7 @@ curl -u admin:change-me -X PUT http://forklift/api/v1/repositories/<id> \
 - `action`: `block` (403, refuse to serve), `warn` or `audit` (serve, record). The gate triggers when the highest non-ignored advisory severity meets `threshold` (`critical`/`high`/`medium`/`low`, default `high`). `ignore` lists accepted/false-positive advisory ids (CVE/GHSA/OSV).
 - A not-yet-scanned version is served while its scan is queued, unless `block_unscanned` is set under an enforcing (`block`) posture.
 - Scope (v1): direct dependency coordinate match only. Transitive dependencies, artifact integrity/provenance, and dependency-confusion are out of scope. A clean result means "no matching public OSV advisory", not a guarantee.
-- Configure `FORKLIFT_OSV_URL` (default `https://api.osv.dev`; empty disables scanning), `FORKLIFT_VULN_RESCAN_INTERVAL` (default `6h`), `FORKLIFT_VULN_TTL` (default `24h`).
+- Configure via flags: `--osv-url` (default `https://api.osv.dev`; empty disables scanning), `--vuln-rescan-interval` (default `6h`), `--vuln-ttl` (default `24h`). The matching `FORKLIFT_OSV_URL` / `FORKLIFT_VULN_RESCAN_INTERVAL` / `FORKLIFT_VULN_TTL` env vars still seed the defaults; flags take precedence.
 - Blocks are counted in `forklift_vuln_blocked_total{repo,action}` and scans in `forklift_vuln_scans_total{result}`; blocks land in the audit log as `vuln.block` events. Per-version severity shows in the repository's Artifacts tab.
 
 ### License policy (deps.dev)
@@ -254,7 +254,7 @@ curl -u admin:change-me -X PUT http://forklift/api/v1/repositories/<id> \
 - `action`: `block` (403, refuse to serve), `warn` or `audit` (serve, record). A version carrying any license in `deny` is gated; when `allow` is non-empty, a version carrying any license outside it is also gated (allow-list mode). Matching is case-insensitive.
 - A not-yet-resolved version is served while its resolution is queued, unless `block_unresolved` is set under an enforcing (`block`) posture. Applies to proxy repositories; hosted uploads are resolved for display only.
 - Scope: direct dependency coordinate match only; the SPDX value is whatever deps.dev reports. Transitive dependencies and artifact integrity are out of scope.
-- Configure `FORKLIFT_DEPSDEV_URL` (default `https://api.deps.dev`; empty disables resolution), `FORKLIFT_LICENSE_RESCAN_INTERVAL` (default `24h`), `FORKLIFT_LICENSE_TTL` (default `7d`).
+- Configure via flags: `--deps-dev-url` (default `https://api.deps.dev`; empty disables resolution), `--license-rescan-interval` (default `24h`), `--license-ttl` (default `7d` / `168h`). The matching `FORKLIFT_DEPSDEV_URL` / `FORKLIFT_LICENSE_RESCAN_INTERVAL` / `FORKLIFT_LICENSE_TTL` env vars still seed the defaults; flags take precedence.
 - Blocks are counted in `forklift_license_blocked_total{repo,action}` and resolutions in `forklift_license_resolves_total{result}`; blocks land in the audit log as `license.block` events. Per-version licenses show in the repository's Artifacts tab. See [docs/license-scanning.md](docs/license-scanning.md).
 
 API reference: `http://forklift/api-docs` (Scalar) and `http://forklift/openapi.yaml`.

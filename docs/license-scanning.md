@@ -41,7 +41,7 @@ per-version license metadata for every package system forklift proxies behind
 one schema. forklift queries:
 
 ```
-GET {FORKLIFT_DEPSDEV_URL}/v3/systems/{system}/packages/{package}/versions/{version}
+GET {deps-dev-url}/v3/systems/{system}/packages/{package}/versions/{version}
 ```
 
 and reads the `licenses` array (SPDX expressions). The coordinate for each
@@ -62,15 +62,17 @@ files itself.
 
 ## Enabling resolution
 
-License resolution is a process-wide switch, controlled by environment
-variables. It is **on by default** (the default deps.dev endpoint is set); set
-`FORKLIFT_DEPSDEV_URL` to empty to disable resolution and the gate entirely.
+License resolution is a process-wide switch, controlled by CLI flags. It is **on
+by default** (the default deps.dev endpoint is set); pass `--deps-dev-url=` empty
+to disable resolution and the gate entirely. The matching `FORKLIFT_*` env vars
+still seed the flag defaults, so existing env-based deployments keep working;
+flags take precedence.
 
-| Variable | Default | Meaning |
-|----------|---------|---------|
-| `FORKLIFT_DEPSDEV_URL` | `https://api.deps.dev` | deps.dev API base. Empty disables license scanning. |
-| `FORKLIFT_LICENSE_RESCAN_INTERVAL` | `24h` | How often the backfill sweep runs and how often stale results are re-checked. |
-| `FORKLIFT_LICENSE_TTL` | `7d` | A stored result older than this is eligible for re-resolution. |
+| Flag | Env (default seed) | Default | Meaning |
+|------|--------------------|---------|---------|
+| `--deps-dev-url` | `FORKLIFT_DEPSDEV_URL` | `https://api.deps.dev` | deps.dev API base. Empty disables license scanning. |
+| `--license-rescan-interval` | `FORKLIFT_LICENSE_RESCAN_INTERVAL` | `24h` | How often the backfill sweep runs and how often stale results are re-checked. |
+| `--license-ttl` | `FORKLIFT_LICENSE_TTL` | `7d` | A stored result older than this is eligible for re-resolution. |
 
 The worker, backfill, and rescanner are **leader-gated**: in an HA deployment
 only the leader drives them, keeping a single writer to SQLite.
@@ -158,7 +160,7 @@ A practical rollout sequence:
 - **Licenses are missing in the UI.** Resolution is asynchronous: a
   freshly-cached version may show no license until the worker processes it. The
   backfill also fills in older artifacts on its interval. Confirm
-  `FORKLIFT_DEPSDEV_URL` is set and reachable from the pod.
+  `--deps-dev-url` is set (non-empty) and reachable from the pod.
 - **`forklift_license_resolves_total{result="error"}` is climbing.** deps.dev
   lookups are failing (network egress blocked, rate limited, or the endpoint is
   wrong). Unresolved coordinates fail open unless `block_unresolved` is set, so
@@ -167,7 +169,7 @@ A practical rollout sequence:
   artifact browser or via the API. deps.dev may report an expression
   (`(MIT OR GPL-3.0)`) or an unexpected id; adjust `deny`/`allow` accordingly,
   or temporarily move the license to `allow`.
-- **Air-gapped / no egress.** Set `FORKLIFT_DEPSDEV_URL` to empty to disable the
+- **Air-gapped / no egress.** Pass `--deps-dev-url=` empty to disable the
   feature, or point it at an internal mirror of the deps.dev API.
 
 ## Conclusion

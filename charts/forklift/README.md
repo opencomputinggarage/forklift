@@ -99,6 +99,7 @@ The following table lists the configurable parameters and their default values.
 | auth.sessionSecret | string | `""` | Secret used to sign session cookies; MUST be shared across replicas. If empty a value is generated into the chart Secret on first install and preserved. |
 | auth.sessionTTL | string | `"12h"` | Session cookie lifetime. |
 | externalUrl | string | `""` | Public base URL clients reach forklift at (e.g. https://forklift.example.com). When set, generated index/metadata URLs use it instead of the inbound request host, which hardens against Host-header injection. Empty uses the request host. |
+| extraArgs | list | `[]` | Raw CLI flags appended to the container args (after the scan flags). |
 | extraEnv | list | `[]` | Raw environment variables appended to the container. |
 | extraObjects | list | `[]` | Arbitrary additional manifests to render (each value is templated). |
 | fullnameOverride | string | `""` | Override the fully qualified resource name. |
@@ -124,6 +125,9 @@ The following table lists the configurable parameters and their default values.
 | ingress.enabled | bool | `false` | Enable Ingress. |
 | ingress.hosts | list | `[{"host":"forklift.example.com","paths":[{"path":"/","pathType":"Prefix"}]}]` | Ingress host rules. |
 | ingress.tls | list | `[]` | Ingress TLS configuration. |
+| license.depsDevUrl | string | `"https://api.deps.dev"` | deps.dev API base URL used to resolve package licenses. Empty disables resolution. |
+| license.rescanInterval | string | `"24h"` | How often stale license results are re-queried. |
+| license.ttl | string | `"168h"` | Age at which a license result is considered stale. |
 | livenessProbe | object | `{"httpGet":{"path":"/healthz","port":"http"},"initialDelaySeconds":5,"periodSeconds":10}` | Liveness probe configuration. |
 | log.format | string | `"json"` | Log format (json, text). |
 | log.level | string | `"info"` | Log level (debug, info, warn, error). |
@@ -179,7 +183,9 @@ The following table lists the configurable parameters and their default values.
 | storage.s3.region | string | `""` | AWS region. Empty uses the AWS default chain / pod environment. |
 | tolerations | list | `[]` | Tolerations for pod scheduling. |
 | topologySpreadConstraints | list | `[]` | Topology spread constraints for pod scheduling. |
-| vuln.osvUrl | string | `"https://api.osv.dev"` | OSV API base URL used to scan requested versions. |
+| vuln.osvUrl | string | `"https://api.osv.dev"` | OSV API base URL used to scan requested versions. Empty disables scanning. |
+| vuln.rescanInterval | string | `"6h"` | How often stale scan results are re-queried. |
+| vuln.ttl | string | `"24h"` | Age at which a scan result is considered stale. |
 
 ## Source Code
 

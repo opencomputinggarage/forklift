@@ -39,25 +39,41 @@ import (
 )
 
 func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "fatal:", err)
+		os.Exit(1)
+	}
+
 	showVersion := flag.Bool("version", false, "print version and exit")
+	// Vulnerability (OSV) and license (deps.dev) scanning are configured via
+	// flags. The Load() values seed the defaults so any FORKLIFT_* env still
+	// applies, while flags take precedence. An empty URL disables that scanner.
+	flag.StringVar(&cfg.Vuln.OSVURL, "osv-url", cfg.Vuln.OSVURL,
+		"OSV API base URL for vulnerability scanning; empty disables it")
+	flag.DurationVar(&cfg.Vuln.RescanInterval, "vuln-rescan-interval", cfg.Vuln.RescanInterval,
+		"how often stale vulnerability scan results are re-queried")
+	flag.DurationVar(&cfg.Vuln.TTL, "vuln-ttl", cfg.Vuln.TTL,
+		"age at which a vulnerability scan result becomes stale")
+	flag.StringVar(&cfg.License.DepsDevURL, "deps-dev-url", cfg.License.DepsDevURL,
+		"deps.dev API base URL for license scanning; empty disables it")
+	flag.DurationVar(&cfg.License.RescanInterval, "license-rescan-interval", cfg.License.RescanInterval,
+		"how often stale license results are re-queried")
+	flag.DurationVar(&cfg.License.TTL, "license-ttl", cfg.License.TTL,
+		"age at which a license result becomes stale")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("forklift", version.String())
 		return
 	}
 
-	if err := run(); err != nil {
+	if err := run(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "fatal:", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	cfg, err := config.Load()
-	if err != nil {
-		return err
-	}
-
+func run(cfg *config.Config) error {
 	log := newLogger(cfg)
 	log.Info("starting forklift", "version", version.String(), "data_dir", cfg.DataDir)
 

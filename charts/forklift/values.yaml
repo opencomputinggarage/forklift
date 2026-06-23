@@ -239,13 +239,30 @@ audit:
   # -- (string) Retention period; the leader prunes older entries. "0" keeps them forever.
   retention: 2160h # 90 days
 
-# Vulnerability scanning data source (OSV). Enforcement is per-repository
+# Vulnerability scanning data source (OSV). Passed to the container as CLI flags
+# (--osv-url, --vuln-rescan-interval, --vuln-ttl). Enforcement is per-repository
 # (Settings > Vulnerability policy) and only happens for repositories that opt
 # in, so there is no global on/off here; this just points the scanner at an OSV
 # endpoint. For air-gapped clusters, set this to a self-hosted/mirrored OSV.
 vuln:
-  # -- (string) OSV API base URL used to scan requested versions.
+  # -- (string) OSV API base URL used to scan requested versions. Empty disables scanning.
   osvUrl: https://api.osv.dev
+  # -- (string) How often stale scan results are re-queried.
+  rescanInterval: 6h
+  # -- (string) Age at which a scan result is considered stale.
+  ttl: 24h
+
+# License scanning data source (deps.dev). Passed to the container as CLI flags
+# (--deps-dev-url, --license-rescan-interval, --license-ttl). Like vulnerability
+# scanning, enforcement is per-repository; this only points the resolver at a
+# deps.dev endpoint. Set depsDevUrl empty to disable license resolution.
+license:
+  # -- (string) deps.dev API base URL used to resolve package licenses. Empty disables resolution.
+  depsDevUrl: https://api.deps.dev
+  # -- (string) How often stale license results are re-queried.
+  rescanInterval: 24h
+  # -- (string) Age at which a license result is considered stale.
+  ttl: 168h
 
 # -- (string) Public base URL clients reach forklift at (e.g. https://forklift.example.com).
 # When set, generated index/metadata URLs use it instead of the inbound request
@@ -412,6 +429,9 @@ topologySpreadConstraints: []
 
 # -- (list) Raw environment variables appended to the container.
 extraEnv: []
+
+# -- (list) Raw CLI flags appended to the container args (after the scan flags).
+extraArgs: []
 
 # -- (list) Arbitrary additional manifests to render (each value is templated).
 extraObjects: []

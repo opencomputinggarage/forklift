@@ -1,3 +1,4 @@
+{{- include "forklift.validateStorage" . }}
 {{- if .Values.replication.enabled }}
 # PV-based replication mode: every pod owns a ReadWriteOnce PVC. The Lease
 # leader serves traffic (selected by the forklift.io/role=leader pod label,

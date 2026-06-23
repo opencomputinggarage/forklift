@@ -10,6 +10,7 @@ import (
 
 	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/license"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/vuln"
@@ -32,12 +33,20 @@ type Manager struct {
 	ttlExpired      *prometheus.CounterVec
 	vulnBlocked     *prometheus.CounterVec
 	vulnScans       *prometheus.CounterVec
+	licenseBlocked  *prometheus.CounterVec
+	licenseResolves *prometheus.CounterVec
 
 	// scanner performs vulnerability lookups; nil disables the vuln gate. Scan
 	// jobs are queued and processed by RunVulnWorker so the serving path never
 	// blocks on an advisory lookup.
 	scanner   vuln.Scanner
 	scanQueue chan scanJob
+
+	// resolver performs license lookups; nil disables the license gate. Resolve
+	// jobs are queued and processed by RunLicenseWorker so the serving path never
+	// blocks on a license lookup.
+	resolver     license.Resolver
+	resolveQueue chan resolveJob
 }
 
 // NewManager creates a Manager. authz may be nil to disable authorization
@@ -70,10 +79,20 @@ func NewManager(engine *Engine, store *meta.Store, authz *auth.Service, rec *aud
 			Namespace: "forklift", Name: "vuln_scans_total",
 			Help: "Vulnerability scans performed, by result (clean|vulnerable|error).",
 		}, []string{"result"}),
-		scanQueue: make(chan scanJob, 256),
+		licenseBlocked: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: "forklift", Name: "license_blocked_total",
+			Help: "Requests blocked (or counted in warn/audit mode) by the license policy.",
+		}, []string{"repo", "action"}),
+		licenseResolves: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: "forklift", Name: "license_resolves_total",
+			Help: "License resolutions performed, by result (resolved|unknown|error).",
+		}, []string{"result"}),
+		scanQueue:    make(chan scanJob, 256),
+		resolveQueue: make(chan resolveJob, 256),
 	}
 	if reg != nil {
-		reg.MustRegister(m.approvalBlocked, m.denyBlocked, m.ttlExpired, m.vulnBlocked, m.vulnScans)
+		reg.MustRegister(m.approvalBlocked, m.denyBlocked, m.ttlExpired, m.vulnBlocked, m.vulnScans,
+			m.licenseBlocked, m.licenseResolves)
 	}
 	return m
 }
@@ -81,6 +100,10 @@ func NewManager(engine *Engine, store *meta.Store, authz *auth.Service, rec *aud
 // SetVulnScanner enables the vulnerability gate and background scanning. When
 // unset, the gate is a no-op (the feature is disabled).
 func (m *Manager) SetVulnScanner(s vuln.Scanner) { m.scanner = s }
+
+// SetLicenseResolver enables the license gate and background resolution. When
+// unset, the gate is a no-op (the feature is disabled).
+func (m *Manager) SetLicenseResolver(r license.Resolver) { m.resolver = r }
 
 // authorize enforces RBAC for a repository request. action is read, write or
 // delete. It returns false and writes the response when access is denied.

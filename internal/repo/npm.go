@@ -40,6 +40,9 @@ func (m *Manager) handleNpm(w http.ResponseWriter, r *http.Request) {
 	if m.vulnGate(w, r, res, npmPackage(res.path), npmVersion(res.path)) {
 		return
 	}
+	if m.licenseGate(w, r, res, npmPackage(res.path), npmVersion(res.path)) {
+		return
+	}
 
 	if strings.Contains(res.path, "/-/") {
 		m.npmTarball(w, r, res)
@@ -281,6 +284,7 @@ func (m *Manager) npmPublish(w http.ResponseWriter, r *http.Request, res resolve
 				return
 			}
 			m.scanStored(res.repo, tarballPath)
+			m.resolveStored(res.repo, tarballPath)
 		}
 	}
 	delete(doc, "_attachments")

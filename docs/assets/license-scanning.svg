@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#111111"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="560" fill="#ffffff"/>
+
+  <!-- boundaries -->
+  <rect x="176" y="28" width="486" height="512" rx="10" fill="#ffffff" stroke="#111111" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="192" y="50" font-size="14" font-weight="700" fill="#111111">Kubernetes cluster · forklift leader pod</text>
+  <rect x="688" y="312" width="190" height="106" rx="10" fill="#ffffff" stroke="#111111" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="704" y="332" font-size="13" font-weight="700" fill="#111111">External services</text>
+
+  <!-- client (actor, outside the cluster) -->
+  <g font-size="12">
+    <rect x="24" y="150" width="132" height="60" rx="6" fill="#111111" stroke="#111111"/>
+    <text x="90" y="176" text-anchor="middle" font-weight="700" fill="#ffffff">Client</text>
+    <text x="90" y="193" text-anchor="middle" font-size="9.5" fill="#cccccc">mvn npm cargo go pip</text>
+  </g>
+
+  <!-- format handler -->
+  <g font-size="12">
+    <rect x="196" y="150" width="120" height="60" rx="6" fill="#ffffff" stroke="#111111" stroke-width="1.5"/>
+    <text x="256" y="176" text-anchor="middle" font-size="11" font-weight="700" fill="#111111">Format handler</text>
+    <text x="256" y="193" text-anchor="middle" font-size="9" fill="#999999">maven npm cargo go pypi</text>
+  </g>
+
+  <!-- license gate (synchronous serving path) -->
+  <g>
+    <rect x="356" y="120" width="190" height="120" rx="6" fill="#111111" stroke="#111111" stroke-width="2.5"/>
+    <text x="451" y="142" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">License gate</text>
+    <text x="451" y="159" text-anchor="middle" font-size="9" fill="#999999">proxy read · stored result only</text>
+    <g font-size="10.5" fill="#dddddd">
+      <text x="372" y="182">• deny / allow (SPDX)</text>
+      <text x="372" y="201">• action: block · warn · audit</text>
+      <text x="372" y="220">• block_unresolved</text>
+    </g>
+  </g>
+
+  <!-- resolve queue -->
+  <g font-size="12">
+    <rect x="356" y="272" width="190" height="46" rx="6" fill="#f6f6f6" stroke="#111111" stroke-width="1.2"/>
+    <text x="451" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#333333">Resolve queue</text>
+    <text x="451" y="307" text-anchor="middle" font-size="9" fill="#888888">deduped · async</text>
+  </g>
+
+  <!-- backfill + rescanner (background jobs) -->
+  <g font-size="12">
+    <rect x="196" y="262" width="120" height="58" rx="6" fill="#ffffff" stroke="#999999" stroke-width="1.2" stroke-dasharray="5 4"/>
+    <text x="256" y="284" text-anchor="middle" font-size="11" font-weight="700" fill="#555555">Backfill +</text>
+    <text x="256" y="299" text-anchor="middle" font-size="11" font-weight="700" fill="#555555">Rescanner</text>
+    <text x="256" y="313" text-anchor="middle" font-size="8.5" fill="#888888">stored · stale</text>
+  </g>
+
+  <!-- license worker -->
+  <g>
+    <rect x="356" y="352" width="190" height="60" rx="6" fill="#111111" stroke="#111111"/>
+    <text x="451" y="378" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">License worker</text>
+    <text x="451" y="394" text-anchor="middle" font-size="9" fill="#cccccc">RunLicenseWorker</text>
+  </g>
+
+  <!-- license_scans storage -->
+  <g>
+    <rect x="356" y="448" width="190" height="70" rx="8" fill="#111111" stroke="#111111"/>
+    <text x="451" y="478" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">license_scans (SQLite)</text>
+    <text x="451" y="496" text-anchor="middle" font-size="9" fill="#cccccc">system · pkg · version</text>
+    <text x="451" y="508" text-anchor="middle" font-size="9" fill="#cccccc">→ SPDX licenses, source</text>
+  </g>
+
+  <!-- deps.dev (external) -->
+  <g>
+    <rect x="704" y="344" width="158" height="58" rx="6" fill="#111111" stroke="#111111"/>
+    <text x="783" y="370" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">deps.dev API</text>
+    <text x="783" y="387" text-anchor="middle" font-size="8.5" fill="#cccccc">/v3/systems/{sys}/packages</text>
+  </g>
+
+  <!-- edges -->
+  <g stroke="#111111" stroke-width="1.5" fill="none">
+    <!-- client <-> handler -->
+    <path d="M156,172 H196" marker-end="url(#arrow)"/>
+    <path d="M196,192 H156" marker-end="url(#arrow)"/>
+    <!-- handler -> gate -->
+    <path d="M316,176 H356" marker-end="url(#arrow)"/>
+    <!-- gate -> queue (enqueue on miss/unresolved) -->
+    <path d="M451,240 V272" marker-end="url(#arrow)" stroke-dasharray="5 4"/>
+    <!-- backfill -> queue -->
+    <path d="M316,291 H356" marker-end="url(#arrow)"/>
+    <!-- queue -> worker -->
+    <path d="M451,318 V352" marker-end="url(#arrow)"/>
+    <!-- worker -> deps.dev (resolve) -->
+    <path d="M546,374 H704" marker-end="url(#arrow)"/>
+    <!-- deps.dev -> worker (licenses, dashed return) -->
+    <path d="M704,390 H546" marker-end="url(#arrow)" stroke-dasharray="5 4"/>
+    <!-- worker -> storage (upsert) -->
+    <path d="M451,412 V448" marker-end="url(#arrow)"/>
+    <!-- gate -> storage (lookup, left route) -->
+    <path d="M356,210 H340 V490 H356" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- label backgrounds (white, so text reads cleanly) -->
+  <g stroke="none" fill="#ffffff">
+    <rect x="160" y="160" width="32" height="12" rx="2"/>
+    <rect x="156" y="196" width="44" height="12" rx="2"/>
+    <rect x="338" y="248" width="118" height="13" rx="2"/>
+    <rect x="252" y="246" width="68" height="12" rx="2"/>
+    <rect x="588" y="362" width="40" height="13" rx="2"/>
+    <rect x="582" y="397" width="54" height="13" rx="2"/>
+    <rect x="456" y="421" width="44" height="13" rx="2"/>
+    <rect x="300" y="333" width="44" height="13" rx="2"/>
+  </g>
+
+  <!-- edge labels -->
+  <g font-size="10" fill="#333333" text-anchor="middle">
+    <text x="176" y="169">pull</text>
+    <text x="178" y="205">200 / 403</text>
+    <text x="613" y="372">resolve</text>
+    <text x="609" y="407">licenses[]</text>
+    <text x="478" y="431">upsert</text>
+  </g>
+  <g font-size="9" fill="#333333">
+    <text x="342" y="258">enqueue on miss / unresolved</text>
+    <text x="256" y="343" text-anchor="middle">backfill · rescan</text>
+    <text x="322" y="208" text-anchor="end">lookup</text>
+  </g>
+</svg>

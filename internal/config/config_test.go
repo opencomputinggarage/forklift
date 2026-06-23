@@ -102,3 +102,71 @@ func TestAuthDefaults(t *testing.T) {
 		t.Fatalf("oidc claim defaults = %+v", c.Auth.OIDC)
 	}
 }
+
+func TestStorageDefaultsFS(t *testing.T) {
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Storage.Backend != "fs" {
+		t.Fatalf("storage backend = %q, want fs", c.Storage.Backend)
+	}
+	if c.Storage.MetaSyncInterval != 30*time.Second {
+		t.Fatalf("meta sync interval = %v", c.Storage.MetaSyncInterval)
+	}
+}
+
+func TestStorageS3Loads(t *testing.T) {
+	t.Setenv("FORKLIFT_STORAGE_BACKEND", "s3")
+	t.Setenv("FORKLIFT_STORAGE_S3_BUCKET", "my-bucket")
+	t.Setenv("FORKLIFT_STORAGE_S3_PREFIX", "forklift")
+	t.Setenv("FORKLIFT_STORAGE_S3_REGION", "ap-northeast-2")
+	t.Setenv("FORKLIFT_STORAGE_S3_FORCE_PATH_STYLE", "true")
+	t.Setenv("FORKLIFT_STORAGE_META_SYNC_INTERVAL", "10s")
+
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("valid s3 config rejected: %v", err)
+	}
+	if c.Storage.Backend != "s3" || c.Storage.S3.Bucket != "my-bucket" {
+		t.Fatalf("s3 config = %+v", c.Storage)
+	}
+	if !c.Storage.S3.ForcePathStyle || c.Storage.S3.Region != "ap-northeast-2" {
+		t.Fatalf("s3 config = %+v", c.Storage.S3)
+	}
+	if c.Storage.MetaSyncInterval != 10*time.Second {
+		t.Fatalf("meta sync interval = %v", c.Storage.MetaSyncInterval)
+	}
+}
+
+func TestStorageS3RequiresBucket(t *testing.T) {
+	t.Setenv("FORKLIFT_STORAGE_BACKEND", "s3")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error when s3 backend has no bucket")
+	}
+}
+
+func TestStorageRejectsUnknownBackend(t *testing.T) {
+	t.Setenv("FORKLIFT_STORAGE_BACKEND", "gcs")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for unknown backend")
+	}
+}
+
+func TestStorageS3RejectsPartialStaticCreds(t *testing.T) {
+	t.Setenv("FORKLIFT_STORAGE_BACKEND", "s3")
+	t.Setenv("FORKLIFT_STORAGE_S3_BUCKET", "b")
+	t.Setenv("FORKLIFT_STORAGE_S3_ACCESS_KEY_ID", "only-id")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error when only one static credential is set")
+	}
+}
+
+func TestStorageS3IncompatibleWithReplication(t *testing.T) {
+	t.Setenv("FORKLIFT_STORAGE_BACKEND", "s3")
+	t.Setenv("FORKLIFT_STORAGE_S3_BUCKET", "b")
+	t.Setenv("FORKLIFT_REPLICATION_ENABLED", "true")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for s3 backend + replication")
+	}
+}

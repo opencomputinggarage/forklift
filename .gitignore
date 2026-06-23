@@ -1,5 +1,6 @@
 # Go build artifacts
 /bin/
+/forklift
 cover.out
 *.test
 

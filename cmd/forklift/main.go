@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,8 +24,10 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/cluster"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/license"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/metrics"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/objstore"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/openapi"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/replication"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/repo"
@@ -70,11 +74,6 @@ func run() error {
 	}
 	defer store.Close()
 
-	blobs, err := storage.NewFSStore(cfg.DataDir)
-	if err != nil {
-		return fmt.Errorf("open blob store: %w", err)
-	}
-
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(prometheus.NewGoCollector(), prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 
@@ -88,6 +87,45 @@ func run() error {
 
 	// Repository inventory and physical storage usage, computed per scrape.
 	reg.MustRegister(metrics.NewStorageCollector(store))
+
+	// Blob store backend: local filesystem (default) or S3. In s3 mode blobs are
+	// shared directly in the bucket and the metadata database is snapshotted to
+	// S3 by metaSync, so the deployment needs no EBS/RWX volume.
+	var blobs storage.WalkableStore
+	var metaSync *objstore.MetaSync
+	switch cfg.Storage.Backend {
+	case "s3":
+		s3blobs, err := storage.NewS3BlobStore(ctx, toS3Config(cfg.Storage.S3), filepath.Join(cfg.DataDir, "blob-tmp"))
+		if err != nil {
+			return fmt.Errorf("open s3 blob store: %w", err)
+		}
+		blobs = s3blobs
+		metaKey := path.Join(strings.Trim(cfg.Storage.S3.Prefix, "/"), "meta", "forklift.db")
+		metaSync = objstore.NewMetaSync(objstore.MetaOptions{
+			Store:      store,
+			API:        s3blobs.Client(),
+			Bucket:     cfg.Storage.S3.Bucket,
+			Key:        metaKey,
+			DataDir:    cfg.DataDir,
+			Interval:   cfg.Storage.MetaSyncInterval,
+			Log:        log,
+			Registerer: reg,
+		})
+		// Restore the latest snapshot before bootstrap/seed so they see existing
+		// data. The live SQLite file lives on an ephemeral volume that loses its
+		// contents on restart; an empty bucket is a clean no-op.
+		if err := metaSync.RestoreOnBoot(ctx); err != nil {
+			return fmt.Errorf("restore metadata from s3: %w", err)
+		}
+		go metaSync.Run(ctx)
+		log.Info("storage backend: s3", "bucket", cfg.Storage.S3.Bucket, "prefix", cfg.Storage.S3.Prefix)
+	default:
+		fsblobs, err := storage.NewFSStore(cfg.DataDir)
+		if err != nil {
+			return fmt.Errorf("open blob store: %w", err)
+		}
+		blobs = fsblobs
+	}
 
 	// Auth: optional Keycloak OIDC plus local users and PATs.
 	var oidcProvider *auth.OIDCProvider
@@ -142,6 +180,10 @@ func run() error {
 	if cfg.Vuln.OSVURL != "" {
 		manager.SetVulnScanner(vuln.NewOSV(cfg.Vuln.OSVURL, nil))
 		log.Info("vulnerability scanning enabled", "osv_url", cfg.Vuln.OSVURL)
+	}
+	if cfg.License.DepsDevURL != "" {
+		manager.SetLicenseResolver(license.NewDepsDev(cfg.License.DepsDevURL, nil))
+		log.Info("license resolution enabled", "deps_dev_url", cfg.License.DepsDevURL)
 	}
 
 	// Pending approvals, computed on scrape (one indexed COUNT). Needs no leader
@@ -251,6 +293,13 @@ func run() error {
 				log.Error("replication: promote failed; serving local data", "err", err)
 			}
 		}
+		// In s3 mode, apply the latest metadata snapshot before serving so the
+		// new leader takes traffic on current data.
+		if metaSync != nil {
+			if err := metaSync.Promote(leadCtx); err != nil {
+				log.Error("objstore: promote failed; serving local data", "err", err)
+			}
+		}
 		srv.SetReady(true)
 		setPodRole(leadCtx, cluster.RoleLeader)
 		// A partitioned former leader may not have removed its own leader
@@ -267,12 +316,22 @@ func run() error {
 		go manager.RunVulnWorker(leadCtx)
 		go manager.RunVulnBackfill(leadCtx, cfg.Vuln.RescanInterval)
 		go manager.RunVulnRescanner(leadCtx, cfg.Vuln.RescanInterval, cfg.Vuln.TTL)
+		// License resolution worker + backfill + periodic re-resolver (no-ops
+		// without a resolver).
+		go manager.RunLicenseWorker(leadCtx)
+		go manager.RunLicenseBackfill(leadCtx, cfg.License.RescanInterval)
+		go manager.RunLicenseRescanner(leadCtx, cfg.License.RescanInterval, cfg.License.TTL)
 		if recorder != nil && cfg.Audit.Retention > 0 {
 			go recorder.RunRetention(leadCtx, time.Hour, cfg.Audit.Retention)
 		}
 	}
 	stopLeading := func() {
 		leaderGauge.Set(0)
+		if metaSync != nil {
+			// Resume downloading the leader's snapshots; gate Ready on leadership
+			// like the shared-volume mode (s3 mode runs as a Deployment).
+			metaSync.Demote()
+		}
 		if replicator != nil {
 			// Stay Ready so rollouts proceed; the role label moves traffic away.
 			replicator.Demote()
@@ -291,6 +350,18 @@ func run() error {
 	}
 
 	return srv.Run(ctx, reg)
+}
+
+func toS3Config(c config.S3Config) storage.S3Config {
+	return storage.S3Config{
+		Bucket:          c.Bucket,
+		Prefix:          c.Prefix,
+		Region:          c.Region,
+		Endpoint:        c.Endpoint,
+		ForcePathStyle:  c.ForcePathStyle,
+		AccessKeyID:     c.AccessKeyID,
+		SecretAccessKey: c.SecretAccessKey,
+	}
 }
 
 func newLogger(cfg *config.Config) *slog.Logger {

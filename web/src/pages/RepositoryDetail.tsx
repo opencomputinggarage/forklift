@@ -179,11 +179,11 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
       {repo.type === "proxy" && (
         <div className="panel">
           <h2>Cache</h2>
-          <div className="checkbox">
-            <input type="checkbox" checked={cache.enabled}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, cache: { ...cache, enabled: e.target.checked } } })} />
-            <span>Enable caching</span>
-          </div>
+          <Toggle
+            checked={cache.enabled}
+            label="Enable caching"
+            onChange={(v) => setRepo({ ...repo, config: { ...repo.config, cache: { ...cache, enabled: v } } })}
+          />
           <div className="row">
             <div><label>Metadata TTL</label>
               <input value={cache.metadata_ttl}
@@ -205,11 +205,11 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
       {repo.type === "proxy" && (
         <div className="panel">
           <h2>Age policy</h2>
-          <div className="checkbox">
-            <input type="checkbox" checked={age.enabled}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, age_policy: { ...age, enabled: e.target.checked } } })} />
-            <span>Enable supply-chain cooldown</span>
-          </div>
+          <Toggle
+            checked={age.enabled}
+            label="Enable supply-chain cooldown"
+            onChange={(v) => setRepo({ ...repo, config: { ...repo.config, age_policy: { ...age, enabled: v } } })}
+          />
           <div className="row">
             <div><label>Min age (e.g. 3d)</label>
               <input value={age.min_age}
@@ -228,11 +228,11 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
       {repo.type === "proxy" && (
         <div className="panel">
           <h2>Package approval <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· quarantine</span></h2>
-          <div className="checkbox">
-            <input type="checkbox" checked={approval.enabled}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, approval: { ...approval, enabled: e.target.checked } } })} />
-            <span>Require approval before serving a package</span>
-          </div>
+          <Toggle
+            checked={approval.enabled}
+            label="Require approval before serving a package"
+            onChange={(v) => setRepo({ ...repo, config: { ...repo.config, approval: { ...approval, enabled: v } } })}
+          />
           <div className="row">
             <div><label>Mode</label>
               <Select value={approval.mode || "enforce"}
@@ -259,12 +259,12 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
 
       {repo.type === "proxy" && (
         <div className="panel">
-          <h2>Vulnerability policy <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· OSV scan</span></h2>
-          <div className="checkbox">
-            <input type="checkbox" checked={vuln.enabled}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, vuln: { ...vuln, enabled: e.target.checked } } })} />
-            <span>Gate packages by known vulnerabilities</span>
-          </div>
+          <h2>Vulnerability policy <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>Powered by OSV</span></h2>
+          <Toggle
+            checked={vuln.enabled}
+            label="Gate packages by known vulnerabilities"
+            onChange={(v) => setRepo({ ...repo, config: { ...repo.config, vuln: { ...vuln, enabled: v } } })}
+          />
           <div className="row">
             <div><label>Threshold</label>
               <Select value={vuln.threshold || "high"}
@@ -295,10 +295,12 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
                 vuln: { ...vuln, ignore: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) },
               },
             })} />
-          <div className="checkbox" style={{ marginTop: 8 }}>
-            <input type="checkbox" checked={!!vuln.block_unscanned}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, vuln: { ...vuln, block_unscanned: e.target.checked } } })} />
-            <span>Block versions not yet scanned (block action only)</span>
+          <div style={{ marginTop: 8 }}>
+            <Toggle
+              checked={!!vuln.block_unscanned}
+              label="Block versions not yet scanned (block action only)"
+              onChange={(v) => setRepo({ ...repo, config: { ...repo.config, vuln: { ...vuln, block_unscanned: v } } })}
+            />
           </div>
           <p className="muted">Coordinate match against OSV (direct dependency only); transitive deps and artifact integrity are out of scope. Newly disclosed advisories surface on the next re-scan.</p>
         </div>
@@ -306,12 +308,12 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
 
       {repo.type === "proxy" && (
         <div className="panel">
-          <h2>License policy <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· deps.dev</span></h2>
-          <div className="checkbox">
-            <input type="checkbox" checked={license.enabled}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, enabled: e.target.checked } } })} />
-            <span>Gate packages by their declared license</span>
-          </div>
+          <h2>License policy <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>Powered by deps.dev</span></h2>
+          <Toggle
+            checked={license.enabled}
+            label="Gate packages by their declared license"
+            onChange={(v) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, enabled: v } } })}
+          />
           <div className="row">
             <div><label>Action</label>
               <Select value={license.action || "audit"}
@@ -344,10 +346,12 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
                 license: { ...license, allow: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) },
               },
             })} />
-          <div className="checkbox" style={{ marginTop: 8 }}>
-            <input type="checkbox" checked={!!license.block_unresolved}
-              onChange={(e) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, block_unresolved: e.target.checked } } })} />
-            <span>Block versions not yet resolved (block action only)</span>
+          <div style={{ marginTop: 8 }}>
+            <Toggle
+              checked={!!license.block_unresolved}
+              label="Block versions not yet resolved (block action only)"
+              onChange={(v) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, block_unresolved: v } } })}
+            />
           </div>
           <p className="muted">Licenses resolved per version from deps.dev (SPDX, direct coordinate). A denied license, or any license outside a non-empty allow list, triggers the action. Matching is case-insensitive.</p>
         </div>
@@ -550,7 +554,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
         <button className="btn secondary" type="submit">Filter</button>
       </form>
       {error && <div className="error">{error}</div>}
-      <table style={{ marginTop: 12 }}>
+      <table className="artifacts-table" style={{ marginTop: 12 }}>
         <thead>
           <tr><th>Path</th><th>Version</th><th>Vuln</th><th>License</th><th>Size</th><th>Type</th><th>Last accessed</th>{canDelete && <th></th>}</tr>
         </thead>
@@ -560,7 +564,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               <td style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, wordBreak: "break-all" }}>{a.path}</td>
               <td>{a.version || "—"}</td>
               <td><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></td>
-              <td>{a.licenses && a.licenses.length > 0
+              <td style={{ whiteSpace: "nowrap" }}>{a.licenses && a.licenses.length > 0
                 ? a.licenses.map((l) => (
                     <span key={l} className="badge" style={{ marginRight: 4, fontSize: 11 }}>{l}</span>
                   ))

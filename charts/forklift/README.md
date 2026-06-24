@@ -81,6 +81,7 @@ The following table lists the configurable parameters and their default values.
 |-----|------|---------|-------------|
 | replicaCount | int | `2` | Number of replicas. With 2+ replicas, enable ha to elect a single active writer. |
 | revisionHistoryLimit | int | `10` | Number of old ReplicaSets to retain for rollback. |
+| strategy | object | `{}` | Deployment update strategy. Empty selects a safe default per mode: RollingUpdate (maxUnavailable 0, maxSurge 1) in the s3 backend — per-pod storage + leader election + S3 fencing make a surging rollout safe and zero-downtime — and Recreate for the fs backend (single shared SQLite / RWO volume). Set explicitly to override, e.g. {type: Recreate}. |
 | image.registry | string | `"ghcr.io"` | Container image registry host. Set empty to fold the host into `repository` instead. |
 | image.repository | string | `"younsl/forklift"` | Container image repository (path under the registry). |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |

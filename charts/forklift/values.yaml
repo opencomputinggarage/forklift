@@ -5,6 +5,13 @@ replicaCount: 2
 # -- (int) Number of old ReplicaSets to retain for rollback.
 revisionHistoryLimit: 10
 
+# -- (object) Deployment update strategy. Empty selects a safe default per mode:
+# RollingUpdate (maxUnavailable 0, maxSurge 1) in the s3 backend — per-pod
+# storage + leader election + S3 fencing make a surging rollout safe and
+# zero-downtime — and Recreate for the fs backend (single shared SQLite / RWO
+# volume). Set explicitly to override, e.g. {type: Recreate}.
+strategy: {}
+
 image:
   # -- (string) Container image registry host. Set empty to fold the host into
   # `repository` instead.

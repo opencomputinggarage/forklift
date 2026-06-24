@@ -3,6 +3,7 @@ package objstore
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -17,13 +18,23 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 )
 
-// fakeMetaS3 is a minimal in-memory storage.S3API for MetaSync tests.
-type fakeMetaS3 struct {
-	mu      sync.Mutex
-	objects map[string][]byte
+// metaObj is a stored object with the user-metadata and ETag the fencing logic
+// inspects.
+type metaObj struct {
+	data []byte
+	meta map[string]string
+	etag string
 }
 
-func newFakeMetaS3() *fakeMetaS3 { return &fakeMetaS3{objects: map[string][]byte{}} }
+// fakeMetaS3 is a minimal in-memory storage.S3API for MetaSync tests. It records
+// user-metadata and assigns a unique ETag per write so fencing can be exercised.
+type fakeMetaS3 struct {
+	mu      sync.Mutex
+	objects map[string]metaObj
+	putN    int
+}
+
+func newFakeMetaS3() *fakeMetaS3 { return &fakeMetaS3{objects: map[string]metaObj{}} }
 
 func (f *fakeMetaS3) PutObject(ctx context.Context, in *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
 	b, err := io.ReadAll(in.Body)
@@ -32,30 +43,33 @@ func (f *fakeMetaS3) PutObject(ctx context.Context, in *s3.PutObjectInput, _ ...
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.objects[aws.ToString(in.Key)] = b
-	return &s3.PutObjectOutput{}, nil
+	f.putN++
+	etag := fmt.Sprintf("etag-%d", f.putN)
+	f.objects[aws.ToString(in.Key)] = metaObj{data: b, meta: in.Metadata, etag: etag}
+	return &s3.PutObjectOutput{ETag: aws.String(etag)}, nil
 }
 
 func (f *fakeMetaS3) GetObject(ctx context.Context, in *s3.GetObjectInput, _ ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	b, ok := f.objects[aws.ToString(in.Key)]
+	o, ok := f.objects[aws.ToString(in.Key)]
 	if !ok {
 		return nil, &types.NoSuchKey{}
 	}
 	return &s3.GetObjectOutput{
-		Body:          io.NopCloser(bytes.NewReader(b)),
-		ContentLength: aws.Int64(int64(len(b))),
+		Body:          io.NopCloser(bytes.NewReader(o.data)),
+		ContentLength: aws.Int64(int64(len(o.data))),
 	}, nil
 }
 
 func (f *fakeMetaS3) HeadObject(ctx context.Context, in *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if _, ok := f.objects[aws.ToString(in.Key)]; !ok {
+	o, ok := f.objects[aws.ToString(in.Key)]
+	if !ok {
 		return nil, &types.NotFound{}
 	}
-	return &s3.HeadObjectOutput{}, nil
+	return &s3.HeadObjectOutput{ETag: aws.String(o.etag), Metadata: o.meta}, nil
 }
 
 func (f *fakeMetaS3) DeleteObject(ctx context.Context, in *s3.DeleteObjectInput, _ ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
@@ -103,7 +117,7 @@ func TestMetaSyncRoundTrip(t *testing.T) {
 		t.Fatalf("set marker: %v", err)
 	}
 	m1 := newMetaSync(t, s1, fake, dir1)
-	if err := m1.Promote(ctx); err != nil {
+	if err := m1.Promote(ctx, 1); err != nil {
 		t.Fatalf("promote: %v", err)
 	}
 	if err := m1.sync(ctx); err != nil {
@@ -165,7 +179,7 @@ func TestMetaSyncStandbyDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	m1 := newMetaSync(t, s1, fake, dir1)
-	if err := m1.Promote(ctx); err != nil {
+	if err := m1.Promote(ctx, 1); err != nil {
 		t.Fatal(err)
 	}
 	if err := m1.sync(ctx); err != nil {
@@ -184,7 +198,7 @@ func TestMetaSyncStandbyDownload(t *testing.T) {
 	if m2.snapshotPath == "" {
 		t.Fatal("standby did not record a downloaded snapshot")
 	}
-	if err := m2.Promote(ctx); err != nil {
+	if err := m2.Promote(ctx, 1); err != nil {
 		t.Fatalf("promote: %v", err)
 	}
 	var v int
@@ -193,5 +207,45 @@ func TestMetaSyncStandbyDownload(t *testing.T) {
 	}
 	if v != 7 {
 		t.Fatalf("user_version = %d, want 7", v)
+	}
+}
+
+// TestMetaSyncFencingRefusesStaleLeader verifies a leader from an older term
+// (lower fencing token) cannot overwrite a snapshot written by a newer leader,
+// preventing split-brain metadata loss.
+func TestMetaSyncFencingRefusesStaleLeader(t *testing.T) {
+	ctx := context.Background()
+	fake := newFakeMetaS3()
+	const key = "forklift/meta/forklift.db"
+
+	// Current leader (term 5) uploads a snapshot.
+	dir1 := t.TempDir()
+	s1, _ := meta.Open(ctx, filepath.Join(dir1, "forklift.db"))
+	defer s1.Close()
+	m1 := newMetaSync(t, s1, fake, dir1)
+	if err := m1.Promote(ctx, 5); err != nil {
+		t.Fatalf("promote leader: %v", err)
+	}
+	if err := m1.sync(ctx); err != nil {
+		t.Fatalf("leader upload: %v", err)
+	}
+	want := fake.objects[key].etag
+	if got := fake.objects[key].meta[fenceMetaKey]; got != "5" {
+		t.Fatalf("stored fence = %q, want \"5\"", got)
+	}
+
+	// A stale leader (term 3) must be refused and must not overwrite.
+	dir2 := t.TempDir()
+	s2, _ := meta.Open(ctx, filepath.Join(dir2, "forklift.db"))
+	defer s2.Close()
+	m2 := newMetaSync(t, s2, fake, dir2)
+	if err := m2.Promote(ctx, 3); err != nil {
+		t.Fatalf("promote stale: %v", err)
+	}
+	if err := m2.sync(ctx); err == nil {
+		t.Fatal("stale leader (term 3) upload should be refused by fencing")
+	}
+	if fake.objects[key].etag != want {
+		t.Fatal("stale leader overwrote the snapshot despite fencing")
 	}
 }

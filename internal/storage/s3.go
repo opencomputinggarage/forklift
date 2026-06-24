@@ -267,6 +267,17 @@ func (s *S3BlobStore) WalkDigests(ctx context.Context, fn func(digest string) er
 // rather than failure.
 func IsNotFound(err error) bool { return isNotFound(err) }
 
+// IsPreconditionFailed reports whether err is an S3 412 Precondition Failed,
+// returned when a conditional write (If-Match / If-None-Match) is rejected
+// because another writer changed the object first. Co-located components (e.g.
+// objstore fencing) treat it as "lost the race, skip this cycle".
+func IsPreconditionFailed(err error) bool {
+	if re, ok := errors.AsType[*smithyhttp.ResponseError](err); ok {
+		return re.HTTPStatusCode() == http.StatusPreconditionFailed
+	}
+	return false
+}
+
 // isNotFound reports whether err is an S3 "no such key"/404, across the SDK's
 // typed errors and the generic HTTP response error.
 func isNotFound(err error) bool {

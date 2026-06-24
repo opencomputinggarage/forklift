@@ -121,6 +121,13 @@ storage:
 minio:
   # -- (bool) Deploy the bundled MinIO and wire forklift's s3 backend to it.
   enabled: true
+  image:
+    # -- (string) MinIO server image repository.
+    repository: quay.io/minio/minio
+    # -- (string) MinIO server image tag. Pinned to a recent release for full S3
+    # conditional-write support (If-Match / If-None-Match), used by the metadata
+    # snapshot fencing in HA.
+    tag: RELEASE.2025-09-07T16-13-09Z
   # -- (string) Deployment mode: "standalone" (single node) or "distributed".
   mode: standalone
   # -- (string) MinIO root access key. Mirrored into forklift's Secret as the

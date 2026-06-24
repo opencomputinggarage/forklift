@@ -16,6 +16,7 @@ import { UserModify } from "./pages/UserModify";
 import { Roles } from "./pages/Roles";
 import { RoleNew } from "./pages/RoleNew";
 import { RoleModify } from "./pages/RoleModify";
+import { HAStatus } from "./pages/HAStatus";
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -53,6 +54,7 @@ export function App() {
           {(me.admin || me.auditor) && <Route path="/roles" element={<Roles me={me} />} />}
           {me.admin && <Route path="/roles/new" element={<RoleNew />} />}
           {(me.admin || me.auditor) && <Route path="/roles/:id" element={<RoleModify me={me} />} />}
+          {me.admin && <Route path="/ha" element={<HAStatus />} />}
           <Route path="*" element={<Navigate to="/repositories" replace />} />
         </Routes>
       </div>
@@ -105,6 +107,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
       )}
       {(me.admin || me.auditor) && <NavLink className="navlink" to="/users">Users</NavLink>}
       {(me.admin || me.auditor) && <NavLink className="navlink" to="/roles">Roles</NavLink>}
+      {me.admin && <NavLink className="navlink" to="/ha">HA Status</NavLink>}
       <div className="spacer" />
       <a className="navlink" href="/api-docs" target="_blank" rel="noreferrer">API Docs ↗</a>
       <div className="userbox">

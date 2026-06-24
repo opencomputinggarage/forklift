@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -248,6 +249,10 @@ func run(cfg *config.Config) error {
 	})
 	reg.MustRegister(leaderGauge)
 
+	// leaderState mirrors leaderGauge for the admin HA status API (gauges are
+	// write-only from here). Single-instance deployments set it true on start.
+	var leaderState atomic.Bool
+
 	var elector *cluster.Elector
 	if cfg.HA.Enabled {
 		elector, err = cluster.New(cfg.HA, log)
@@ -255,6 +260,40 @@ func run(cfg *config.Config) error {
 			return fmt.Errorf("init leader election: %w", err)
 		}
 	}
+
+	// Admin-only HA status for the management console: backend/mode, this pod's
+	// identity and role, the current Lease holder, and the s3 fencing token.
+	apiHandler.SetHAStatus(func(sctx context.Context) api.HAStatus {
+		st := api.HAStatus{
+			Enabled:   cfg.HA.Enabled,
+			Mode:      haMode(cfg),
+			Backend:   cfg.Storage.Backend,
+			Identity:  cfg.HA.Identity,
+			LeaseName: cfg.HA.LeaseName,
+			IsLeader:  leaderState.Load(),
+		}
+		if elector == nil {
+			// Single instance is always the leader and serves itself.
+			st.IsLeader = true
+			st.Leader = cfg.HA.Identity
+			st.Role = cluster.RoleLeader
+			return st
+		}
+		if st.IsLeader {
+			st.Role = cluster.RoleLeader
+		} else {
+			st.Role = cluster.RoleStandby
+		}
+		if leader, err := elector.LeaderIdentity(sctx); err == nil {
+			st.Leader = leader
+		}
+		if cfg.Storage.Backend == "s3" {
+			if t, err := elector.FencingToken(sctx); err == nil {
+				st.FencingToken = t
+			}
+		}
+		return st
+	})
 
 	// PV-based replication: the leader serves token-gated snapshot/blob
 	// endpoints; the standby pulls them onto its own volume and promotes that
@@ -288,8 +327,19 @@ func run(cfg *config.Config) error {
 		// forklift.io/role=leader pod label patched on (de)promotion.
 		srv.SetReady(true)
 	}
+
+	// labelRouting keeps every replica Ready and routes the Service to the leader
+	// via the forklift.io/role label, instead of gating readiness on leadership.
+	// Used by replication (per-pod volumes can't gate readiness on leadership) and
+	// by the s3 backend in HA, where both pods must stay Ready while a single
+	// writer is enforced by leader routing plus S3 fencing.
+	labelRouting := cfg.Replication.Enabled || (metaSync != nil && cfg.HA.Enabled)
+	if metaSync != nil && cfg.HA.Enabled {
+		// s3 HA: become Ready immediately; the leader label routes traffic.
+		srv.SetReady(true)
+	}
 	setPodRole := func(roleCtx context.Context, role string) {
-		if !cfg.Replication.Enabled || cfg.Replication.PodName == "" {
+		if !labelRouting || elector == nil || cfg.Replication.PodName == "" {
 			return
 		}
 		if err := elector.SetPodRole(roleCtx, cfg.Replication.PodNamespace, cfg.Replication.PodName, role); err != nil {
@@ -304,15 +354,26 @@ func run(cfg *config.Config) error {
 	// applied before this instance takes traffic.
 	startLeading := func(leadCtx context.Context) {
 		leaderGauge.Set(1)
+		leaderState.Store(true)
 		if replicator != nil {
 			if err := replicator.Promote(leadCtx); err != nil {
 				log.Error("replication: promote failed; serving local data", "err", err)
 			}
 		}
 		// In s3 mode, apply the latest metadata snapshot before serving so the
-		// new leader takes traffic on current data.
+		// new leader takes traffic on current data. The fencing token (Lease
+		// transition count) tags snapshot uploads so a superseded leader cannot
+		// overwrite this term's metadata.
 		if metaSync != nil {
-			if err := metaSync.Promote(leadCtx); err != nil {
+			fence := int64(0)
+			if elector != nil {
+				if t, err := elector.FencingToken(leadCtx); err != nil {
+					log.Warn("objstore: read fencing token failed; using 0", "err", err)
+				} else {
+					fence = t
+				}
+			}
+			if err := metaSync.Promote(leadCtx, fence); err != nil {
 				log.Error("objstore: promote failed; serving local data", "err", err)
 			}
 		}
@@ -320,7 +381,7 @@ func run(cfg *config.Config) error {
 		setPodRole(leadCtx, cluster.RoleLeader)
 		// A partitioned former leader may not have removed its own leader
 		// label; strip it so the Service routes to this pod only.
-		if cfg.Replication.Enabled && cfg.Replication.PodName != "" {
+		if labelRouting && cfg.Replication.PodName != "" {
 			if err := elector.DemotePeers(leadCtx, cfg.Replication.PodNamespace, cfg.Replication.PodName); err != nil {
 				log.Error("demote peer leader labels", "err", err)
 			}
@@ -343,19 +404,23 @@ func run(cfg *config.Config) error {
 	}
 	stopLeading := func() {
 		leaderGauge.Set(0)
+		leaderState.Store(false)
 		if metaSync != nil {
-			// Resume downloading the leader's snapshots; gate Ready on leadership
-			// like the shared-volume mode (s3 mode runs as a Deployment).
+			// Resume downloading the leader's snapshots on the next sync cycle.
 			metaSync.Demote()
 		}
 		if replicator != nil {
-			// Stay Ready so rollouts proceed; the role label moves traffic away.
 			replicator.Demote()
+		}
+		if labelRouting {
+			// Stay Ready so rollouts proceed; moving the forklift.io/role=leader
+			// label is what redirects traffic to the new leader.
 			demoteCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			setPodRole(demoteCtx, cluster.RoleStandby)
 			return
 		}
+		// Shared-volume HA without label routing: readiness gates the leader.
 		srv.SetReady(false)
 	}
 
@@ -366,6 +431,21 @@ func run(cfg *config.Config) error {
 	}
 
 	return srv.Run(ctx, reg)
+}
+
+// haMode names the active high-availability/storage topology for the admin
+// status view.
+func haMode(cfg *config.Config) string {
+	switch {
+	case cfg.Replication.Enabled:
+		return "replication"
+	case cfg.Storage.Backend == "s3":
+		return "object-storage"
+	case cfg.HA.Enabled:
+		return "shared-volume"
+	default:
+		return "single"
+	}
 }
 
 func toS3Config(c config.S3Config) storage.S3Config {

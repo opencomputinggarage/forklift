@@ -12,9 +12,9 @@ spec:
   type: {{ .Values.service.type }}
   selector:
     {{- include "forklift.selectorLabels" . | nindent 4 }}
-    {{- if .Values.replication.enabled }}
-    # In replication mode every pod is Ready; only the leader (which patches
-    # this label onto itself) receives traffic.
+    {{- if eq (include "forklift.labelRouting" .) "true" }}
+    # Leader-routed HA (replication or s3+HA): every pod is Ready, but only the
+    # leader (which patches this label onto itself) receives traffic.
     forklift.io/role: leader
     {{- end }}
   ports:

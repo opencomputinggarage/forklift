@@ -120,6 +120,16 @@ peer replication is redundant and would compete for the metadata snapshot.
 {{- end -}}
 {{- end -}}
 
+{{/*
+labelRouting is true when traffic is routed to the leader via the
+forklift.io/role label (every pod stays Ready) instead of gating readiness on
+leadership: replication mode, or the s3 backend in HA. The main Service selects
+the leader label and the leader gets RBAC to patch pod labels.
+*/}}
+{{- define "forklift.labelRouting" -}}
+{{- if or .Values.replication.enabled (and (eq (include "forklift.s3Enabled" .) "true") (eq (include "forklift.haEnabled" .) "true")) -}}true{{- else -}}false{{- end -}}
+{{- end -}}
+
 {{/* haEnabled resolves the HA toggle: explicit value, else replicaCount > 1. */}}
 {{- define "forklift.haEnabled" -}}
 {{- if kindIs "bool" .Values.ha.enabled }}

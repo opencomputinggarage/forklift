@@ -18,6 +18,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -55,6 +57,10 @@ type MetaSync struct {
 	log      *slog.Logger
 
 	isLeader atomic.Bool
+	// fence is the current leadership term (Lease transition count). Snapshot
+	// uploads carry it; a stale leader with a lower fence is refused, preventing
+	// split-brain overwrites of a newer leader's metadata.
+	fence atomic.Int64
 
 	// syncMu serializes sync cycles with promotion so Promote never races a
 	// half-written snapshot download.
@@ -198,16 +204,60 @@ func (m *MetaSync) upload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if _, err := m.api.PutObject(ctx, &s3.PutObjectInput{
+
+	put := &s3.PutObjectInput{
 		Bucket:        aws.String(m.bucket),
 		Key:           aws.String(m.key),
 		Body:          f,
 		ContentLength: aws.Int64(fi.Size()),
-	}); err != nil {
+		Metadata:      map[string]string{fenceMetaKey: strconv.FormatInt(m.fence.Load(), 10)},
+	}
+	// Fencing: never overwrite a snapshot written by a newer leadership term.
+	// HEAD the current object; a higher stored fence means this process is a
+	// stale ("zombie") leader and must not clobber the newer state. The
+	// conditional write (If-Match on the observed ETag, or If-None-Match for a
+	// first write) closes the HEAD->PUT race: a concurrent writer makes one side
+	// lose with 412, which we treat as "skip this cycle".
+	head, err := m.api.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(m.bucket),
+		Key:    aws.String(m.key),
+	})
+	switch {
+	case err == nil:
+		if stored := parseFence(head.Metadata); stored > m.fence.Load() {
+			return fmt.Errorf("fencing: local term %d older than stored %d; refusing to overwrite snapshot", m.fence.Load(), stored)
+		}
+		put.IfMatch = head.ETag
+	case storage.IsNotFound(err):
+		put.IfNoneMatch = aws.String("*")
+	default:
+		return fmt.Errorf("head snapshot: %w", err)
+	}
+	if _, err := m.api.PutObject(ctx, put); err != nil {
+		if storage.IsPreconditionFailed(err) {
+			return fmt.Errorf("fencing: snapshot changed under us (concurrent writer); skipping cycle: %w", err)
+		}
 		return err
 	}
 	m.snapshotBytes.Set(float64(fi.Size()))
 	return nil
+}
+
+// fenceMetaKey is the S3 user-metadata key holding the leadership term that
+// wrote the snapshot.
+const fenceMetaKey = "fence"
+
+// parseFence reads the fencing token from S3 object user-metadata. Keys are
+// case-insensitive; a missing or malformed value reads as 0.
+func parseFence(md map[string]string) int64 {
+	for k, v := range md {
+		if strings.EqualFold(k, fenceMetaKey) {
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+				return n
+			}
+		}
+	}
+	return 0
 }
 
 // download fetches the snapshot to dst via a temp file and atomic rename.
@@ -259,8 +309,9 @@ func (m *MetaSync) download(ctx context.Context, dst string) (bool, int64, error
 // Ready. If a newer snapshot was downloaded during the standby phase it replaces
 // the local database; otherwise the local data (e.g. from RestoreOnBoot or a
 // re-elected former leader) is served as-is.
-func (m *MetaSync) Promote(ctx context.Context) error {
+func (m *MetaSync) Promote(ctx context.Context, fence int64) error {
 	m.isLeader.Store(true)
+	m.fence.Store(fence)
 	m.syncMu.Lock()
 	defer m.syncMu.Unlock()
 	path := m.snapshotPath

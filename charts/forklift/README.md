@@ -1,6 +1,6 @@
 # forklift
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.0](https://img.shields.io/badge/AppVersion-0.2.0-informational?style=flat-square)
+![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.1](https://img.shields.io/badge/AppVersion-0.2.1-informational?style=flat-square)
 
 Lightweight Kubernetes-native artifact repository (Maven, npm, Cargo, Go, PyPI) with proxy caching and supply-chain controls (age policy, package approval, vulnerability scanning)
 
@@ -45,7 +45,7 @@ helm install forklift oci://ghcr.io/younsl/charts/forklift -f values.yaml
 Install a specific version:
 
 ```console
-helm install forklift oci://ghcr.io/younsl/charts/forklift --version 0.2.0
+helm install forklift oci://ghcr.io/younsl/charts/forklift --version 0.2.1
 ```
 
 ### Install from local chart
@@ -53,7 +53,7 @@ helm install forklift oci://ghcr.io/younsl/charts/forklift --version 0.2.0
 Download forklift chart and install from local directory:
 
 ```console
-helm pull oci://ghcr.io/younsl/charts/forklift --untar --version 0.2.0
+helm pull oci://ghcr.io/younsl/charts/forklift --untar --version 0.2.1
 helm install forklift ./forklift
 ```
 
@@ -110,6 +110,8 @@ The following table lists the configurable parameters and their default values.
 | storage.s3.metaSyncInterval | string | `"30s"` | Leader snapshot upload / standby download cadence; the bounded data-loss window on failover. |
 | storage.s3.existingSecret | string | `""` | Name of an existing Secret with keys `access-key-id` and `secret-access-key` for static credentials. Leave empty to use the AWS default credential chain (EKS IRSA or EKS Pod Identity) — the recommended setup; grant the role s3:GetObject,PutObject,DeleteObject,ListBucket on the bucket and its prefix, and annotate the serviceAccount accordingly. |
 | minio.enabled | bool | `true` | Deploy the bundled MinIO and wire forklift's s3 backend to it. |
+| minio.image.repository | string | `"quay.io/minio/minio"` | MinIO server image repository. |
+| minio.image.tag | string | `"RELEASE.2025-09-07T16-13-09Z"` | MinIO server image tag. Pinned to a recent release for full S3 conditional-write support (If-Match / If-None-Match), used by the metadata snapshot fencing in HA. |
 | minio.mode | string | `"standalone"` | Deployment mode: "standalone" (single node) or "distributed". |
 | minio.rootUser | string | `"forklift"` | MinIO root access key. Mirrored into forklift's Secret as the S3 access-key-id. CHANGE for any non-dev use. |
 | minio.rootPassword | string | `"forklift-minio-change-me"` | MinIO root secret key (min 8 chars). Mirrored as the S3 secret-access-key. CHANGE for any non-dev use. |

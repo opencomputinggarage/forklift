@@ -6,6 +6,7 @@ import { Badge } from "@/components/app-ui/badge";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Combobox,
   ComboboxChip,
@@ -25,7 +26,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Plus, X } from "lucide-react";
 
 export const Route = createFileRoute("/workspace/tokens/new")({
   component: TokenNew,
@@ -39,8 +41,16 @@ interface Scope {
   actions: string[];
 }
 
-function dateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+function startOfLocalDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function formatDateLabel(d: Date): string {
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(d);
 }
 
 // Token creation page. Reached from the New token button on /workspace/tokens
@@ -55,7 +65,8 @@ export function TokenNew() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [scopes, setScopes] = useState<Scope[]>([]);
-  const [expiresOn, setExpiresOn] = useState("");
+  const [expiresOn, setExpiresOn] = useState<Date | undefined>();
+  const [expiresPickerOpen, setExpiresPickerOpen] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState("");
   const [copied, setCopied] = useState(false);
@@ -80,9 +91,11 @@ export function TokenNew() {
       .catch(() => setRepoOptions(["*"]));
   }, []);
 
-  const today = new Date();
-  const minDate = new Date(today.getTime() + 24 * 3600 * 1000);
-  const maxDate = new Date(today.getTime() + MAX_TTL_HOURS * 3600 * 1000);
+  const today = startOfLocalDay(new Date());
+  const minDate = new Date(today);
+  minDate.setDate(today.getDate() + 1);
+  const maxDate = new Date(today);
+  maxDate.setDate(today.getDate() + 365);
 
   const addScope = () => {
     if (!pattern.trim() || actions.length === 0) return;
@@ -93,7 +106,8 @@ export function TokenNew() {
   };
 
   const expiresIn = (): string => {
-    const target = new Date(expiresOn + "T00:00:00");
+    if (!expiresOn) return "1h";
+    const target = startOfLocalDay(expiresOn);
     const hours = Math.ceil((target.getTime() - Date.now()) / 3600000);
     return `${Math.min(Math.max(hours, 1), MAX_TTL_HOURS)}h`;
   };
@@ -103,6 +117,10 @@ export function TokenNew() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!valid) {
+      setError("Complete all required fields before creating a token.");
+      return;
+    }
     try {
       const body = {
         name: name.trim(),
@@ -194,15 +212,35 @@ export function TokenNew() {
                 <FieldLabel htmlFor="expires-on">
                   Expires on<span className="text-destructive">*</span>
                 </FieldLabel>
-                <Input
-                  id="expires-on"
-                  type="date"
-                  value={expiresOn}
-                  min={dateStr(minDate)}
-                  max={dateStr(maxDate)}
-                  onChange={(e) => setExpiresOn(e.target.value)}
-                  required
-                />
+                <Popover open={expiresPickerOpen} onOpenChange={setExpiresPickerOpen}>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        id="expires-on"
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                        aria-invalid={!expiresOn || undefined}
+                      />
+                    }
+                  >
+                    <CalendarIcon data-icon="inline-start" />
+                    {expiresOn ? formatDateLabel(expiresOn) : "Select expiration date"}
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={expiresOn}
+                      defaultMonth={expiresOn ?? minDate}
+                      disabled={{ before: minDate, after: maxDate }}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setExpiresOn(startOfLocalDay(date));
+                        setExpiresPickerOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
                 <FieldDescription>Tokens expire after at most one year.</FieldDescription>
               </Field>
             </FieldGroup>

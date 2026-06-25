@@ -1,6 +1,5 @@
 import { createFileRoute, Link, Navigate, useParams } from "@tanstack/react-router";
 import { useAuth } from "@/authContext";
-import { PageHeader } from "@/components/app-ui/page";
 import { cn } from "@/lib/utils";
 import { HAStatusPanel } from "../ha";
 import { Receivers } from "../notifications/index";
@@ -31,7 +30,11 @@ function AdminPage() {
 
   return (
     <>
-      <PageHeader title="Admin" />
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+        <h1 className="m-0 min-w-0 text-2xl leading-tight font-semibold tracking-normal max-sm:text-xl">
+          Admin
+        </h1>
+      </div>
 
       <nav className="mb-[18px] flex gap-1 border-b border-border max-[760px]:overflow-x-auto max-[760px]:pb-px">
         {TABS.map((t) => (

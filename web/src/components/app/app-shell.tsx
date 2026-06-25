@@ -3,8 +3,8 @@ import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { api, type Me } from "@/api";
 import { AuthProvider } from "@/authContext";
 import { Login } from "@/components/auth/login";
-import { Badge } from "@/components/app-ui/badge";
 import { Logo } from "@/components/app/logo";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { openApiQueryOptions } from "@/generated/openapi-query-options";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -93,7 +93,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <nav className="-mx-1 flex flex-col gap-1 px-1 max-lg:flex-row max-lg:overflow-x-auto max-lg:pb-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden">
         <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/repositories">
           <span>{t("nav.repositories")}</span>
-          {repoCount !== null && <Badge className="ml-2 min-w-5 justify-center px-1.5 lg:ml-auto">{repoCount}</Badge>}
+          {repoCount !== null && <Badge variant="outline" className="ml-2 min-w-5 justify-center px-1.5 lg:ml-auto">{repoCount}</Badge>}
         </Link>
         <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/tokens">{t("nav.tokens")}</Link>
         {canApprove && (

@@ -1,20 +1,12 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { useAuth } from "@/authContext";
-import { PageHeader } from "@/components/app-ui/page";
-import { Receivers } from "../notifications/index";
 
 export const Route = createFileRoute("/admin/notifications")({
-  component: AdminNotificationsRoute,
+  component: AdminNotificationsLayout,
 });
 
-function AdminNotificationsRoute() {
+function AdminNotificationsLayout() {
   const { me } = useAuth();
   if (!me.admin) return <Navigate to="/repositories" replace />;
-
-  return (
-    <>
-      <PageHeader title="Notifications" />
-      <Receivers />
-    </>
-  );
+  return <Outlet />;
 }

@@ -32,9 +32,9 @@ import { Route as NotificationsIdRouteImport } from './../routes/notifications/$
 import { Route as ApprovalsIdRouteImport } from './../routes/approvals/$id'
 import { Route as AdminNotificationsRouteImport } from './../routes/admin/notifications'
 import { Route as AdminHaRouteImport } from './../routes/admin/ha'
-import { Route as AdminTabRouteImport } from './../routes/admin/$tab'
 import { Route as UsersIdIndexRouteImport } from './../routes/users/$id/index'
 import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositories/$id/index'
+import { Route as AdminNotificationsIndexRouteImport } from './../routes/admin/notifications/index'
 import { Route as RepositoriesIdTabRouteImport } from './../routes/repositories/$id/$tab'
 import { Route as AdminNotificationsNewRouteImport } from './../routes/admin/notifications/new'
 import { Route as AdminNotificationsIdRouteImport } from './../routes/admin/notifications/$id'
@@ -155,11 +155,6 @@ const AdminHaRoute = AdminHaRouteImport.update({
   path: '/admin/ha',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminTabRoute = AdminTabRouteImport.update({
-  id: '/admin/$tab',
-  path: '/admin/$tab',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const UsersIdIndexRoute = UsersIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -169,6 +164,11 @@ const RepositoriesIdIndexRoute = RepositoriesIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => RepositoriesIdRoute,
+} as any)
+const AdminNotificationsIndexRoute = AdminNotificationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminNotificationsRoute,
 } as any)
 const RepositoriesIdTabRoute = RepositoriesIdTabRouteImport.update({
   id: '/$tab',
@@ -196,7 +196,6 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
   '/settings': typeof SettingsRoute
-  '/admin/$tab': typeof AdminTabRoute
   '/admin/ha': typeof AdminHaRoute
   '/admin/notifications': typeof AdminNotificationsRouteWithChildren
   '/approvals/$id': typeof ApprovalsIdRoute
@@ -219,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications/$id': typeof AdminNotificationsIdRoute
   '/admin/notifications/new': typeof AdminNotificationsNewRoute
   '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
+  '/admin/notifications/': typeof AdminNotificationsIndexRoute
   '/repositories/$id/': typeof RepositoriesIdIndexRoute
   '/users/$id/': typeof UsersIdIndexRoute
   '/users/$id/tokens/new': typeof UsersIdTokensNewRoute
@@ -228,9 +228,7 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
   '/settings': typeof SettingsRoute
-  '/admin/$tab': typeof AdminTabRoute
   '/admin/ha': typeof AdminHaRoute
-  '/admin/notifications': typeof AdminNotificationsRouteWithChildren
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -249,6 +247,7 @@ export interface FileRoutesByTo {
   '/admin/notifications/$id': typeof AdminNotificationsIdRoute
   '/admin/notifications/new': typeof AdminNotificationsNewRoute
   '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
+  '/admin/notifications': typeof AdminNotificationsIndexRoute
   '/repositories/$id': typeof RepositoriesIdIndexRoute
   '/users/$id': typeof UsersIdIndexRoute
   '/users/$id/tokens/new': typeof UsersIdTokensNewRoute
@@ -259,7 +258,6 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
   '/settings': typeof SettingsRoute
-  '/admin/$tab': typeof AdminTabRoute
   '/admin/ha': typeof AdminHaRoute
   '/admin/notifications': typeof AdminNotificationsRouteWithChildren
   '/approvals/$id': typeof ApprovalsIdRoute
@@ -282,6 +280,7 @@ export interface FileRoutesById {
   '/admin/notifications/$id': typeof AdminNotificationsIdRoute
   '/admin/notifications/new': typeof AdminNotificationsNewRoute
   '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
+  '/admin/notifications/': typeof AdminNotificationsIndexRoute
   '/repositories/$id/': typeof RepositoriesIdIndexRoute
   '/users/$id/': typeof UsersIdIndexRoute
   '/users/$id/tokens/new': typeof UsersIdTokensNewRoute
@@ -293,7 +292,6 @@ export interface FileRouteTypes {
     | '/$'
     | '/ha'
     | '/settings'
-    | '/admin/$tab'
     | '/admin/ha'
     | '/admin/notifications'
     | '/approvals/$id'
@@ -316,6 +314,7 @@ export interface FileRouteTypes {
     | '/admin/notifications/$id'
     | '/admin/notifications/new'
     | '/repositories/$id/$tab'
+    | '/admin/notifications/'
     | '/repositories/$id/'
     | '/users/$id/'
     | '/users/$id/tokens/new'
@@ -325,9 +324,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/ha'
     | '/settings'
-    | '/admin/$tab'
     | '/admin/ha'
-    | '/admin/notifications'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -346,6 +343,7 @@ export interface FileRouteTypes {
     | '/admin/notifications/$id'
     | '/admin/notifications/new'
     | '/repositories/$id/$tab'
+    | '/admin/notifications'
     | '/repositories/$id'
     | '/users/$id'
     | '/users/$id/tokens/new'
@@ -355,7 +353,6 @@ export interface FileRouteTypes {
     | '/$'
     | '/ha'
     | '/settings'
-    | '/admin/$tab'
     | '/admin/ha'
     | '/admin/notifications'
     | '/approvals/$id'
@@ -378,6 +375,7 @@ export interface FileRouteTypes {
     | '/admin/notifications/$id'
     | '/admin/notifications/new'
     | '/repositories/$id/$tab'
+    | '/admin/notifications/'
     | '/repositories/$id/'
     | '/users/$id/'
     | '/users/$id/tokens/new'
@@ -388,7 +386,6 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   HaRoute: typeof HaRoute
   SettingsRoute: typeof SettingsRoute
-  AdminTabRoute: typeof AdminTabRoute
   AdminHaRoute: typeof AdminHaRoute
   AdminNotificationsRoute: typeof AdminNotificationsRouteWithChildren
   ApprovalsIdRoute: typeof ApprovalsIdRoute
@@ -573,13 +570,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminHaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/$tab': {
-      id: '/admin/$tab'
-      path: '/admin/$tab'
-      fullPath: '/admin/$tab'
-      preLoaderRoute: typeof AdminTabRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/users/$id/': {
       id: '/users/$id/'
       path: '/'
@@ -593,6 +583,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/repositories/$id/'
       preLoaderRoute: typeof RepositoriesIdIndexRouteImport
       parentRoute: typeof RepositoriesIdRoute
+    }
+    '/admin/notifications/': {
+      id: '/admin/notifications/'
+      path: '/'
+      fullPath: '/admin/notifications/'
+      preLoaderRoute: typeof AdminNotificationsIndexRouteImport
+      parentRoute: typeof AdminNotificationsRoute
     }
     '/repositories/$id/$tab': {
       id: '/repositories/$id/$tab'
@@ -628,11 +625,13 @@ declare module '@tanstack/react-router' {
 interface AdminNotificationsRouteChildren {
   AdminNotificationsIdRoute: typeof AdminNotificationsIdRoute
   AdminNotificationsNewRoute: typeof AdminNotificationsNewRoute
+  AdminNotificationsIndexRoute: typeof AdminNotificationsIndexRoute
 }
 
 const AdminNotificationsRouteChildren: AdminNotificationsRouteChildren = {
   AdminNotificationsIdRoute: AdminNotificationsIdRoute,
   AdminNotificationsNewRoute: AdminNotificationsNewRoute,
+  AdminNotificationsIndexRoute: AdminNotificationsIndexRoute,
 }
 
 const AdminNotificationsRouteWithChildren =
@@ -670,7 +669,6 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   HaRoute: HaRoute,
   SettingsRoute: SettingsRoute,
-  AdminTabRoute: AdminTabRoute,
   AdminHaRoute: AdminHaRoute,
   AdminNotificationsRoute: AdminNotificationsRouteWithChildren,
   ApprovalsIdRoute: ApprovalsIdRoute,

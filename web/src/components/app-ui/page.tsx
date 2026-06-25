@@ -15,11 +15,11 @@ function PageHeader({
   return (
     <div
       className={cn(
-        "mb-4 flex min-w-0 items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch",
+        "mb-3 flex min-w-0 items-end justify-between gap-3 border-b border-[var(--fx-border-subtle)] pb-3 max-sm:flex-col max-sm:items-stretch",
         className
       )}
     >
-      <h1 className="m-0 min-w-0 text-2xl leading-tight font-semibold tracking-normal max-sm:text-xl">
+      <h1 className="m-0 min-w-0 text-[1.35rem] leading-tight font-semibold tracking-normal max-sm:text-lg">
         {title}
       </h1>
       {actions && (
@@ -38,7 +38,7 @@ function PageDescription({
   return (
     <p
       className={cn(
-        "mb-5 -mt-2 max-w-[820px] text-sm leading-relaxed text-muted-foreground max-sm:mb-4 max-sm:-mt-1",
+        "mb-5 -mt-1 max-w-[820px] text-sm leading-6 text-muted-foreground max-sm:mb-4 max-sm:mt-0",
         className
       )}
       {...props}
@@ -49,8 +49,9 @@ function PageDescription({
 function Panel({ className, ...props }: React.ComponentProps<typeof Card>) {
   return (
     <Card
+      size="sm"
       className={cn(
-        "mb-4 w-full min-w-0 max-w-full border-border/90 bg-card/95 shadow-none",
+        "mb-4 w-full min-w-0 max-w-full bg-[var(--fx-surface-panel)] shadow-[var(--fx-panel-highlight)]",
         className
       )}
       {...props}
@@ -62,7 +63,7 @@ function PanelBody({
   className,
   ...props
 }: React.ComponentProps<typeof CardContent>) {
-  return <CardContent className={cn("min-w-0 px-4 max-sm:px-3", className)} {...props} />
+  return <CardContent className={cn("min-w-0 px-3 max-sm:px-2.5", className)} {...props} />
 }
 
 function Inline({ className, ...props }: React.ComponentProps<"div">) {

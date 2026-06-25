@@ -13,6 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrap,
 } from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/roles/")({
@@ -52,6 +53,7 @@ export function Roles({ me }: { me: Me }) {
 
       <Panel>
         <PanelBody>
+          <TableWrap>
           <Table>
             <TableHeader>
               <TableRow><TableHead>Role</TableHead><TableHead>Source</TableHead><TableHead>Description</TableHead><TableHead>Users</TableHead><TableHead>Permissions</TableHead><TableHead /></TableRow>
@@ -93,6 +95,7 @@ export function Roles({ me }: { me: Me }) {
             {roles.length === 0 && <TableRow><TableCell colSpan={6} className="text-muted-foreground">No roles yet. Create one to grant repository access.</TableCell></TableRow>}
             </TableBody>
           </Table>
+          </TableWrap>
         </PanelBody>
       </Panel>
     </>

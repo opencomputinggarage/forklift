@@ -15,6 +15,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrap,
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -166,6 +167,7 @@ export function Repositories({ me }: { me: Me }) {
       {error && <Alert className="mb-4">{error}</Alert>}
       <Panel>
         <PanelBody>
+        <TableWrap>
         <Table className="table-fixed">
           <TableHeader>
             <TableRow><TableHead className="w-[16%]">Name</TableHead><TableHead className="w-[8%]">Format</TableHead><TableHead className="w-[8%]">Type</TableHead><TableHead className="w-[31%]">Endpoint (forklift)</TableHead><TableHead className="w-[9%]">Artifacts</TableHead><TableHead className="w-[8%]">Size</TableHead><TableHead className="w-[11%]">Upstream</TableHead><TableHead className="w-[9%]">Security</TableHead></TableRow>
@@ -219,6 +221,7 @@ export function Repositories({ me }: { me: Me }) {
             )}
           </TableBody>
         </Table>
+        </TableWrap>
         </PanelBody>
       </Panel>
     </>

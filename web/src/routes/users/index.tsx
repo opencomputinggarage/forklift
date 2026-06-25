@@ -13,6 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrap,
 } from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/users/")({
@@ -54,6 +55,7 @@ export function Users({ me }: { me: Me }) {
       <Panel>
         <PanelBody>
           <h2 className="mb-3 text-base font-semibold">Users</h2>
+          <TableWrap>
           <Table>
             <TableHeader>
               <TableRow><TableHead>Username</TableHead><TableHead>Source</TableHead><TableHead>Email</TableHead><TableHead>Roles</TableHead><TableHead>Status</TableHead><TableHead>Last login</TableHead><TableHead /></TableRow>
@@ -86,7 +88,7 @@ export function Users({ me }: { me: Me }) {
                 <TableCell>
                   {u.disabled
                     ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-destructive" /> disabled</span>
-                    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-emerald-400" /> active</span>}
+                    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-[var(--fx-success)]" /> active</span>}
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-muted-foreground" title={u.last_login_at ?? undefined}>
                   {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
@@ -105,6 +107,7 @@ export function Users({ me }: { me: Me }) {
             {users.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No users.</TableCell></TableRow>}
             </TableBody>
           </Table>
+          </TableWrap>
         </PanelBody>
       </Panel>
     </>

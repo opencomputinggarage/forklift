@@ -13,6 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableWrap,
 } from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/tokens/")({
@@ -68,6 +69,7 @@ export function Tokens() {
 
       <Panel>
         <PanelBody>
+          <TableWrap>
           <Table>
             <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Permissions</TableHead><TableHead>Created</TableHead><TableHead>Expires</TableHead><TableHead>Last used</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody>
@@ -91,6 +93,7 @@ export function Tokens() {
             {tokens.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No tokens yet.</TableCell></TableRow>}
             </TableBody>
           </Table>
+          </TableWrap>
         </PanelBody>
       </Panel>
 

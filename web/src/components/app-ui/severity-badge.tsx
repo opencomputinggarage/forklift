@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils"
 type BadgeProps = Omit<React.ComponentProps<typeof Badge>, "variant">
 
 const severityClassName: Record<string, string> = {
-  critical: "border-red-500/70 bg-red-500 text-white",
-  high: "border-orange-500/70 bg-orange-500 text-white",
-  medium: "border-amber-500/70 bg-amber-500 text-black",
-  low: "border-slate-400/70 bg-slate-400 text-black",
-  none: "border-emerald-500/70 bg-emerald-600 text-white",
+  critical: "border-[color-mix(in_oklch,var(--fx-severity-critical)_65%,transparent)] bg-[color-mix(in_oklch,var(--fx-severity-critical)_14%,transparent)] text-[var(--fx-severity-critical)]",
+  high: "border-[color-mix(in_oklch,var(--fx-severity-high)_65%,transparent)] bg-[color-mix(in_oklch,var(--fx-severity-high)_14%,transparent)] text-[var(--fx-severity-high)]",
+  medium: "border-[color-mix(in_oklch,var(--fx-severity-medium)_65%,transparent)] bg-[color-mix(in_oklch,var(--fx-severity-medium)_14%,transparent)] text-[var(--fx-severity-medium)]",
+  low: "border-[color-mix(in_oklch,var(--fx-severity-low)_65%,transparent)] bg-[color-mix(in_oklch,var(--fx-severity-low)_14%,transparent)] text-[var(--fx-severity-low)]",
+  none: "border-[color-mix(in_oklch,var(--fx-success)_60%,transparent)] bg-[color-mix(in_oklch,var(--fx-success)_12%,transparent)] text-[var(--fx-success)]",
 }
 
 function SeverityBadge({

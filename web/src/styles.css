@@ -114,17 +114,24 @@
 /* forklift UI design tokens: Linear-inspired product console with scarce forklift yellow accent. */
 :root,
 .dark {
-  --fx-canvas: #090b0f;
-  --fx-canvas-elevated: #0b0e13;
-  --fx-surface-1: #101318;
-  --fx-surface-2: #171b22;
-  --fx-surface-3: #1d232c;
-  --fx-input: #0d1015;
-  --fx-border: #252b35;
-  --fx-border-strong: #343c49;
-  --fx-text: #f4f6f8;
-  --fx-text-muted: #9aa3af;
-  --fx-text-subtle: #68717f;
+  --fx-canvas: #08090c;
+  --fx-canvas-elevated: #0b0c10;
+  --fx-surface-1: #0f1117;
+  --fx-surface-2: #151820;
+  --fx-surface-3: #1b2029;
+  --fx-surface-panel: #0d0f14;
+  --fx-surface-panel-raised: #12151c;
+  --fx-surface-hover: #171a22;
+  --fx-surface-selected: #1a1f29;
+  --fx-input: #0b0d12;
+  --fx-control: #10131a;
+  --fx-control-hover: #171b23;
+  --fx-border: #242933;
+  --fx-border-subtle: #1b2028;
+  --fx-border-strong: #343b48;
+  --fx-text: #f2f4f7;
+  --fx-text-muted: #9ba3af;
+  --fx-text-subtle: #67707d;
   --fx-accent: #ffd400;
   --fx-accent-hover: #ffe04d;
   --fx-accent-pressed: #d6b100;
@@ -134,16 +141,24 @@
   --fx-danger: #f97066;
   --fx-danger-hover: #ff8a80;
   --fx-danger-foreground: #fff;
+  --fx-severity-critical: #f97066;
+  --fx-severity-high: #fb923c;
+  --fx-severity-medium: #fdb022;
+  --fx-severity-low: #98a2b3;
   --fx-radius-sm: 5px;
   --fx-radius-md: 6px;
   --fx-radius-lg: 8px;
   --fx-radius-xl: 11px;
   --fx-radius-2xl: 14px;
   --fx-sidebar-width: 244px;
+  --fx-content-max: 1440px;
+  --fx-main-gutter-x: clamp(16px, 2.2vw, 32px);
+  --fx-main-gutter-y: clamp(18px, 2.4vw, 32px);
   --fx-page-x: 32px;
   --fx-page-y: 32px;
   --fx-overlay-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
-  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --fx-focus-shadow: 0 0 0 3px color-mix(in oklch, var(--fx-accent) 22%, transparent);
   --fx-logo-chip: #f2f3f5;
   --fx-login-glow: rgba(255, 255, 255, 0.055);
   --fx-login-wave: rgba(255, 255, 255, 0.045);
@@ -157,8 +172,15 @@
   --fx-surface-1: #ffffff;
   --fx-surface-2: #f1f3f5;
   --fx-surface-3: #e9edf2;
+  --fx-surface-panel: #ffffff;
+  --fx-surface-panel-raised: #f8fafc;
+  --fx-surface-hover: #f1f4f7;
+  --fx-surface-selected: #e9edf3;
   --fx-input: #ffffff;
+  --fx-control: #ffffff;
+  --fx-control-hover: #f3f5f8;
   --fx-border: #d7dce3;
+  --fx-border-subtle: #e6e9ee;
   --fx-border-strong: #c1c8d2;
   --fx-text: #111318;
   --fx-text-muted: #5f6875;
@@ -172,8 +194,13 @@
   --fx-danger: #c2413b;
   --fx-danger-hover: #a8322d;
   --fx-danger-foreground: #fff;
+  --fx-severity-critical: #c2413b;
+  --fx-severity-high: #c05621;
+  --fx-severity-medium: #b7791f;
+  --fx-severity-low: #64748b;
   --fx-overlay-shadow: 0 24px 80px rgba(15, 23, 42, 0.16);
   --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --fx-focus-shadow: 0 0 0 3px color-mix(in oklch, var(--fx-accent) 20%, transparent);
   --fx-logo-chip: #eef1f5;
   --fx-login-glow: rgba(17, 19, 24, 0.045);
   --fx-login-wave: rgba(17, 19, 24, 0.05);
@@ -231,9 +258,7 @@ body {
   min-width: 0;
   overflow-x: hidden;
   font-family: var(--font-sans);
-  background:
-    radial-gradient(circle at 50% -10%, color-mix(in oklch, var(--fx-accent) 8%, transparent), transparent 34%),
-    linear-gradient(180deg, var(--fx-body-gradient-start) 0%, var(--fx-canvas) 280px);
+  background: linear-gradient(180deg, var(--fx-body-gradient-start) 0%, var(--fx-canvas) 260px);
   color: var(--text);
   font-size: 14px;
   letter-spacing: 0;

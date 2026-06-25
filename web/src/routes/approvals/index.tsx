@@ -55,13 +55,16 @@ export function ApprovalVulnBadge({ severity, ids, scope }: { severity?: string;
 // Severity order (worst first) and segment colours for the mini bar.
 const SEV_ORDER = ["critical", "high", "medium", "low"] as const;
 export const SEV_COLOR: Record<string, string> = {
-  critical: "#e5484d", high: "#f77f00", medium: "#f5a623", low: "#9aa1ac",
+  critical: "var(--fx-severity-critical)",
+  high: "var(--fx-severity-high)",
+  medium: "var(--fx-severity-medium)",
+  low: "var(--fx-severity-low)",
 };
 const SEV_BG_CLASS: Record<string, string> = {
-  critical: "bg-[#e5484d]",
-  high: "bg-[#f77f00]",
-  medium: "bg-[#f5a623]",
-  low: "bg-[#9aa1ac]",
+  critical: "bg-[var(--fx-severity-critical)]",
+  high: "bg-[var(--fx-severity-high)]",
+  medium: "bg-[var(--fx-severity-medium)]",
+  low: "bg-[var(--fx-severity-low)]",
 };
 
 // SeverityBar renders the per-level advisory counts as a segmented stacked bar
@@ -117,7 +120,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
       )}
       {pop && (
         <span
-          className="pointer-events-none absolute top-full left-1/2 z-[200] mt-2 flex w-max -translate-x-1/2 flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+          className="pointer-events-none absolute top-full left-1/2 z-[200] mt-2 flex w-max -translate-x-1/2 flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[var(--fx-overlay-shadow)]"
           role="tooltip"
         >
           <span className="text-xs font-semibold">
@@ -391,7 +394,7 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
   const single = repoNames.length === 1;
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
         <h2 className="m-0 mb-4 text-base font-semibold">Approve all pending</h2>
         <form onSubmit={submit} className="space-y-4">
           <Field>
@@ -456,7 +459,7 @@ export function ReviewModal({ row, onDone, onCancel }: {
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
         <h2 className="m-0 mb-3 text-base font-semibold">Review "{row.package}"</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Approve to serve all versions from {row.repo_name} (age policy still
@@ -629,7 +632,7 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
         <h2 className="m-0 mb-3 text-base font-semibold">Deny version</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Only this exact version is blocked; other versions keep flowing.
@@ -694,7 +697,7 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
         <h2 className="m-0 mb-4 text-base font-semibold">Add decision</h2>
         <form onSubmit={submit} className="space-y-4">
           <Field>

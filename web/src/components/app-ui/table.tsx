@@ -14,7 +14,7 @@ function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="table-wrap"
-      className={cn("w-full min-w-0 max-w-full overflow-x-auto rounded-lg overscroll-x-contain [-webkit-overflow-scrolling:touch]", className)}
+      className={cn("w-full min-w-0 max-w-full overflow-x-auto rounded-md border border-[var(--fx-border-subtle)] bg-[var(--fx-surface-panel)] overscroll-x-contain [-webkit-overflow-scrolling:touch]", className)}
       {...props}
     />
   )
@@ -24,7 +24,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <ShadcnTable
       data-slot="table"
-      className={cn("min-w-[720px] border-collapse max-sm:text-sm", className)}
+      className={cn("min-w-[720px] border-collapse text-[13px] max-sm:text-sm", className)}
       {...props}
     />
   )
@@ -43,7 +43,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <ShadcnTableRow
       data-slot="table-row"
       className={cn(
-        "border-border last:border-0 hover:bg-muted/35",
+        "border-[var(--fx-border-subtle)] last:border-0 hover:bg-[var(--fx-surface-hover)] data-[state=selected]:bg-[var(--fx-surface-selected)]",
         className
       )}
       {...props}
@@ -56,7 +56,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <ShadcnTableHead
       data-slot="table-head"
       className={cn(
-        "h-auto bg-card/70 px-3 py-2.5 text-xs font-semibold text-muted-foreground uppercase",
+        "h-auto border-b border-[var(--fx-border-subtle)] bg-[var(--fx-surface-panel-raised)] px-2.5 py-2 text-[11px] font-medium text-[var(--fx-text-subtle)] uppercase",
         className
       )}
       {...props}
@@ -68,7 +68,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <ShadcnTableCell
       data-slot="table-cell"
-      className={cn("px-3 py-2.5 align-middle", className)}
+      className={cn("px-2.5 py-2 align-middle", className)}
       {...props}
     />
   )

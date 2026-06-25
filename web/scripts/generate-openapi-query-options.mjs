@@ -128,7 +128,7 @@ function responseType(method, routePath, operation) {
 }
 
 function runtimePath(routePath) {
-  return routePath.replace(apiBasePath, "") || "/";
+  return routePath;
 }
 
 function operationArgsType(pathParamsType, queryParamsType) {
@@ -233,13 +233,14 @@ async function requestJson<TResponse>(
   const response = await fetch(appendQuery(pathname, query), {
     credentials: "include",
   });
-  if (response.status === 204) return undefined as TResponse;
+  if (response.status === 204) return null as TResponse;
   const text = await response.text();
   let data: unknown;
   try {
-    data = text ? JSON.parse(text) : undefined;
+    data = text ? JSON.parse(text) : null;
   } catch {
-    data = undefined;
+    if (response.ok) throw new Error("Invalid JSON response");
+    data = null;
   }
   if (!response.ok) {
     const error = (data as { error?: string } | undefined)?.error;

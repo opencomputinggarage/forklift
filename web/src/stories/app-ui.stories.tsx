@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/app-ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrap } from "@/components/app-ui/table";
 import { ActionBadge, PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
@@ -35,11 +36,11 @@ export const Components: Story = {
       <main className="min-h-screen bg-background p-8 text-foreground">
         <PageHeader
           title={
-            <Inline className="flex-wrap gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span>Repository policy</span>
               <RepoTypeBadge type={repoType} />
               <FormatBadge format="npm" />
-            </Inline>
+            </div>
           }
           actions={
             <>
@@ -53,8 +54,8 @@ export const Components: Story = {
         </PageDescription>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
-          <Panel>
-            <PanelBody>
+          <Card size="sm" className="mb-4">
+            <CardContent>
               <h2 className="m-0 mb-4 text-base font-semibold">Controls</h2>
               <FieldGroup className="gap-4">
                 <Field>
@@ -82,13 +83,13 @@ export const Components: Story = {
                   <span>Enable policy</span>
                 </label>
               </FieldGroup>
-            </PanelBody>
-          </Panel>
+            </CardContent>
+          </Card>
 
-          <Panel>
-            <PanelBody>
+          <Card size="sm" className="mb-4">
+            <CardContent>
               <h2 className="m-0 mb-4 text-base font-semibold">Badges</h2>
-              <Inline className="flex-wrap gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Badge>default</Badge>
                 <Badge variant="success">success</Badge>
                 <Badge variant="warning">warning</Badge>
@@ -99,13 +100,13 @@ export const Components: Story = {
                 <RoleBadge>admin</RoleBadge>
                 <PermissionBadge>npm-*: read,write</PermissionBadge>
                 <ActionBadge action="approve" />
-              </Inline>
-            </PanelBody>
-          </Panel>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Panel>
-          <PanelBody>
+        <Card size="sm" className="mb-4">
+          <CardContent>
             <h2 className="m-0 mb-4 text-base font-semibold">Table</h2>
             <TableWrap>
               <Table>
@@ -127,8 +128,8 @@ export const Components: Story = {
                 </TableBody>
               </Table>
             </TableWrap>
-          </PanelBody>
-        </Panel>
+          </CardContent>
+        </Card>
 
         <Alert>Package approval scan failed. Review OSV connectivity.</Alert>
       </main>

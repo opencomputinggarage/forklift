@@ -9,81 +9,53 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './../routes/__root'
-import { Route as SettingsRouteImport } from './../routes/settings'
-import { Route as HaRouteImport } from './../routes/ha'
-import { Route as SplatRouteImport } from './../routes/$'
 import { Route as IndexRouteImport } from './../routes/index'
-import { Route as UsersIndexRouteImport } from './../routes/users/index'
-import { Route as TokensIndexRouteImport } from './../routes/tokens/index'
-import { Route as RolesIndexRouteImport } from './../routes/roles/index'
-import { Route as RepositoriesIndexRouteImport } from './../routes/repositories/index'
-import { Route as NotificationsIndexRouteImport } from './../routes/notifications/index'
-import { Route as ApprovalsIndexRouteImport } from './../routes/approvals/index'
+import { Route as WorkspaceIndexRouteImport } from './../routes/workspace/index'
+import { Route as SystemIndexRouteImport } from './../routes/system/index'
 import { Route as AdminIndexRouteImport } from './../routes/admin/index'
-import { Route as UsersNewRouteImport } from './../routes/users/new'
-import { Route as UsersIdRouteImport } from './../routes/users/$id'
-import { Route as TokensNewRouteImport } from './../routes/tokens/new'
-import { Route as RolesNewRouteImport } from './../routes/roles/new'
-import { Route as RolesIdRouteImport } from './../routes/roles/$id'
-import { Route as RepositoriesNewRouteImport } from './../routes/repositories/new'
-import { Route as RepositoriesIdRouteImport } from './../routes/repositories/$id'
-import { Route as NotificationsNewRouteImport } from './../routes/notifications/new'
-import { Route as NotificationsIdRouteImport } from './../routes/notifications/$id'
-import { Route as ApprovalsIdRouteImport } from './../routes/approvals/$id'
-import { Route as AdminTabRouteImport } from './../routes/admin/$tab'
-import { Route as UsersIdIndexRouteImport } from './../routes/users/$id/index'
-import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositories/$id/index'
-import { Route as RepositoriesIdTabRouteImport } from './../routes/repositories/$id/$tab'
-import { Route as UsersIdTokensNewRouteImport } from './../routes/users/$id/tokens/new'
+import { Route as AccessIndexRouteImport } from './../routes/access/index'
+import { Route as WorkspaceTokensRouteImport } from './../routes/workspace/tokens'
+import { Route as WorkspaceRepositoriesRouteImport } from './../routes/workspace/repositories'
+import { Route as WorkspaceApprovalsRouteImport } from './../routes/workspace/approvals'
+import { Route as SystemSettingsRouteImport } from './../routes/system/settings'
+import { Route as AdminNotificationsRouteImport } from './../routes/admin/notifications'
+import { Route as AdminHaRouteImport } from './../routes/admin/ha'
+import { Route as AccessUsersRouteImport } from './../routes/access/users'
+import { Route as AccessRolesRouteImport } from './../routes/access/roles'
+import { Route as WorkspaceTokensIndexRouteImport } from './../routes/workspace/tokens/index'
+import { Route as WorkspaceRepositoriesIndexRouteImport } from './../routes/workspace/repositories/index'
+import { Route as WorkspaceApprovalsIndexRouteImport } from './../routes/workspace/approvals/index'
+import { Route as AdminNotificationsIndexRouteImport } from './../routes/admin/notifications/index'
+import { Route as AccessUsersIndexRouteImport } from './../routes/access/users/index'
+import { Route as AccessRolesIndexRouteImport } from './../routes/access/roles/index'
+import { Route as WorkspaceTokensNewRouteImport } from './../routes/workspace/tokens/new'
+import { Route as WorkspaceRepositoriesNewRouteImport } from './../routes/workspace/repositories/new'
+import { Route as WorkspaceRepositoriesIdRouteImport } from './../routes/workspace/repositories/$id'
+import { Route as WorkspaceApprovalsIdRouteImport } from './../routes/workspace/approvals/$id'
+import { Route as AdminNotificationsNewRouteImport } from './../routes/admin/notifications/new'
+import { Route as AdminNotificationsIdRouteImport } from './../routes/admin/notifications/$id'
+import { Route as AccessUsersNewRouteImport } from './../routes/access/users/new'
+import { Route as AccessUsersIdRouteImport } from './../routes/access/users/$id'
+import { Route as AccessRolesNewRouteImport } from './../routes/access/roles/new'
+import { Route as AccessRolesIdRouteImport } from './../routes/access/roles/$id'
+import { Route as WorkspaceRepositoriesIdIndexRouteImport } from './../routes/workspace/repositories/$id/index'
+import { Route as AccessUsersIdIndexRouteImport } from './../routes/access/users/$id/index'
+import { Route as WorkspaceRepositoriesIdTabRouteImport } from './../routes/workspace/repositories/$id/$tab'
+import { Route as AccessUsersIdTokensNewRouteImport } from './../routes/access/users/$id/tokens/new'
 
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HaRoute = HaRouteImport.update({
-  id: '/ha',
-  path: '/ha',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SplatRoute = SplatRouteImport.update({
-  id: '/$',
-  path: '/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersIndexRoute = UsersIndexRouteImport.update({
-  id: '/users/',
-  path: '/users/',
+const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
+  id: '/workspace/',
+  path: '/workspace/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TokensIndexRoute = TokensIndexRouteImport.update({
-  id: '/tokens/',
-  path: '/tokens/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RolesIndexRoute = RolesIndexRouteImport.update({
-  id: '/roles/',
-  path: '/roles/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RepositoriesIndexRoute = RepositoriesIndexRouteImport.update({
-  id: '/repositories/',
-  path: '/repositories/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
-  id: '/notifications/',
-  path: '/notifications/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApprovalsIndexRoute = ApprovalsIndexRouteImport.update({
-  id: '/approvals/',
-  path: '/approvals/',
+const SystemIndexRoute = SystemIndexRouteImport.update({
+  id: '/system/',
+  path: '/system/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -91,298 +63,372 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersNewRoute = UsersNewRouteImport.update({
-  id: '/users/new',
-  path: '/users/new',
+const AccessIndexRoute = AccessIndexRouteImport.update({
+  id: '/access/',
+  path: '/access/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersIdRoute = UsersIdRouteImport.update({
-  id: '/users/$id',
-  path: '/users/$id',
+const WorkspaceTokensRoute = WorkspaceTokensRouteImport.update({
+  id: '/workspace/tokens',
+  path: '/workspace/tokens',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TokensNewRoute = TokensNewRouteImport.update({
-  id: '/tokens/new',
-  path: '/tokens/new',
+const WorkspaceRepositoriesRoute = WorkspaceRepositoriesRouteImport.update({
+  id: '/workspace/repositories',
+  path: '/workspace/repositories',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RolesNewRoute = RolesNewRouteImport.update({
-  id: '/roles/new',
-  path: '/roles/new',
+const WorkspaceApprovalsRoute = WorkspaceApprovalsRouteImport.update({
+  id: '/workspace/approvals',
+  path: '/workspace/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RolesIdRoute = RolesIdRouteImport.update({
-  id: '/roles/$id',
-  path: '/roles/$id',
+const SystemSettingsRoute = SystemSettingsRouteImport.update({
+  id: '/system/settings',
+  path: '/system/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RepositoriesNewRoute = RepositoriesNewRouteImport.update({
-  id: '/repositories/new',
-  path: '/repositories/new',
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin/notifications',
+  path: '/admin/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RepositoriesIdRoute = RepositoriesIdRouteImport.update({
-  id: '/repositories/$id',
-  path: '/repositories/$id',
+const AdminHaRoute = AdminHaRouteImport.update({
+  id: '/admin/ha',
+  path: '/admin/ha',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NotificationsNewRoute = NotificationsNewRouteImport.update({
-  id: '/notifications/new',
-  path: '/notifications/new',
+const AccessUsersRoute = AccessUsersRouteImport.update({
+  id: '/access/users',
+  path: '/access/users',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NotificationsIdRoute = NotificationsIdRouteImport.update({
-  id: '/notifications/$id',
-  path: '/notifications/$id',
+const AccessRolesRoute = AccessRolesRouteImport.update({
+  id: '/access/roles',
+  path: '/access/roles',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApprovalsIdRoute = ApprovalsIdRouteImport.update({
-  id: '/approvals/$id',
-  path: '/approvals/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminTabRoute = AdminTabRouteImport.update({
-  id: '/admin/$tab',
-  path: '/admin/$tab',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsersIdIndexRoute = UsersIdIndexRouteImport.update({
+const WorkspaceTokensIndexRoute = WorkspaceTokensIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => UsersIdRoute,
+  getParentRoute: () => WorkspaceTokensRoute,
 } as any)
-const RepositoriesIdIndexRoute = RepositoriesIdIndexRouteImport.update({
+const WorkspaceRepositoriesIndexRoute =
+  WorkspaceRepositoriesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => WorkspaceRepositoriesRoute,
+  } as any)
+const WorkspaceApprovalsIndexRoute = WorkspaceApprovalsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => RepositoriesIdRoute,
+  getParentRoute: () => WorkspaceApprovalsRoute,
 } as any)
-const RepositoriesIdTabRoute = RepositoriesIdTabRouteImport.update({
-  id: '/$tab',
-  path: '/$tab',
-  getParentRoute: () => RepositoriesIdRoute,
+const AdminNotificationsIndexRoute = AdminNotificationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminNotificationsRoute,
 } as any)
-const UsersIdTokensNewRoute = UsersIdTokensNewRouteImport.update({
+const AccessUsersIndexRoute = AccessUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccessUsersRoute,
+} as any)
+const AccessRolesIndexRoute = AccessRolesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccessRolesRoute,
+} as any)
+const WorkspaceTokensNewRoute = WorkspaceTokensNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => WorkspaceTokensRoute,
+} as any)
+const WorkspaceRepositoriesNewRoute =
+  WorkspaceRepositoriesNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => WorkspaceRepositoriesRoute,
+  } as any)
+const WorkspaceRepositoriesIdRoute = WorkspaceRepositoriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => WorkspaceRepositoriesRoute,
+} as any)
+const WorkspaceApprovalsIdRoute = WorkspaceApprovalsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => WorkspaceApprovalsRoute,
+} as any)
+const AdminNotificationsNewRoute = AdminNotificationsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminNotificationsRoute,
+} as any)
+const AdminNotificationsIdRoute = AdminNotificationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminNotificationsRoute,
+} as any)
+const AccessUsersNewRoute = AccessUsersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AccessUsersRoute,
+} as any)
+const AccessUsersIdRoute = AccessUsersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AccessUsersRoute,
+} as any)
+const AccessRolesNewRoute = AccessRolesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AccessRolesRoute,
+} as any)
+const AccessRolesIdRoute = AccessRolesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AccessRolesRoute,
+} as any)
+const WorkspaceRepositoriesIdIndexRoute =
+  WorkspaceRepositoriesIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => WorkspaceRepositoriesIdRoute,
+  } as any)
+const AccessUsersIdIndexRoute = AccessUsersIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccessUsersIdRoute,
+} as any)
+const WorkspaceRepositoriesIdTabRoute =
+  WorkspaceRepositoriesIdTabRouteImport.update({
+    id: '/$tab',
+    path: '/$tab',
+    getParentRoute: () => WorkspaceRepositoriesIdRoute,
+  } as any)
+const AccessUsersIdTokensNewRoute = AccessUsersIdTokensNewRouteImport.update({
   id: '/tokens/new',
   path: '/tokens/new',
-  getParentRoute: () => UsersIdRoute,
+  getParentRoute: () => AccessUsersIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$': typeof SplatRoute
-  '/ha': typeof HaRoute
-  '/settings': typeof SettingsRoute
-  '/admin/$tab': typeof AdminTabRoute
-  '/approvals/$id': typeof ApprovalsIdRoute
-  '/notifications/$id': typeof NotificationsIdRoute
-  '/notifications/new': typeof NotificationsNewRoute
-  '/repositories/$id': typeof RepositoriesIdRouteWithChildren
-  '/repositories/new': typeof RepositoriesNewRoute
-  '/roles/$id': typeof RolesIdRoute
-  '/roles/new': typeof RolesNewRoute
-  '/tokens/new': typeof TokensNewRoute
-  '/users/$id': typeof UsersIdRouteWithChildren
-  '/users/new': typeof UsersNewRoute
+  '/access/roles': typeof AccessRolesRouteWithChildren
+  '/access/users': typeof AccessUsersRouteWithChildren
+  '/admin/ha': typeof AdminHaRoute
+  '/admin/notifications': typeof AdminNotificationsRouteWithChildren
+  '/system/settings': typeof SystemSettingsRoute
+  '/workspace/approvals': typeof WorkspaceApprovalsRouteWithChildren
+  '/workspace/repositories': typeof WorkspaceRepositoriesRouteWithChildren
+  '/workspace/tokens': typeof WorkspaceTokensRouteWithChildren
+  '/access/': typeof AccessIndexRoute
   '/admin/': typeof AdminIndexRoute
-  '/approvals/': typeof ApprovalsIndexRoute
-  '/notifications/': typeof NotificationsIndexRoute
-  '/repositories/': typeof RepositoriesIndexRoute
-  '/roles/': typeof RolesIndexRoute
-  '/tokens/': typeof TokensIndexRoute
-  '/users/': typeof UsersIndexRoute
-  '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
-  '/repositories/$id/': typeof RepositoriesIdIndexRoute
-  '/users/$id/': typeof UsersIdIndexRoute
-  '/users/$id/tokens/new': typeof UsersIdTokensNewRoute
+  '/system/': typeof SystemIndexRoute
+  '/workspace/': typeof WorkspaceIndexRoute
+  '/access/roles/$id': typeof AccessRolesIdRoute
+  '/access/roles/new': typeof AccessRolesNewRoute
+  '/access/users/$id': typeof AccessUsersIdRouteWithChildren
+  '/access/users/new': typeof AccessUsersNewRoute
+  '/admin/notifications/$id': typeof AdminNotificationsIdRoute
+  '/admin/notifications/new': typeof AdminNotificationsNewRoute
+  '/workspace/approvals/$id': typeof WorkspaceApprovalsIdRoute
+  '/workspace/repositories/$id': typeof WorkspaceRepositoriesIdRouteWithChildren
+  '/workspace/repositories/new': typeof WorkspaceRepositoriesNewRoute
+  '/workspace/tokens/new': typeof WorkspaceTokensNewRoute
+  '/access/roles/': typeof AccessRolesIndexRoute
+  '/access/users/': typeof AccessUsersIndexRoute
+  '/admin/notifications/': typeof AdminNotificationsIndexRoute
+  '/workspace/approvals/': typeof WorkspaceApprovalsIndexRoute
+  '/workspace/repositories/': typeof WorkspaceRepositoriesIndexRoute
+  '/workspace/tokens/': typeof WorkspaceTokensIndexRoute
+  '/workspace/repositories/$id/$tab': typeof WorkspaceRepositoriesIdTabRoute
+  '/access/users/$id/': typeof AccessUsersIdIndexRoute
+  '/workspace/repositories/$id/': typeof WorkspaceRepositoriesIdIndexRoute
+  '/access/users/$id/tokens/new': typeof AccessUsersIdTokensNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$': typeof SplatRoute
-  '/ha': typeof HaRoute
-  '/settings': typeof SettingsRoute
-  '/admin/$tab': typeof AdminTabRoute
-  '/approvals/$id': typeof ApprovalsIdRoute
-  '/notifications/$id': typeof NotificationsIdRoute
-  '/notifications/new': typeof NotificationsNewRoute
-  '/repositories/new': typeof RepositoriesNewRoute
-  '/roles/$id': typeof RolesIdRoute
-  '/roles/new': typeof RolesNewRoute
-  '/tokens/new': typeof TokensNewRoute
-  '/users/new': typeof UsersNewRoute
+  '/admin/ha': typeof AdminHaRoute
+  '/system/settings': typeof SystemSettingsRoute
+  '/access': typeof AccessIndexRoute
   '/admin': typeof AdminIndexRoute
-  '/approvals': typeof ApprovalsIndexRoute
-  '/notifications': typeof NotificationsIndexRoute
-  '/repositories': typeof RepositoriesIndexRoute
-  '/roles': typeof RolesIndexRoute
-  '/tokens': typeof TokensIndexRoute
-  '/users': typeof UsersIndexRoute
-  '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
-  '/repositories/$id': typeof RepositoriesIdIndexRoute
-  '/users/$id': typeof UsersIdIndexRoute
-  '/users/$id/tokens/new': typeof UsersIdTokensNewRoute
+  '/system': typeof SystemIndexRoute
+  '/workspace': typeof WorkspaceIndexRoute
+  '/access/roles/$id': typeof AccessRolesIdRoute
+  '/access/roles/new': typeof AccessRolesNewRoute
+  '/access/users/new': typeof AccessUsersNewRoute
+  '/admin/notifications/$id': typeof AdminNotificationsIdRoute
+  '/admin/notifications/new': typeof AdminNotificationsNewRoute
+  '/workspace/approvals/$id': typeof WorkspaceApprovalsIdRoute
+  '/workspace/repositories/new': typeof WorkspaceRepositoriesNewRoute
+  '/workspace/tokens/new': typeof WorkspaceTokensNewRoute
+  '/access/roles': typeof AccessRolesIndexRoute
+  '/access/users': typeof AccessUsersIndexRoute
+  '/admin/notifications': typeof AdminNotificationsIndexRoute
+  '/workspace/approvals': typeof WorkspaceApprovalsIndexRoute
+  '/workspace/repositories': typeof WorkspaceRepositoriesIndexRoute
+  '/workspace/tokens': typeof WorkspaceTokensIndexRoute
+  '/workspace/repositories/$id/$tab': typeof WorkspaceRepositoriesIdTabRoute
+  '/access/users/$id': typeof AccessUsersIdIndexRoute
+  '/workspace/repositories/$id': typeof WorkspaceRepositoriesIdIndexRoute
+  '/access/users/$id/tokens/new': typeof AccessUsersIdTokensNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$': typeof SplatRoute
-  '/ha': typeof HaRoute
-  '/settings': typeof SettingsRoute
-  '/admin/$tab': typeof AdminTabRoute
-  '/approvals/$id': typeof ApprovalsIdRoute
-  '/notifications/$id': typeof NotificationsIdRoute
-  '/notifications/new': typeof NotificationsNewRoute
-  '/repositories/$id': typeof RepositoriesIdRouteWithChildren
-  '/repositories/new': typeof RepositoriesNewRoute
-  '/roles/$id': typeof RolesIdRoute
-  '/roles/new': typeof RolesNewRoute
-  '/tokens/new': typeof TokensNewRoute
-  '/users/$id': typeof UsersIdRouteWithChildren
-  '/users/new': typeof UsersNewRoute
+  '/access/roles': typeof AccessRolesRouteWithChildren
+  '/access/users': typeof AccessUsersRouteWithChildren
+  '/admin/ha': typeof AdminHaRoute
+  '/admin/notifications': typeof AdminNotificationsRouteWithChildren
+  '/system/settings': typeof SystemSettingsRoute
+  '/workspace/approvals': typeof WorkspaceApprovalsRouteWithChildren
+  '/workspace/repositories': typeof WorkspaceRepositoriesRouteWithChildren
+  '/workspace/tokens': typeof WorkspaceTokensRouteWithChildren
+  '/access/': typeof AccessIndexRoute
   '/admin/': typeof AdminIndexRoute
-  '/approvals/': typeof ApprovalsIndexRoute
-  '/notifications/': typeof NotificationsIndexRoute
-  '/repositories/': typeof RepositoriesIndexRoute
-  '/roles/': typeof RolesIndexRoute
-  '/tokens/': typeof TokensIndexRoute
-  '/users/': typeof UsersIndexRoute
-  '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
-  '/repositories/$id/': typeof RepositoriesIdIndexRoute
-  '/users/$id/': typeof UsersIdIndexRoute
-  '/users/$id/tokens/new': typeof UsersIdTokensNewRoute
+  '/system/': typeof SystemIndexRoute
+  '/workspace/': typeof WorkspaceIndexRoute
+  '/access/roles/$id': typeof AccessRolesIdRoute
+  '/access/roles/new': typeof AccessRolesNewRoute
+  '/access/users/$id': typeof AccessUsersIdRouteWithChildren
+  '/access/users/new': typeof AccessUsersNewRoute
+  '/admin/notifications/$id': typeof AdminNotificationsIdRoute
+  '/admin/notifications/new': typeof AdminNotificationsNewRoute
+  '/workspace/approvals/$id': typeof WorkspaceApprovalsIdRoute
+  '/workspace/repositories/$id': typeof WorkspaceRepositoriesIdRouteWithChildren
+  '/workspace/repositories/new': typeof WorkspaceRepositoriesNewRoute
+  '/workspace/tokens/new': typeof WorkspaceTokensNewRoute
+  '/access/roles/': typeof AccessRolesIndexRoute
+  '/access/users/': typeof AccessUsersIndexRoute
+  '/admin/notifications/': typeof AdminNotificationsIndexRoute
+  '/workspace/approvals/': typeof WorkspaceApprovalsIndexRoute
+  '/workspace/repositories/': typeof WorkspaceRepositoriesIndexRoute
+  '/workspace/tokens/': typeof WorkspaceTokensIndexRoute
+  '/workspace/repositories/$id/$tab': typeof WorkspaceRepositoriesIdTabRoute
+  '/access/users/$id/': typeof AccessUsersIdIndexRoute
+  '/workspace/repositories/$id/': typeof WorkspaceRepositoriesIdIndexRoute
+  '/access/users/$id/tokens/new': typeof AccessUsersIdTokensNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/$'
-    | '/ha'
-    | '/settings'
-    | '/admin/$tab'
-    | '/approvals/$id'
-    | '/notifications/$id'
-    | '/notifications/new'
-    | '/repositories/$id'
-    | '/repositories/new'
-    | '/roles/$id'
-    | '/roles/new'
-    | '/tokens/new'
-    | '/users/$id'
-    | '/users/new'
+    | '/access/roles'
+    | '/access/users'
+    | '/admin/ha'
+    | '/admin/notifications'
+    | '/system/settings'
+    | '/workspace/approvals'
+    | '/workspace/repositories'
+    | '/workspace/tokens'
+    | '/access/'
     | '/admin/'
-    | '/approvals/'
-    | '/notifications/'
-    | '/repositories/'
-    | '/roles/'
-    | '/tokens/'
-    | '/users/'
-    | '/repositories/$id/$tab'
-    | '/repositories/$id/'
-    | '/users/$id/'
-    | '/users/$id/tokens/new'
+    | '/system/'
+    | '/workspace/'
+    | '/access/roles/$id'
+    | '/access/roles/new'
+    | '/access/users/$id'
+    | '/access/users/new'
+    | '/admin/notifications/$id'
+    | '/admin/notifications/new'
+    | '/workspace/approvals/$id'
+    | '/workspace/repositories/$id'
+    | '/workspace/repositories/new'
+    | '/workspace/tokens/new'
+    | '/access/roles/'
+    | '/access/users/'
+    | '/admin/notifications/'
+    | '/workspace/approvals/'
+    | '/workspace/repositories/'
+    | '/workspace/tokens/'
+    | '/workspace/repositories/$id/$tab'
+    | '/access/users/$id/'
+    | '/workspace/repositories/$id/'
+    | '/access/users/$id/tokens/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/$'
-    | '/ha'
-    | '/settings'
-    | '/admin/$tab'
-    | '/approvals/$id'
-    | '/notifications/$id'
-    | '/notifications/new'
-    | '/repositories/new'
-    | '/roles/$id'
-    | '/roles/new'
-    | '/tokens/new'
-    | '/users/new'
+    | '/admin/ha'
+    | '/system/settings'
+    | '/access'
     | '/admin'
-    | '/approvals'
-    | '/notifications'
-    | '/repositories'
-    | '/roles'
-    | '/tokens'
-    | '/users'
-    | '/repositories/$id/$tab'
-    | '/repositories/$id'
-    | '/users/$id'
-    | '/users/$id/tokens/new'
+    | '/system'
+    | '/workspace'
+    | '/access/roles/$id'
+    | '/access/roles/new'
+    | '/access/users/new'
+    | '/admin/notifications/$id'
+    | '/admin/notifications/new'
+    | '/workspace/approvals/$id'
+    | '/workspace/repositories/new'
+    | '/workspace/tokens/new'
+    | '/access/roles'
+    | '/access/users'
+    | '/admin/notifications'
+    | '/workspace/approvals'
+    | '/workspace/repositories'
+    | '/workspace/tokens'
+    | '/workspace/repositories/$id/$tab'
+    | '/access/users/$id'
+    | '/workspace/repositories/$id'
+    | '/access/users/$id/tokens/new'
   id:
     | '__root__'
     | '/'
-    | '/$'
-    | '/ha'
-    | '/settings'
-    | '/admin/$tab'
-    | '/approvals/$id'
-    | '/notifications/$id'
-    | '/notifications/new'
-    | '/repositories/$id'
-    | '/repositories/new'
-    | '/roles/$id'
-    | '/roles/new'
-    | '/tokens/new'
-    | '/users/$id'
-    | '/users/new'
+    | '/access/roles'
+    | '/access/users'
+    | '/admin/ha'
+    | '/admin/notifications'
+    | '/system/settings'
+    | '/workspace/approvals'
+    | '/workspace/repositories'
+    | '/workspace/tokens'
+    | '/access/'
     | '/admin/'
-    | '/approvals/'
-    | '/notifications/'
-    | '/repositories/'
-    | '/roles/'
-    | '/tokens/'
-    | '/users/'
-    | '/repositories/$id/$tab'
-    | '/repositories/$id/'
-    | '/users/$id/'
-    | '/users/$id/tokens/new'
+    | '/system/'
+    | '/workspace/'
+    | '/access/roles/$id'
+    | '/access/roles/new'
+    | '/access/users/$id'
+    | '/access/users/new'
+    | '/admin/notifications/$id'
+    | '/admin/notifications/new'
+    | '/workspace/approvals/$id'
+    | '/workspace/repositories/$id'
+    | '/workspace/repositories/new'
+    | '/workspace/tokens/new'
+    | '/access/roles/'
+    | '/access/users/'
+    | '/admin/notifications/'
+    | '/workspace/approvals/'
+    | '/workspace/repositories/'
+    | '/workspace/tokens/'
+    | '/workspace/repositories/$id/$tab'
+    | '/access/users/$id/'
+    | '/workspace/repositories/$id/'
+    | '/access/users/$id/tokens/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SplatRoute: typeof SplatRoute
-  HaRoute: typeof HaRoute
-  SettingsRoute: typeof SettingsRoute
-  AdminTabRoute: typeof AdminTabRoute
-  ApprovalsIdRoute: typeof ApprovalsIdRoute
-  NotificationsIdRoute: typeof NotificationsIdRoute
-  NotificationsNewRoute: typeof NotificationsNewRoute
-  RepositoriesIdRoute: typeof RepositoriesIdRouteWithChildren
-  RepositoriesNewRoute: typeof RepositoriesNewRoute
-  RolesIdRoute: typeof RolesIdRoute
-  RolesNewRoute: typeof RolesNewRoute
-  TokensNewRoute: typeof TokensNewRoute
-  UsersIdRoute: typeof UsersIdRouteWithChildren
-  UsersNewRoute: typeof UsersNewRoute
+  AccessRolesRoute: typeof AccessRolesRouteWithChildren
+  AccessUsersRoute: typeof AccessUsersRouteWithChildren
+  AdminHaRoute: typeof AdminHaRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRouteWithChildren
+  SystemSettingsRoute: typeof SystemSettingsRoute
+  WorkspaceApprovalsRoute: typeof WorkspaceApprovalsRouteWithChildren
+  WorkspaceRepositoriesRoute: typeof WorkspaceRepositoriesRouteWithChildren
+  WorkspaceTokensRoute: typeof WorkspaceTokensRouteWithChildren
+  AccessIndexRoute: typeof AccessIndexRoute
   AdminIndexRoute: typeof AdminIndexRoute
-  ApprovalsIndexRoute: typeof ApprovalsIndexRoute
-  NotificationsIndexRoute: typeof NotificationsIndexRoute
-  RepositoriesIndexRoute: typeof RepositoriesIndexRoute
-  RolesIndexRoute: typeof RolesIndexRoute
-  TokensIndexRoute: typeof TokensIndexRoute
-  UsersIndexRoute: typeof UsersIndexRoute
+  SystemIndexRoute: typeof SystemIndexRoute
+  WorkspaceIndexRoute: typeof WorkspaceIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ha': {
-      id: '/ha'
-      path: '/ha'
-      fullPath: '/ha'
-      preLoaderRoute: typeof HaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$': {
-      id: '/$'
-      path: '/$'
-      fullPath: '/$'
-      preLoaderRoute: typeof SplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -390,46 +436,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/': {
-      id: '/users/'
-      path: '/users'
-      fullPath: '/users/'
-      preLoaderRoute: typeof UsersIndexRouteImport
+    '/workspace/': {
+      id: '/workspace/'
+      path: '/workspace'
+      fullPath: '/workspace/'
+      preLoaderRoute: typeof WorkspaceIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tokens/': {
-      id: '/tokens/'
-      path: '/tokens'
-      fullPath: '/tokens/'
-      preLoaderRoute: typeof TokensIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roles/': {
-      id: '/roles/'
-      path: '/roles'
-      fullPath: '/roles/'
-      preLoaderRoute: typeof RolesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/repositories/': {
-      id: '/repositories/'
-      path: '/repositories'
-      fullPath: '/repositories/'
-      preLoaderRoute: typeof RepositoriesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications/': {
-      id: '/notifications/'
-      path: '/notifications'
-      fullPath: '/notifications/'
-      preLoaderRoute: typeof NotificationsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/approvals/': {
-      id: '/approvals/'
-      path: '/approvals'
-      fullPath: '/approvals/'
-      preLoaderRoute: typeof ApprovalsIndexRouteImport
+    '/system/': {
+      id: '/system/'
+      path: '/system'
+      fullPath: '/system/'
+      preLoaderRoute: typeof SystemIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -439,164 +457,347 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/new': {
-      id: '/users/new'
-      path: '/users/new'
-      fullPath: '/users/new'
-      preLoaderRoute: typeof UsersNewRouteImport
+    '/access/': {
+      id: '/access/'
+      path: '/access'
+      fullPath: '/access/'
+      preLoaderRoute: typeof AccessIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/$id': {
-      id: '/users/$id'
-      path: '/users/$id'
-      fullPath: '/users/$id'
-      preLoaderRoute: typeof UsersIdRouteImport
+    '/workspace/tokens': {
+      id: '/workspace/tokens'
+      path: '/workspace/tokens'
+      fullPath: '/workspace/tokens'
+      preLoaderRoute: typeof WorkspaceTokensRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tokens/new': {
-      id: '/tokens/new'
-      path: '/tokens/new'
-      fullPath: '/tokens/new'
-      preLoaderRoute: typeof TokensNewRouteImport
+    '/workspace/repositories': {
+      id: '/workspace/repositories'
+      path: '/workspace/repositories'
+      fullPath: '/workspace/repositories'
+      preLoaderRoute: typeof WorkspaceRepositoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/roles/new': {
-      id: '/roles/new'
-      path: '/roles/new'
-      fullPath: '/roles/new'
-      preLoaderRoute: typeof RolesNewRouteImport
+    '/workspace/approvals': {
+      id: '/workspace/approvals'
+      path: '/workspace/approvals'
+      fullPath: '/workspace/approvals'
+      preLoaderRoute: typeof WorkspaceApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/roles/$id': {
-      id: '/roles/$id'
-      path: '/roles/$id'
-      fullPath: '/roles/$id'
-      preLoaderRoute: typeof RolesIdRouteImport
+    '/system/settings': {
+      id: '/system/settings'
+      path: '/system/settings'
+      fullPath: '/system/settings'
+      preLoaderRoute: typeof SystemSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/repositories/new': {
-      id: '/repositories/new'
-      path: '/repositories/new'
-      fullPath: '/repositories/new'
-      preLoaderRoute: typeof RepositoriesNewRouteImport
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/admin/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/repositories/$id': {
-      id: '/repositories/$id'
-      path: '/repositories/$id'
-      fullPath: '/repositories/$id'
-      preLoaderRoute: typeof RepositoriesIdRouteImport
+    '/admin/ha': {
+      id: '/admin/ha'
+      path: '/admin/ha'
+      fullPath: '/admin/ha'
+      preLoaderRoute: typeof AdminHaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/notifications/new': {
-      id: '/notifications/new'
-      path: '/notifications/new'
-      fullPath: '/notifications/new'
-      preLoaderRoute: typeof NotificationsNewRouteImport
+    '/access/users': {
+      id: '/access/users'
+      path: '/access/users'
+      fullPath: '/access/users'
+      preLoaderRoute: typeof AccessUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/notifications/$id': {
-      id: '/notifications/$id'
-      path: '/notifications/$id'
-      fullPath: '/notifications/$id'
-      preLoaderRoute: typeof NotificationsIdRouteImport
+    '/access/roles': {
+      id: '/access/roles'
+      path: '/access/roles'
+      fullPath: '/access/roles'
+      preLoaderRoute: typeof AccessRolesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/approvals/$id': {
-      id: '/approvals/$id'
-      path: '/approvals/$id'
-      fullPath: '/approvals/$id'
-      preLoaderRoute: typeof ApprovalsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/$tab': {
-      id: '/admin/$tab'
-      path: '/admin/$tab'
-      fullPath: '/admin/$tab'
-      preLoaderRoute: typeof AdminTabRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/users/$id/': {
-      id: '/users/$id/'
+    '/workspace/tokens/': {
+      id: '/workspace/tokens/'
       path: '/'
-      fullPath: '/users/$id/'
-      preLoaderRoute: typeof UsersIdIndexRouteImport
-      parentRoute: typeof UsersIdRoute
+      fullPath: '/workspace/tokens/'
+      preLoaderRoute: typeof WorkspaceTokensIndexRouteImport
+      parentRoute: typeof WorkspaceTokensRoute
     }
-    '/repositories/$id/': {
-      id: '/repositories/$id/'
+    '/workspace/repositories/': {
+      id: '/workspace/repositories/'
       path: '/'
-      fullPath: '/repositories/$id/'
-      preLoaderRoute: typeof RepositoriesIdIndexRouteImport
-      parentRoute: typeof RepositoriesIdRoute
+      fullPath: '/workspace/repositories/'
+      preLoaderRoute: typeof WorkspaceRepositoriesIndexRouteImport
+      parentRoute: typeof WorkspaceRepositoriesRoute
     }
-    '/repositories/$id/$tab': {
-      id: '/repositories/$id/$tab'
+    '/workspace/approvals/': {
+      id: '/workspace/approvals/'
+      path: '/'
+      fullPath: '/workspace/approvals/'
+      preLoaderRoute: typeof WorkspaceApprovalsIndexRouteImport
+      parentRoute: typeof WorkspaceApprovalsRoute
+    }
+    '/admin/notifications/': {
+      id: '/admin/notifications/'
+      path: '/'
+      fullPath: '/admin/notifications/'
+      preLoaderRoute: typeof AdminNotificationsIndexRouteImport
+      parentRoute: typeof AdminNotificationsRoute
+    }
+    '/access/users/': {
+      id: '/access/users/'
+      path: '/'
+      fullPath: '/access/users/'
+      preLoaderRoute: typeof AccessUsersIndexRouteImport
+      parentRoute: typeof AccessUsersRoute
+    }
+    '/access/roles/': {
+      id: '/access/roles/'
+      path: '/'
+      fullPath: '/access/roles/'
+      preLoaderRoute: typeof AccessRolesIndexRouteImport
+      parentRoute: typeof AccessRolesRoute
+    }
+    '/workspace/tokens/new': {
+      id: '/workspace/tokens/new'
+      path: '/new'
+      fullPath: '/workspace/tokens/new'
+      preLoaderRoute: typeof WorkspaceTokensNewRouteImport
+      parentRoute: typeof WorkspaceTokensRoute
+    }
+    '/workspace/repositories/new': {
+      id: '/workspace/repositories/new'
+      path: '/new'
+      fullPath: '/workspace/repositories/new'
+      preLoaderRoute: typeof WorkspaceRepositoriesNewRouteImport
+      parentRoute: typeof WorkspaceRepositoriesRoute
+    }
+    '/workspace/repositories/$id': {
+      id: '/workspace/repositories/$id'
+      path: '/$id'
+      fullPath: '/workspace/repositories/$id'
+      preLoaderRoute: typeof WorkspaceRepositoriesIdRouteImport
+      parentRoute: typeof WorkspaceRepositoriesRoute
+    }
+    '/workspace/approvals/$id': {
+      id: '/workspace/approvals/$id'
+      path: '/$id'
+      fullPath: '/workspace/approvals/$id'
+      preLoaderRoute: typeof WorkspaceApprovalsIdRouteImport
+      parentRoute: typeof WorkspaceApprovalsRoute
+    }
+    '/admin/notifications/new': {
+      id: '/admin/notifications/new'
+      path: '/new'
+      fullPath: '/admin/notifications/new'
+      preLoaderRoute: typeof AdminNotificationsNewRouteImport
+      parentRoute: typeof AdminNotificationsRoute
+    }
+    '/admin/notifications/$id': {
+      id: '/admin/notifications/$id'
+      path: '/$id'
+      fullPath: '/admin/notifications/$id'
+      preLoaderRoute: typeof AdminNotificationsIdRouteImport
+      parentRoute: typeof AdminNotificationsRoute
+    }
+    '/access/users/new': {
+      id: '/access/users/new'
+      path: '/new'
+      fullPath: '/access/users/new'
+      preLoaderRoute: typeof AccessUsersNewRouteImport
+      parentRoute: typeof AccessUsersRoute
+    }
+    '/access/users/$id': {
+      id: '/access/users/$id'
+      path: '/$id'
+      fullPath: '/access/users/$id'
+      preLoaderRoute: typeof AccessUsersIdRouteImport
+      parentRoute: typeof AccessUsersRoute
+    }
+    '/access/roles/new': {
+      id: '/access/roles/new'
+      path: '/new'
+      fullPath: '/access/roles/new'
+      preLoaderRoute: typeof AccessRolesNewRouteImport
+      parentRoute: typeof AccessRolesRoute
+    }
+    '/access/roles/$id': {
+      id: '/access/roles/$id'
+      path: '/$id'
+      fullPath: '/access/roles/$id'
+      preLoaderRoute: typeof AccessRolesIdRouteImport
+      parentRoute: typeof AccessRolesRoute
+    }
+    '/workspace/repositories/$id/': {
+      id: '/workspace/repositories/$id/'
+      path: '/'
+      fullPath: '/workspace/repositories/$id/'
+      preLoaderRoute: typeof WorkspaceRepositoriesIdIndexRouteImport
+      parentRoute: typeof WorkspaceRepositoriesIdRoute
+    }
+    '/access/users/$id/': {
+      id: '/access/users/$id/'
+      path: '/'
+      fullPath: '/access/users/$id/'
+      preLoaderRoute: typeof AccessUsersIdIndexRouteImport
+      parentRoute: typeof AccessUsersIdRoute
+    }
+    '/workspace/repositories/$id/$tab': {
+      id: '/workspace/repositories/$id/$tab'
       path: '/$tab'
-      fullPath: '/repositories/$id/$tab'
-      preLoaderRoute: typeof RepositoriesIdTabRouteImport
-      parentRoute: typeof RepositoriesIdRoute
+      fullPath: '/workspace/repositories/$id/$tab'
+      preLoaderRoute: typeof WorkspaceRepositoriesIdTabRouteImport
+      parentRoute: typeof WorkspaceRepositoriesIdRoute
     }
-    '/users/$id/tokens/new': {
-      id: '/users/$id/tokens/new'
+    '/access/users/$id/tokens/new': {
+      id: '/access/users/$id/tokens/new'
       path: '/tokens/new'
-      fullPath: '/users/$id/tokens/new'
-      preLoaderRoute: typeof UsersIdTokensNewRouteImport
-      parentRoute: typeof UsersIdRoute
+      fullPath: '/access/users/$id/tokens/new'
+      preLoaderRoute: typeof AccessUsersIdTokensNewRouteImport
+      parentRoute: typeof AccessUsersIdRoute
     }
   }
 }
 
-interface RepositoriesIdRouteChildren {
-  RepositoriesIdTabRoute: typeof RepositoriesIdTabRoute
-  RepositoriesIdIndexRoute: typeof RepositoriesIdIndexRoute
+interface AccessRolesRouteChildren {
+  AccessRolesIdRoute: typeof AccessRolesIdRoute
+  AccessRolesNewRoute: typeof AccessRolesNewRoute
+  AccessRolesIndexRoute: typeof AccessRolesIndexRoute
 }
 
-const RepositoriesIdRouteChildren: RepositoriesIdRouteChildren = {
-  RepositoriesIdTabRoute: RepositoriesIdTabRoute,
-  RepositoriesIdIndexRoute: RepositoriesIdIndexRoute,
+const AccessRolesRouteChildren: AccessRolesRouteChildren = {
+  AccessRolesIdRoute: AccessRolesIdRoute,
+  AccessRolesNewRoute: AccessRolesNewRoute,
+  AccessRolesIndexRoute: AccessRolesIndexRoute,
 }
 
-const RepositoriesIdRouteWithChildren = RepositoriesIdRoute._addFileChildren(
-  RepositoriesIdRouteChildren,
+const AccessRolesRouteWithChildren = AccessRolesRoute._addFileChildren(
+  AccessRolesRouteChildren,
 )
 
-interface UsersIdRouteChildren {
-  UsersIdIndexRoute: typeof UsersIdIndexRoute
-  UsersIdTokensNewRoute: typeof UsersIdTokensNewRoute
+interface AccessUsersIdRouteChildren {
+  AccessUsersIdIndexRoute: typeof AccessUsersIdIndexRoute
+  AccessUsersIdTokensNewRoute: typeof AccessUsersIdTokensNewRoute
 }
 
-const UsersIdRouteChildren: UsersIdRouteChildren = {
-  UsersIdIndexRoute: UsersIdIndexRoute,
-  UsersIdTokensNewRoute: UsersIdTokensNewRoute,
+const AccessUsersIdRouteChildren: AccessUsersIdRouteChildren = {
+  AccessUsersIdIndexRoute: AccessUsersIdIndexRoute,
+  AccessUsersIdTokensNewRoute: AccessUsersIdTokensNewRoute,
 }
 
-const UsersIdRouteWithChildren =
-  UsersIdRoute._addFileChildren(UsersIdRouteChildren)
+const AccessUsersIdRouteWithChildren = AccessUsersIdRoute._addFileChildren(
+  AccessUsersIdRouteChildren,
+)
+
+interface AccessUsersRouteChildren {
+  AccessUsersIdRoute: typeof AccessUsersIdRouteWithChildren
+  AccessUsersNewRoute: typeof AccessUsersNewRoute
+  AccessUsersIndexRoute: typeof AccessUsersIndexRoute
+}
+
+const AccessUsersRouteChildren: AccessUsersRouteChildren = {
+  AccessUsersIdRoute: AccessUsersIdRouteWithChildren,
+  AccessUsersNewRoute: AccessUsersNewRoute,
+  AccessUsersIndexRoute: AccessUsersIndexRoute,
+}
+
+const AccessUsersRouteWithChildren = AccessUsersRoute._addFileChildren(
+  AccessUsersRouteChildren,
+)
+
+interface AdminNotificationsRouteChildren {
+  AdminNotificationsIdRoute: typeof AdminNotificationsIdRoute
+  AdminNotificationsNewRoute: typeof AdminNotificationsNewRoute
+  AdminNotificationsIndexRoute: typeof AdminNotificationsIndexRoute
+}
+
+const AdminNotificationsRouteChildren: AdminNotificationsRouteChildren = {
+  AdminNotificationsIdRoute: AdminNotificationsIdRoute,
+  AdminNotificationsNewRoute: AdminNotificationsNewRoute,
+  AdminNotificationsIndexRoute: AdminNotificationsIndexRoute,
+}
+
+const AdminNotificationsRouteWithChildren =
+  AdminNotificationsRoute._addFileChildren(AdminNotificationsRouteChildren)
+
+interface WorkspaceApprovalsRouteChildren {
+  WorkspaceApprovalsIdRoute: typeof WorkspaceApprovalsIdRoute
+  WorkspaceApprovalsIndexRoute: typeof WorkspaceApprovalsIndexRoute
+}
+
+const WorkspaceApprovalsRouteChildren: WorkspaceApprovalsRouteChildren = {
+  WorkspaceApprovalsIdRoute: WorkspaceApprovalsIdRoute,
+  WorkspaceApprovalsIndexRoute: WorkspaceApprovalsIndexRoute,
+}
+
+const WorkspaceApprovalsRouteWithChildren =
+  WorkspaceApprovalsRoute._addFileChildren(WorkspaceApprovalsRouteChildren)
+
+interface WorkspaceRepositoriesIdRouteChildren {
+  WorkspaceRepositoriesIdTabRoute: typeof WorkspaceRepositoriesIdTabRoute
+  WorkspaceRepositoriesIdIndexRoute: typeof WorkspaceRepositoriesIdIndexRoute
+}
+
+const WorkspaceRepositoriesIdRouteChildren: WorkspaceRepositoriesIdRouteChildren =
+  {
+    WorkspaceRepositoriesIdTabRoute: WorkspaceRepositoriesIdTabRoute,
+    WorkspaceRepositoriesIdIndexRoute: WorkspaceRepositoriesIdIndexRoute,
+  }
+
+const WorkspaceRepositoriesIdRouteWithChildren =
+  WorkspaceRepositoriesIdRoute._addFileChildren(
+    WorkspaceRepositoriesIdRouteChildren,
+  )
+
+interface WorkspaceRepositoriesRouteChildren {
+  WorkspaceRepositoriesIdRoute: typeof WorkspaceRepositoriesIdRouteWithChildren
+  WorkspaceRepositoriesNewRoute: typeof WorkspaceRepositoriesNewRoute
+  WorkspaceRepositoriesIndexRoute: typeof WorkspaceRepositoriesIndexRoute
+}
+
+const WorkspaceRepositoriesRouteChildren: WorkspaceRepositoriesRouteChildren = {
+  WorkspaceRepositoriesIdRoute: WorkspaceRepositoriesIdRouteWithChildren,
+  WorkspaceRepositoriesNewRoute: WorkspaceRepositoriesNewRoute,
+  WorkspaceRepositoriesIndexRoute: WorkspaceRepositoriesIndexRoute,
+}
+
+const WorkspaceRepositoriesRouteWithChildren =
+  WorkspaceRepositoriesRoute._addFileChildren(
+    WorkspaceRepositoriesRouteChildren,
+  )
+
+interface WorkspaceTokensRouteChildren {
+  WorkspaceTokensNewRoute: typeof WorkspaceTokensNewRoute
+  WorkspaceTokensIndexRoute: typeof WorkspaceTokensIndexRoute
+}
+
+const WorkspaceTokensRouteChildren: WorkspaceTokensRouteChildren = {
+  WorkspaceTokensNewRoute: WorkspaceTokensNewRoute,
+  WorkspaceTokensIndexRoute: WorkspaceTokensIndexRoute,
+}
+
+const WorkspaceTokensRouteWithChildren = WorkspaceTokensRoute._addFileChildren(
+  WorkspaceTokensRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SplatRoute: SplatRoute,
-  HaRoute: HaRoute,
-  SettingsRoute: SettingsRoute,
-  AdminTabRoute: AdminTabRoute,
-  ApprovalsIdRoute: ApprovalsIdRoute,
-  NotificationsIdRoute: NotificationsIdRoute,
-  NotificationsNewRoute: NotificationsNewRoute,
-  RepositoriesIdRoute: RepositoriesIdRouteWithChildren,
-  RepositoriesNewRoute: RepositoriesNewRoute,
-  RolesIdRoute: RolesIdRoute,
-  RolesNewRoute: RolesNewRoute,
-  TokensNewRoute: TokensNewRoute,
-  UsersIdRoute: UsersIdRouteWithChildren,
-  UsersNewRoute: UsersNewRoute,
+  AccessRolesRoute: AccessRolesRouteWithChildren,
+  AccessUsersRoute: AccessUsersRouteWithChildren,
+  AdminHaRoute: AdminHaRoute,
+  AdminNotificationsRoute: AdminNotificationsRouteWithChildren,
+  SystemSettingsRoute: SystemSettingsRoute,
+  WorkspaceApprovalsRoute: WorkspaceApprovalsRouteWithChildren,
+  WorkspaceRepositoriesRoute: WorkspaceRepositoriesRouteWithChildren,
+  WorkspaceTokensRoute: WorkspaceTokensRouteWithChildren,
+  AccessIndexRoute: AccessIndexRoute,
   AdminIndexRoute: AdminIndexRoute,
-  ApprovalsIndexRoute: ApprovalsIndexRoute,
-  NotificationsIndexRoute: NotificationsIndexRoute,
-  RepositoriesIndexRoute: RepositoriesIndexRoute,
-  RolesIndexRoute: RolesIndexRoute,
-  TokensIndexRoute: TokensIndexRoute,
-  UsersIndexRoute: UsersIndexRoute,
+  SystemIndexRoute: SystemIndexRoute,
+  WorkspaceIndexRoute: WorkspaceIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

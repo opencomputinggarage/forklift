@@ -89,12 +89,12 @@
   --color-secondary-foreground: var(--fx-text);
   --color-muted: var(--fx-surface-2);
   --color-muted-foreground: var(--fx-text-muted);
-  --color-accent: var(--fx-accent);
-  --color-accent-foreground: var(--fx-accent-foreground);
+  --color-accent: var(--fx-surface-hover);
+  --color-accent-foreground: var(--fx-text);
   --color-destructive: var(--fx-danger);
   --color-destructive-foreground: var(--fx-danger-foreground);
   --color-border: var(--fx-border);
-  --color-input: var(--fx-input);
+  --color-input: var(--fx-input-border);
   --color-ring: var(--fx-accent);
   --color-sidebar: var(--fx-surface-1);
   --color-sidebar-foreground: var(--fx-text);
@@ -114,70 +114,101 @@
 /* forklift UI design tokens: Linear-inspired product console with scarce forklift yellow accent. */
 :root,
 .dark {
-  --fx-canvas: #090b0f;
-  --fx-canvas-elevated: #0b0e13;
-  --fx-surface-1: #101318;
-  --fx-surface-2: #171b22;
-  --fx-surface-3: #1d232c;
-  --fx-input: #0d1015;
-  --fx-border: #252b35;
-  --fx-border-strong: #343c49;
-  --fx-text: #f4f6f8;
-  --fx-text-muted: #9aa3af;
-  --fx-text-subtle: #68717f;
-  --fx-accent: #ffd400;
-  --fx-accent-hover: #ffe04d;
-  --fx-accent-pressed: #d6b100;
-  --fx-accent-foreground: #000;
-  --fx-success: #32d583;
-  --fx-warning: #fdb022;
-  --fx-danger: #f97066;
-  --fx-danger-hover: #ff8a80;
+  --fx-canvas: #050506;
+  --fx-canvas-elevated: #0a0a0b;
+  --fx-sidebar-bg: #070708;
+  --fx-surface-1: #171719;
+  --fx-surface-2: #1d1d20;
+  --fx-surface-3: #25262a;
+  --fx-surface-panel: #0f0f10;
+  --fx-surface-panel-raised: #171719;
+  --fx-surface-hover: #202124;
+  --fx-surface-selected: #242424;
+  --fx-input: #171719;
+  --fx-input-border: #434138;
+  --fx-control: #19191c;
+  --fx-control-hover: #232428;
+  --fx-border: #303034;
+  --fx-border-subtle: #2a2a2d;
+  --fx-border-strong: #4f4b40;
+  --fx-text: #f0eee8;
+  --fx-text-muted: #a7a49d;
+  --fx-text-subtle: #7d7a73;
+  --fx-accent: #d8a52e;
+  --fx-accent-hover: #e6b94e;
+  --fx-accent-pressed: #b78318;
+  --fx-accent-foreground: #151108;
+  --fx-success: #45bf80;
+  --fx-warning: #d89b30;
+  --fx-danger: #e16d64;
+  --fx-danger-hover: #ef857d;
   --fx-danger-foreground: #fff;
+  --fx-severity-critical: #e16d64;
+  --fx-severity-high: #dc8541;
+  --fx-severity-medium: #d89b30;
+  --fx-severity-low: #9f9a8f;
   --fx-radius-sm: 5px;
   --fx-radius-md: 6px;
   --fx-radius-lg: 8px;
   --fx-radius-xl: 11px;
   --fx-radius-2xl: 14px;
-  --fx-sidebar-width: 244px;
-  --fx-page-x: 32px;
-  --fx-page-y: 32px;
-  --fx-overlay-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
-  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  --fx-logo-chip: #f2f3f5;
-  --fx-login-glow: rgba(255, 255, 255, 0.055);
-  --fx-login-wave: rgba(255, 255, 255, 0.045);
-  --fx-body-gradient-start: #0b0e13;
+  --fx-sidebar-width: 268px;
+  --fx-content-max: 1120px;
+  --fx-main-gutter-x: clamp(10px, 1.8vw, 24px);
+  --fx-main-gutter-y: clamp(10px, 1.8vw, 24px);
+  --fx-page-x: clamp(28px, 6vw, 64px);
+  --fx-page-y: clamp(40px, 7vw, 72px);
+  --fx-overlay-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --fx-focus-shadow: 0 0 0 3px color-mix(in oklch, var(--fx-accent) 22%, transparent);
+  --fx-logo-chip: #ece9df;
+  --fx-login-glow: rgba(216, 165, 46, 0.046);
+  --fx-login-wave: rgba(232, 230, 223, 0.032);
+  --fx-body-gradient-start: #050506;
   color-scheme: dark;
 }
 
 .light {
-  --fx-canvas: #f7f8fa;
-  --fx-canvas-elevated: #ffffff;
-  --fx-surface-1: #ffffff;
-  --fx-surface-2: #f1f3f5;
-  --fx-surface-3: #e9edf2;
-  --fx-input: #ffffff;
-  --fx-border: #d7dce3;
-  --fx-border-strong: #c1c8d2;
-  --fx-text: #111318;
-  --fx-text-muted: #5f6875;
-  --fx-text-subtle: #8a93a0;
-  --fx-accent: #d6b100;
-  --fx-accent-hover: #b99700;
-  --fx-accent-pressed: #8d7300;
-  --fx-accent-foreground: #111318;
-  --fx-success: #15803d;
-  --fx-warning: #b7791f;
-  --fx-danger: #c2413b;
-  --fx-danger-hover: #a8322d;
+  --fx-canvas: #eceae4;
+  --fx-canvas-elevated: #f8f7f3;
+  --fx-sidebar-bg: #f5f4ef;
+  --fx-surface-1: #fbfaf6;
+  --fx-surface-2: #edeae2;
+  --fx-surface-3: #dfdacf;
+  --fx-surface-panel: #f8f7f3;
+  --fx-surface-panel-raised: #fbfaf6;
+  --fx-surface-hover: #e9e6de;
+  --fx-surface-selected: #ded6bf;
+  --fx-input: #fbfaf6;
+  --fx-input-border: #a6a092;
+  --fx-control: #fffefa;
+  --fx-control-hover: #efede6;
+  --fx-border: #c4beb2;
+  --fx-border-subtle: #d0cabd;
+  --fx-border-strong: #948c7b;
+  --fx-text: #1d1d1b;
+  --fx-text-muted: #5d5a52;
+  --fx-text-subtle: #6c675d;
+  --fx-accent: #86600a;
+  --fx-accent-hover: #715107;
+  --fx-accent-pressed: #5e4306;
+  --fx-accent-foreground: #fff8e8;
+  --fx-success: #167345;
+  --fx-warning: #86600a;
+  --fx-danger: #a64038;
+  --fx-danger-hover: #88342e;
   --fx-danger-foreground: #fff;
-  --fx-overlay-shadow: 0 24px 80px rgba(15, 23, 42, 0.16);
-  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  --fx-logo-chip: #eef1f5;
-  --fx-login-glow: rgba(17, 19, 24, 0.045);
-  --fx-login-wave: rgba(17, 19, 24, 0.05);
-  --fx-body-gradient-start: #ffffff;
+  --fx-severity-critical: #a64038;
+  --fx-severity-high: #a95521;
+  --fx-severity-medium: #86600a;
+  --fx-severity-low: #696457;
+  --fx-overlay-shadow: 0 24px 80px rgba(29, 29, 27, 0.13);
+  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --fx-focus-shadow: 0 0 0 3px color-mix(in oklch, var(--fx-accent) 15%, transparent);
+  --fx-logo-chip: #ece8df;
+  --fx-login-glow: rgba(134, 96, 10, 0.036);
+  --fx-login-wave: rgba(29, 29, 27, 0.036);
+  --fx-body-gradient-start: #eceae4;
   color-scheme: light;
 }
 
@@ -231,17 +262,15 @@ body {
   min-width: 0;
   overflow-x: hidden;
   font-family: var(--font-sans);
-  background:
-    radial-gradient(circle at 50% -10%, color-mix(in oklch, var(--fx-accent) 8%, transparent), transparent 34%),
-    linear-gradient(180deg, var(--fx-body-gradient-start) 0%, var(--fx-canvas) 280px);
+  background: linear-gradient(180deg, var(--fx-body-gradient-start) 0%, var(--fx-canvas) 260px);
   color: var(--text);
   font-size: 14px;
   letter-spacing: 0;
   text-rendering: geometricPrecision;
 }
 
-a { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
-a:hover { color: var(--accent); text-decoration: underline; }
+a:not([data-slot="button"]) { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
+a:not([data-slot="button"]):hover { color: var(--accent); text-decoration: underline; }
 
 @keyframes login-glow {
   from { opacity: 0.86; transform: scale(1); }

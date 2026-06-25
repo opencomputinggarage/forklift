@@ -1,6 +1,5 @@
 import * as React from "react"
 
-import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 function PageHeader({
@@ -15,7 +14,7 @@ function PageHeader({
   return (
     <div
       className={cn(
-        "mb-4 flex min-w-0 items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch",
+        "mb-4 flex min-w-0 items-end justify-between gap-3 max-sm:flex-col max-sm:items-stretch",
         className
       )}
     >
@@ -38,7 +37,7 @@ function PageDescription({
   return (
     <p
       className={cn(
-        "mb-5 -mt-2 max-w-[820px] text-sm leading-relaxed text-muted-foreground max-sm:mb-4 max-sm:-mt-1",
+        "mb-5 -mt-1 max-w-[820px] text-sm leading-6 text-muted-foreground max-sm:mb-4 max-sm:mt-0",
         className
       )}
       {...props}
@@ -46,32 +45,4 @@ function PageDescription({
   )
 }
 
-function Panel({ className, ...props }: React.ComponentProps<typeof Card>) {
-  return (
-    <Card
-      className={cn(
-        "mb-4 w-full min-w-0 max-w-full border-border/90 bg-card/95 shadow-none",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function PanelBody({
-  className,
-  ...props
-}: React.ComponentProps<typeof CardContent>) {
-  return <CardContent className={cn("min-w-0 px-4 max-sm:px-3", className)} {...props} />
-}
-
-function Inline({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("flex min-w-0 items-center gap-2 max-sm:flex-wrap", className)}
-      {...props}
-    />
-  )
-}
-
-export { Inline, PageDescription, PageHeader, Panel, PanelBody }
+export { PageDescription, PageHeader }

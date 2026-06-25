@@ -34,11 +34,11 @@ export function UpstreamStatus({
   else if (h.reachable)
     badge = (
       <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="inline-block size-[9px] rounded-full border border-emerald-400 bg-emerald-400 shadow-[0_0_8px_color-mix(in_oklch,var(--success)_60%,transparent)]" /> reachable{!compact && <> · {h.status} · {h.latency_ms}ms</>}
+        <span className="inline-block size-[9px] rounded-full border border-[var(--fx-success)] bg-[var(--fx-success)]" /> reachable{!compact && <> · {h.status} · {h.latency_ms}ms</>}
       </span>
     );
   else
-    badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-red-500 bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.7)]" /> unreachable</span>;
+    badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-[var(--fx-danger)] bg-[var(--fx-danger)]" /> unreachable</span>;
 
   if (!withButton) return badge;
   return (

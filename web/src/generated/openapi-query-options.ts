@@ -41,13 +41,14 @@ async function requestJson<TResponse>(
   const response = await fetch(appendQuery(pathname, query), {
     credentials: "include",
   });
-  if (response.status === 204) return undefined as TResponse;
+  if (response.status === 204) return null as TResponse;
   const text = await response.text();
   let data: unknown;
   try {
-    data = text ? JSON.parse(text) : undefined;
+    data = text ? JSON.parse(text) : null;
   } catch {
-    data = undefined;
+    if (response.ok) throw new Error("Invalid JSON response");
+    data = null;
   }
   if (!response.ok) {
     const error = (data as { error?: string } | undefined)?.error;
@@ -87,7 +88,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getMe(),
       queryFn: () =>
         requestJson<Me>(
-          buildPath("/me", undefined),
+          buildPath("/api/v1/me", undefined),
           undefined,
         ),
     }),
@@ -96,7 +97,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getVersion(),
       queryFn: () =>
         requestJson<Version>(
-          buildPath("/version", undefined),
+          buildPath("/api/v1/version", undefined),
           undefined,
         ),
     }),
@@ -105,7 +106,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRepositories(),
       queryFn: () =>
         requestJson<Repository[]>(
-          buildPath("/repositories", undefined),
+          buildPath("/api/v1/repositories", undefined),
           undefined,
         ),
     }),
@@ -114,7 +115,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getRepository(params),
       queryFn: () =>
         requestJson<Repository>(
-          buildPath("/repositories/{id}", params.path),
+          buildPath("/api/v1/repositories/{id}", params.path),
           undefined,
         ),
     }),
@@ -123,7 +124,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRepositoryAuditLogs(params),
       queryFn: () =>
         requestJson<AuditLogList>(
-          buildPath("/repositories/{id}/audit-logs", params.path),
+          buildPath("/api/v1/repositories/{id}/audit-logs", params.path),
           params?.query,
         ),
     }),
@@ -132,7 +133,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRepositoryNames(),
       queryFn: () =>
         requestJson<RepositoryName[]>(
-          buildPath("/repository-names", undefined),
+          buildPath("/api/v1/repository-names", undefined),
           undefined,
         ),
     }),
@@ -141,7 +142,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRepositoryArtifacts(params),
       queryFn: () =>
         requestJson<ArtifactList>(
-          buildPath("/repositories/{id}/artifacts", params.path),
+          buildPath("/api/v1/repositories/{id}/artifacts", params.path),
           params?.query,
         ),
     }),
@@ -150,7 +151,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getRepositoryUpstreamHealth(params),
       queryFn: () =>
         requestJson<UpstreamHealth>(
-          buildPath("/repositories/{id}/upstream-health", params.path),
+          buildPath("/api/v1/repositories/{id}/upstream-health", params.path),
           undefined,
         ),
     }),
@@ -159,7 +160,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRepositoryPermissions(params),
       queryFn: () =>
         requestJson<RepoPermission[]>(
-          buildPath("/repositories/{id}/permissions", params.path),
+          buildPath("/api/v1/repositories/{id}/permissions", params.path),
           undefined,
         ),
     }),
@@ -168,7 +169,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRepositoryTokens(params),
       queryFn: () =>
         requestJson<RepoToken[]>(
-          buildPath("/repositories/{id}/tokens", params.path),
+          buildPath("/api/v1/repositories/{id}/tokens", params.path),
           undefined,
         ),
     }),
@@ -177,7 +178,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listTokens(),
       queryFn: () =>
         requestJson<Token[]>(
-          buildPath("/tokens", undefined),
+          buildPath("/api/v1/tokens", undefined),
           undefined,
         ),
     }),
@@ -186,7 +187,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listUsers(),
       queryFn: () =>
         requestJson<User[]>(
-          buildPath("/users", undefined),
+          buildPath("/api/v1/users", undefined),
           undefined,
         ),
     }),
@@ -195,7 +196,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listUserTokens(params),
       queryFn: () =>
         requestJson<Token[]>(
-          buildPath("/users/{id}/tokens", params.path),
+          buildPath("/api/v1/users/{id}/tokens", params.path),
           undefined,
         ),
     }),
@@ -204,7 +205,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listRoles(),
       queryFn: () =>
         requestJson<Role[]>(
-          buildPath("/roles", undefined),
+          buildPath("/api/v1/roles", undefined),
           undefined,
         ),
     }),
@@ -213,7 +214,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listApprovals(params),
       queryFn: () =>
         requestJson<ApprovalList>(
-          buildPath("/approvals", undefined),
+          buildPath("/api/v1/approvals", undefined),
           params?.query,
         ),
     }),
@@ -222,7 +223,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getApprovalsCount(params),
       queryFn: () =>
         requestJson<{ count: number }>(
-          buildPath("/approvals/count", undefined),
+          buildPath("/api/v1/approvals/count", undefined),
           params?.query,
         ),
     }),
@@ -231,7 +232,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getApproval(params),
       queryFn: () =>
         requestJson<Approval>(
-          buildPath("/approvals/{id}", params.path),
+          buildPath("/api/v1/approvals/{id}", params.path),
           undefined,
         ),
     }),
@@ -240,7 +241,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listVersionDenies(params),
       queryFn: () =>
         requestJson<VersionDenyList>(
-          buildPath("/version-denies", undefined),
+          buildPath("/api/v1/version-denies", undefined),
           params?.query,
         ),
     }),
@@ -249,7 +250,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listGroupMappings(),
       queryFn: () =>
         requestJson<unknown>(
-          buildPath("/group-mappings", undefined),
+          buildPath("/api/v1/group-mappings", undefined),
           undefined,
         ),
     }),
@@ -258,7 +259,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getHa(),
       queryFn: () =>
         requestJson<HAStatus>(
-          buildPath("/ha", undefined),
+          buildPath("/api/v1/ha", undefined),
           undefined,
         ),
     }),
@@ -267,7 +268,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.listNotificationReceivers(),
       queryFn: () =>
         requestJson<Receiver[]>(
-          buildPath("/notification/receivers", undefined),
+          buildPath("/api/v1/notification/receivers", undefined),
           undefined,
         ),
     }),
@@ -276,7 +277,7 @@ export const openApiQueryOptions = {
       queryKey: openApiQueryKeys.getRepositoryNotificationSample(params),
       queryFn: () =>
         requestJson<unknown>(
-          buildPath("/repositories/{id}/notification/sample", params.path),
+          buildPath("/api/v1/repositories/{id}/notification/sample", params.path),
           undefined,
         ),
     }),

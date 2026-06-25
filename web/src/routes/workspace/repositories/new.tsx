@@ -3,18 +3,15 @@ import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-ro
 import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { api, Repository, UpstreamHealth } from "@/api";
 import { useAuth } from "@/authContext";
-import { Select } from "@/components/app-ui/select";
-import { Alert } from "@/components/app-ui/alert";
-import { Badge } from "@/components/app-ui/badge";
-import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
   TableCell,
   TableRow,
-  TableWrap,
-} from "@/components/app-ui/table";
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -24,6 +21,13 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/workspace/repositories/new")({
@@ -40,6 +44,44 @@ const REPO_TYPES = [
   { value: "proxy", title: "Proxy", desc: "Cache and serve artifacts from an upstream registry" },
   { value: "group", title: "Group", desc: "Combine repositories behind a single read-only URL" },
 ];
+
+type SelectOption = { value: string; label: string; description?: string };
+
+function SelectControl({
+  value,
+  options,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  options: SelectOption[];
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const selectValue = value === "" && !options.some((o) => o.value === "") ? null : value;
+  return (
+    <Select items={options} value={selectValue} onValueChange={(next) => onChange(next ?? "")}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder={placeholder ?? ""} />
+      </SelectTrigger>
+      <SelectContent align="start">
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            <span className="flex min-w-0 flex-col">
+              <span>{option.label}</span>
+              {option.description && (
+                <span className="text-xs leading-4 text-muted-foreground">{option.description}</span>
+              )}
+            </span>
+          </SelectItem>
+        ))}
+        {options.length === 0 && (
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">No options</div>
+        )}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export function RepositoryNew() {
   const navigate = useNavigate();
@@ -116,10 +158,12 @@ export function RepositoryNew() {
 
   return (
     <>
-      <PageHeader title="New repository" />
-      <PageDescription>
-        Register a hosted, proxy, or group repository for package delivery.
-      </PageDescription>
+      <header className="mb-4">
+        <h1 className="m-0 text-2xl font-semibold tracking-normal">New repository</h1>
+        <p className="mt-1 max-w-[58rem] text-sm leading-relaxed text-muted-foreground">
+          Register a hosted, proxy, or group repository for package delivery.
+        </p>
+      </header>
 
       <Card size="sm" className="mb-4 max-w-[52rem]">
         <CardContent>
@@ -152,7 +196,7 @@ export function RepositoryNew() {
 
               <Field>
                 <FieldLabel>Format<span className="text-destructive">*</span></FieldLabel>
-                <Select
+                <SelectControl
                   value={format}
                   onChange={(v) => { setFormat(v); setMembers([]); }}
                   options={[
@@ -264,7 +308,7 @@ export function RepositoryNew() {
                   repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))}
                 />
                 <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-wrap">
-                  <Select
+                  <SelectControl
                     value=""
                     placeholder="add member..."
                     onChange={(v) => v && setMembers([...members, v])}
@@ -279,7 +323,11 @@ export function RepositoryNew() {
               </section>
             )}
 
-            {error && <Alert>{error}</Alert>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex min-w-0 items-center gap-2 border-t border-border pt-5 max-sm:flex-col max-sm:items-stretch">
               <Button type="submit" disabled={!valid}>Create repository</Button>
@@ -334,7 +382,6 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
   };
   if (members.length === 0) return <p className="text-muted-foreground">No members selected.</p>;
   return (
-    <TableWrap>
     <Table>
       <TableBody>
         {members.map((name, i) => {
@@ -348,7 +395,7 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
                 ? <Link to="/workspace/repositories/$id" params={{ id: String(id) }}>{name}</Link>
                 : name}
             </TableCell>
-            <TableCell>{type ? <Badge>{type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+            <TableCell>{type ? <Badge variant="outline">{type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
             <TableCell className="whitespace-nowrap text-right">
               <div className="flex justify-end gap-1">
                 <Button variant="outline" size="icon-sm" type="button" disabled={i === 0}
@@ -373,6 +420,5 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
         })}
       </TableBody>
     </Table>
-    </TableWrap>
   );
 }

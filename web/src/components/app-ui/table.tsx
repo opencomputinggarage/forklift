@@ -1,4 +1,10 @@
 import * as React from "react"
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+} from "@tanstack/react-table"
 
 import {
   Table as ShadcnTable,
@@ -74,7 +80,68 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   )
 }
 
+function DataTable<TData>({
+  columns,
+  data,
+  empty,
+  className,
+  tableClassName,
+}: {
+  columns: ColumnDef<TData>[]
+  data: TData[]
+  empty?: React.ReactNode
+  className?: string
+  tableClassName?: string
+}) {
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+  const columnCount = table.getAllLeafColumns().length
+
+  return (
+    <TableWrap className={className}>
+      <Table className={tableClassName}>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.length > 0 ? (
+            table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={columnCount} className="text-muted-foreground">
+                {empty ?? "No results."}
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableWrap>
+  )
+}
+
 export {
+  DataTable,
   Table,
   TableBody,
   TableCell,
@@ -82,4 +149,5 @@ export {
   TableHeader,
   TableRow,
   TableWrap,
+  type ColumnDef,
 }

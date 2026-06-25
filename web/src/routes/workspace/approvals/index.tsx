@@ -5,7 +5,6 @@ import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/app-ui/select";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import {
@@ -290,12 +289,10 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
         )}
       </div>
       {error && <Alert className="mb-4">{error}</Alert>}
-      <Card size="sm" className="mb-4">
-        <CardContent>
-        {rows.length === 0 ? (
-          <p className="m-0 text-sm text-muted-foreground">No {status || "approval"} requests.</p>
-        ) : (
-          <TableWrap>
+      {rows.length === 0 ? (
+        <p className="m-0 text-sm text-muted-foreground">No {status || "approval"} requests.</p>
+      ) : (
+        <TableWrap>
           <Table>
             <TableHeader>
               <TableRow>
@@ -329,19 +326,17 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
               ))}
             </TableBody>
           </Table>
-          </TableWrap>
-        )}
-        {count > PAGE && (
-          <div className="flex min-w-0 items-center gap-2 mt-3 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-            <Button variant="outline" disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
-            <Button variant="outline" disabled={offset + PAGE >= count}
-              onClick={() => setOffset(offset + PAGE)}>Older</Button>
-            <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
-          </div>
-        )}
-        </CardContent>
-      </Card>
+        </TableWrap>
+      )}
+      {count > PAGE && (
+        <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch max-sm:flex-wrap">
+          <Button variant="outline" disabled={offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
+          <Button variant="outline" disabled={offset + PAGE >= count}
+            onClick={() => setOffset(offset + PAGE)}>Older</Button>
+          <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
+        </div>
+      )}
       {approvingAll && (
         <ApproveAllModal
           repoNames={repoNames}
@@ -542,12 +537,10 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
         immediately, including already-cached copies.
       </p>
       {error && <Alert className="mb-4">{error}</Alert>}
-      <Card size="sm" className="mb-4">
-        <CardContent>
-        {rows.length === 0 ? (
-          <p className="m-0 text-sm text-muted-foreground">No denied versions.</p>
-        ) : (
-          <TableWrap>
+      {rows.length === 0 ? (
+        <p className="m-0 text-sm text-muted-foreground">No denied versions.</p>
+      ) : (
+        <TableWrap>
           <Table>
             <TableHeader>
               <TableRow>
@@ -572,19 +565,17 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
               ))}
             </TableBody>
           </Table>
-          </TableWrap>
-        )}
-        {count > PAGE && (
-          <div className="flex min-w-0 items-center gap-2 mt-3 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-            <Button variant="outline" disabled={offset === 0}
-              onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
-            <Button variant="outline" disabled={offset + PAGE >= count}
-              onClick={() => setOffset(offset + PAGE)}>Older</Button>
-            <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
-          </div>
-        )}
-        </CardContent>
-      </Card>
+        </TableWrap>
+      )}
+      {count > PAGE && (
+        <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch max-sm:flex-wrap">
+          <Button variant="outline" disabled={offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
+          <Button variant="outline" disabled={offset + PAGE >= count}
+            onClick={() => setOffset(offset + PAGE)}>Older</Button>
+          <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
+        </div>
+      )}
       {adding && (
         <DenyVersionModal
           repoNames={repoNames}

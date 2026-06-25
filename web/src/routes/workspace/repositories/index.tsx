@@ -5,7 +5,6 @@ import { api, humanSize, Me, repoEndpoint, Repository } from "@/api";
 import { useAuth } from "@/authContext";
 import { UpstreamStatus } from "@/components/feedback/upstream-status";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -172,9 +171,7 @@ export function Repositories({ me }: { me: Me }) {
         per-repository caching and supply-chain policies (age cooldown, package approval).
       </PageDescription>
       {error && <Alert className="mb-4">{error}</Alert>}
-      <Card size="sm" className="mb-4">
-        <CardContent>
-        <TableWrap>
+      <TableWrap>
         <Table className="table-fixed">
           <TableHeader>
             <TableRow><TableHead className="w-[16%]">Name</TableHead><TableHead className="w-[8%]">Format</TableHead><TableHead className="w-[8%]">Type</TableHead><TableHead className="w-[31%]">Endpoint (forklift)</TableHead><TableHead className="w-[9%]">Artifacts</TableHead><TableHead className="w-[8%]">Size</TableHead><TableHead className="w-[11%]">Upstream</TableHead><TableHead className="w-[9%]">Security</TableHead></TableRow>
@@ -228,9 +225,7 @@ export function Repositories({ me }: { me: Me }) {
             )}
           </TableBody>
         </Table>
-        </TableWrap>
-        </CardContent>
-      </Card>
+      </TableWrap>
     </>
   );
 }

@@ -6,16 +6,7 @@ import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrap,
-} from "@/components/app-ui/table";
+import { DataTable, type ColumnDef } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin/notifications/")({
@@ -46,6 +37,55 @@ export function Receivers() {
   const [notice, setNotice] = useState("");
   const [testing, setTesting] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<Receiver | null>(null);
+  const columns: ColumnDef<Receiver>[] = [
+    {
+      header: "Name",
+      cell: ({ row }) => <span className="whitespace-nowrap">{row.original.name}</span>,
+    },
+    {
+      header: "Description",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.description || "—"}</span>,
+    },
+    {
+      header: "Webhook",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.webhook_configured ? "configured" : "—"}</span>,
+    },
+    {
+      header: "Created by",
+      cell: ({ row }) => row.original.created_by || <span className="text-muted-foreground">—</span>,
+    },
+    {
+      header: "Created",
+      cell: ({ row }) => <span className="whitespace-nowrap text-muted-foreground">{row.original.created_at?.slice(0, 10)}</span>,
+    },
+    {
+      header: "Enabled",
+      cell: ({ row }) => row.original.enabled
+        ? <Badge variant="success">enabled</Badge>
+        : <Badge variant="outline">disabled</Badge>,
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const receiver = row.original;
+        return (
+          <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap">
+            <Button variant="outline" type="button" disabled={testing === receiver.id}
+              onClick={() => sendTest(receiver)}>
+              {testing === receiver.id ? "Sending…" : "Test"}
+            </Button>
+            <Button variant="outline" type="button"
+              onClick={() => navigate({ to: "/admin/notifications/$id", params: { id: String(receiver.id) } })}>
+              Edit
+            </Button>
+            <Button variant="destructive" type="button" onClick={() => setDeleting(receiver)}>
+              Delete
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
 
   const load = () =>
     api.listReceivers().then(setReceivers).catch((e) => setError((e as Error).message));
@@ -84,75 +124,24 @@ export function Receivers() {
         repository's approval queue. Each repository chooses which receivers to notify in its Settings.
       </PageDescription>
 
-      <Card size="sm" className="mb-4">
-        <CardContent>
-          <div className="flex min-w-0 items-center gap-2 mb-4 max-sm:flex-wrap justify-between gap-3 max-sm:flex-col max-sm:items-start">
-            <h2 className="m-0 text-base font-semibold">
-              Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
-            </h2>
-            <Button render={<Link to="/admin/notifications/new" />} nativeButton={false}>
-              Add receiver
-            </Button>
-          </div>
-          {error && <Alert className="mb-4">{error}</Alert>}
-          {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
-          {!receivers ? (
-            <div className="text-sm text-muted-foreground">Loading…</div>
-          ) : receivers.length === 0 ? (
-            <p className="m-0 text-sm text-muted-foreground">No receivers yet. Add one to start sending approval alarms.</p>
-          ) : (
-            <TableWrap>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Webhook</TableHead>
-                    <TableHead>Created by</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Enabled</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {receivers.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap">{r.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.description || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.webhook_configured ? "configured" : "—"}</TableCell>
-                      <TableCell>{r.created_by || <span className="text-muted-foreground">—</span>}</TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">{r.created_at?.slice(0, 10)}</TableCell>
-                      <TableCell>
-                        {r.enabled
-                          ? <Badge variant="success">enabled</Badge>
-                          : <Badge variant="outline">disabled</Badge>}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap gap-2">
-                          <Button variant="outline" type="button" disabled={testing === r.id}
-                            onClick={() => sendTest(r)}>
-                            {testing === r.id ? "Sending…" : "Test"}
-                          </Button>
-                          <Button variant="outline" type="button"
-                            onClick={() => navigate({ to: "/admin/notifications/$id", params: { id: String(r.id) } })}>
-                            Edit
-                          </Button>
-                          <Button variant="destructive" type="button" onClick={() => setDeleting(r)}>
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableWrap>
-          )}
-          <p className="mb-0 mt-4 text-sm text-muted-foreground">
-            The webhook URL is never shown again after it is saved. Leave it blank when editing to keep the current URL.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="mb-4 flex min-w-0 items-center justify-between gap-3 max-sm:flex-col max-sm:items-start">
+        <h2 className="m-0 text-base font-semibold">
+          Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
+        </h2>
+        <Button render={<Link to="/admin/notifications/new" />} nativeButton={false}>
+          Add receiver
+        </Button>
+      </div>
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
+      {!receivers ? (
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      ) : (
+        <DataTable columns={columns} data={receivers} empty="No receivers yet. Add one to start sending approval alarms." />
+      )}
+      <p className="mt-4 text-sm text-muted-foreground">
+        The webhook URL is never shown again after it is saved. Leave it blank when editing to keep the current URL.
+      </p>
 
       <ConfirmModal
         open={deleting !== null}

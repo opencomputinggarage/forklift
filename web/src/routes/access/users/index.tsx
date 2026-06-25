@@ -3,19 +3,10 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { api, Me, User } from "@/api";
 import { useAuth } from "@/authContext";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrap,
-} from "@/components/app-ui/table";
+import { DataTable, type ColumnDef } from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/access/users/")({
   component: UsersRoute,
@@ -32,6 +23,75 @@ function UsersRoute() {
 export function Users({ me }: { me: Me }) {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
+  const columns: ColumnDef<User>[] = [
+    {
+      header: "Username",
+      cell: ({ row }) => {
+        const user = row.original;
+        return (
+          <span className="whitespace-nowrap">
+            {user.username}
+            {user.username === me.username && <Badge className="ml-2">you</Badge>}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Source",
+      cell: ({ row }) => <Badge>{row.original.source}</Badge>,
+    },
+    {
+      header: "Email",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.email || "-"}</span>,
+    },
+    {
+      header: "Roles",
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1.5">
+          {row.original.roles.map((r) => (
+            <Button
+              key={r.id}
+              variant="outline"
+              size="xs"
+              render={<Link to="/access/roles/$id" params={{ id: String(r.id) }} />}
+              nativeButton={false}
+            >
+              {r.name}
+            </Button>
+          ))}
+          {row.original.roles.length === 0 && <span className="text-muted-foreground">none</span>}
+        </div>
+      ),
+    },
+    {
+      header: "Status",
+      cell: ({ row }) => row.original.disabled
+        ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-destructive" /> disabled</span>
+        : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-[var(--fx-success)]" /> active</span>,
+    },
+    {
+      header: "Last login",
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-muted-foreground" title={row.original.last_login_at ?? undefined}>
+          {row.original.last_login_at ? new Date(row.original.last_login_at).toLocaleString() : "never"}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="outline"
+            render={<Link to="/access/users/$id" params={{ id: String(row.original.id) }} />}
+            nativeButton={false}
+          >
+            Modify
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   useEffect(() => {
     api.listUsers().then(setUsers).catch((e) => setError(e.message));
@@ -53,64 +113,7 @@ export function Users({ me }: { me: Me }) {
       </PageDescription>
       {error && <Alert className="mb-4">{error}</Alert>}
 
-      <Card size="sm" className="mb-4">
-        <CardContent>
-          <h2 className="mb-3 text-base font-semibold">Users</h2>
-          <TableWrap>
-          <Table>
-            <TableHeader>
-              <TableRow><TableHead>Username</TableHead><TableHead>Source</TableHead><TableHead>Email</TableHead><TableHead>Roles</TableHead><TableHead>Status</TableHead><TableHead>Last login</TableHead><TableHead /></TableRow>
-            </TableHeader>
-            <TableBody>
-            {users.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell className="whitespace-nowrap">
-                  {u.username}
-                  {u.username === me.username && <Badge className="ml-2">you</Badge>}
-                </TableCell>
-                <TableCell><Badge>{u.source}</Badge></TableCell>
-                <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1.5">
-                    {u.roles.map((r) => (
-                      <Button
-                        key={r.id}
-                        variant="outline"
-                        size="xs"
-                        render={<Link to="/access/roles/$id" params={{ id: String(r.id) }} />}
-                        nativeButton={false}
-                      >
-                        {r.name}
-                      </Button>
-                    ))}
-                    {u.roles.length === 0 && <span className="text-muted-foreground">none</span>}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {u.disabled
-                    ? <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-destructive" /> disabled</span>
-                    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="size-2 rounded-full bg-[var(--fx-success)]" /> active</span>}
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-muted-foreground" title={u.last_login_at ?? undefined}>
-                  {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-right">
-                  <Button
-                    variant="outline"
-                    render={<Link to="/access/users/$id" params={{ id: String(u.id) }} />}
-                    nativeButton={false}
-                  >
-                    Modify
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {users.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No users.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-          </TableWrap>
-        </CardContent>
-      </Card>
+      <DataTable columns={columns} data={users} empty="No users." />
     </>
   );
 }

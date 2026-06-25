@@ -3,19 +3,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { api, Token } from "@/api";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrap,
-} from "@/components/app-ui/table";
+import { DataTable, type ColumnDef } from "@/components/app-ui/table";
 
 export const Route = createFileRoute("/workspace/tokens/")({
   component: Tokens,
@@ -39,6 +30,48 @@ export function Tokens() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [error, setError] = useState("");
   const [revokeId, setRevokeId] = useState<number | null>(null);
+  const columns: ColumnDef<Token>[] = [
+    {
+      header: "Name",
+      cell: ({ row }) => row.original.name,
+    },
+    {
+      header: "Description",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.description}</span>,
+    },
+    {
+      header: "Permissions",
+      cell: ({ row }) => (
+        <>
+          {parseScopes(row.original.scopes_json).map((scope, i) => (
+            <Badge key={i} className="mr-1 font-mono">
+              {scope.repo_pattern}: {scope.actions.join(",")}
+            </Badge>
+          ))}
+        </>
+      ),
+    },
+    {
+      header: "Created",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.created_at?.slice(0, 10)}</span>,
+    },
+    {
+      header: "Expires",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.expires_at ? row.original.expires_at.slice(0, 10) : "never"}</span>,
+    },
+    {
+      header: "Last used",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.last_used_at ? row.original.last_used_at.slice(0, 10) : "never"}</span>,
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button variant="destructive" onClick={() => setRevokeId(row.original.id)}>Revoke</Button>
+        </div>
+      ),
+    },
+  ];
 
   const load = () => api.listTokens().then(setTokens).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
@@ -68,35 +101,7 @@ export function Tokens() {
 
       {error && <Alert className="mb-4">{error}</Alert>}
 
-      <Card size="sm" className="mb-4">
-        <CardContent>
-          <TableWrap>
-          <Table>
-            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Permissions</TableHead><TableHead>Created</TableHead><TableHead>Expires</TableHead><TableHead>Last used</TableHead><TableHead /></TableRow></TableHeader>
-            <TableBody>
-            {tokens.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>{t.name}</TableCell>
-                <TableCell className="text-muted-foreground">{t.description}</TableCell>
-                <TableCell>
-                  {parseScopes(t.scopes_json).map((s, i) => (
-                    <Badge key={i} className="mr-1 font-mono">
-                      {s.repo_pattern}: {s.actions.join(",")}
-                    </Badge>
-                  ))}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{t.created_at?.slice(0, 10)}</TableCell>
-                <TableCell className="text-muted-foreground">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</TableCell>
-                <TableCell className="text-muted-foreground">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</TableCell>
-                <TableCell><Button variant="destructive" onClick={() => setRevokeId(t.id)}>Revoke</Button></TableCell>
-              </TableRow>
-            ))}
-            {tokens.length === 0 && <TableRow><TableCell colSpan={7} className="text-muted-foreground">No tokens yet.</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-          </TableWrap>
-        </CardContent>
-      </Card>
+      <DataTable columns={columns} data={tokens} empty="No tokens yet." />
 
       <ConfirmModal
         open={revokeId !== null}

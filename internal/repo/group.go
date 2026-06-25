@@ -47,6 +47,11 @@ func (m *Manager) grouped(next http.Handler) http.Handler {
 			http.Error(w, "invalid repository config", http.StatusInternalServerError)
 			return
 		}
+		// The group's own ACL governs access through it; member ACLs are skipped
+		// during fan-out (viaGroup), mirroring authorize.
+		if !m.ipAllowed(w, r, name, cfg) {
+			return
+		}
 
 		ctx := context.WithValue(r.Context(), viaGroupKey, true)
 		for _, member := range cfg.Group.Members {

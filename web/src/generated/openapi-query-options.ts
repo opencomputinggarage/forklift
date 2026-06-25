@@ -3,7 +3,7 @@
 // OpenAPI: forklift API 0.1.0
 
 import { queryOptions } from "@tanstack/react-query";
-import type { ApprovalList, AuditLogList, Me, Repository, Role, Token, User, Version, VersionDenyList } from "@/api";
+import type { ApprovalList, AuditLogList, HAStatus, Me, Receiver, Repository, Role, Token, User, Version, VersionDenyList } from "@/api";
 
 type PathValue = string | number | boolean;
 type QueryValue = PathValue | null | undefined;
@@ -70,6 +70,9 @@ export const openApiQueryKeys = {
   getApprovalsCount: (params?: { query?: { repo?: string; status?: string } }) => key("GET", "/api/v1/approvals/count", params),
   listVersionDenies: (params?: { query?: { repo?: string; limit?: number; offset?: number } }) => key("GET", "/api/v1/version-denies", params),
   listGroupMappings: () => key("GET", "/api/v1/group-mappings"),
+  getHa: () => key("GET", "/api/v1/ha"),
+  listNotificationReceivers: () => key("GET", "/api/v1/notification/receivers"),
+  getRepositoryNotificationSample: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/notification/sample", params),
 } as const;
 
 export const openApiQueryOptions = {
@@ -187,6 +190,33 @@ export const openApiQueryOptions = {
       queryFn: () =>
         requestJson<unknown>(
           buildPath("/group-mappings", undefined),
+          undefined,
+        ),
+    }),
+  getHa: () =>
+    queryOptions({
+      queryKey: openApiQueryKeys.getHa(),
+      queryFn: () =>
+        requestJson<HAStatus>(
+          buildPath("/ha", undefined),
+          undefined,
+        ),
+    }),
+  listNotificationReceivers: () =>
+    queryOptions({
+      queryKey: openApiQueryKeys.listNotificationReceivers(),
+      queryFn: () =>
+        requestJson<Receiver[]>(
+          buildPath("/notification/receivers", undefined),
+          undefined,
+        ),
+    }),
+  getRepositoryNotificationSample: (params: { path: { id: number } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.getRepositoryNotificationSample(params),
+      queryFn: () =>
+        requestJson<unknown>(
+          buildPath("/repositories/{id}/notification/sample", params.path),
           undefined,
         ),
     }),

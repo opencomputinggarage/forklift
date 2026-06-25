@@ -99,6 +99,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
         )}
         {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/users">Users</Link>}
         {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/roles">Roles</Link>}
+        {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/notifications">Notifications</Link>}
         {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/ha">HA Status</Link>}
       </nav>
       <div className="flex-1" />

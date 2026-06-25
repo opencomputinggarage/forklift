@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,6 +26,18 @@ type Elector struct {
 	cfg    config.HAConfig
 	log    *slog.Logger
 	client kubernetes.Interface
+
+	// mu guards the live leadership term state below, mutated from the election
+	// loop and read by StepDown.
+	mu sync.Mutex
+	// leading reports whether this instance currently holds leadership.
+	leading bool
+	// steppingDown marks the current term as a voluntary hand-off so the loop
+	// applies a longer re-contention cooldown after it ends.
+	steppingDown bool
+	// termCancel cancels the current leadership term (releasing the Lease via
+	// ReleaseOnCancel). Nil between terms.
+	termCancel context.CancelFunc
 }
 
 // New builds an Elector using the in-cluster Kubernetes config.
@@ -90,7 +103,14 @@ func (e *Elector) Run(ctx context.Context, onStarted func(context.Context), onSt
 		LockConfig: resourcelock.ResourceLockConfig{Identity: e.cfg.Identity},
 	}
 	for ctx.Err() == nil {
-		leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+		// Each term runs under its own cancellable context so StepDown can end
+		// just this term (releasing the Lease) without tearing down the process.
+		termCtx, cancel := context.WithCancel(ctx)
+		e.mu.Lock()
+		e.termCancel = cancel
+		e.mu.Unlock()
+
+		leaderelection.RunOrDie(termCtx, leaderelection.LeaderElectionConfig{
 			Lock:            lock,
 			ReleaseOnCancel: true,
 			LeaseDuration:   e.cfg.LeaseDuration,
@@ -98,20 +118,57 @@ func (e *Elector) Run(ctx context.Context, onStarted func(context.Context), onSt
 			RetryPeriod:     e.cfg.RetryPeriod,
 			Callbacks: leaderelection.LeaderCallbacks{
 				OnStartedLeading: func(c context.Context) {
+					e.mu.Lock()
+					e.leading = true
+					e.mu.Unlock()
 					e.log.Info("acquired leadership", "identity", e.cfg.Identity)
 					onStarted(c)
 				},
 				OnStoppedLeading: func() {
+					e.mu.Lock()
+					e.leading = false
+					e.mu.Unlock()
 					e.log.Warn("lost leadership", "identity", e.cfg.Identity)
 					onStopped()
 				},
 			},
 		})
-		// RunOrDie returns when leadership is lost or ctx is cancelled. Back off
-		// briefly before re-contending to avoid a tight loop.
+		cancel()
+
+		// RunOrDie returns when leadership is lost or the term is cancelled. After
+		// a voluntary step-down, pause longer than a standby's acquisition latency
+		// (a full LeaseDuration plus a retry tick) so the freed Lease is taken over
+		// instead of being re-grabbed by this instance; otherwise back off briefly.
+		e.mu.Lock()
+		e.termCancel = nil
+		backoff := e.cfg.RetryPeriod
+		if e.steppingDown {
+			e.steppingDown = false
+			backoff = e.cfg.LeaseDuration + e.cfg.RetryPeriod
+		}
+		e.mu.Unlock()
+
 		select {
 		case <-ctx.Done():
-		case <-time.After(e.cfg.RetryPeriod):
+		case <-time.After(backoff):
 		}
 	}
+}
+
+// StepDown voluntarily releases leadership for a controlled manual failover. It
+// cancels the current term so the election loop releases the Lease (via
+// ReleaseOnCancel) and then pauses re-contention long enough for a standby to
+// acquire it. It is a no-op returning false when this instance is not currently
+// the leader. The vacated Lease records a transition, so the new leader's
+// fencing token strictly exceeds this one, preserving the single-writer guard.
+func (e *Elector) StepDown() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if !e.leading || e.termCancel == nil {
+		return false
+	}
+	e.log.Info("stepping down leadership on request", "identity", e.cfg.Identity)
+	e.steppingDown = true
+	e.termCancel()
+	return true
 }

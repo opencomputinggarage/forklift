@@ -35,6 +35,7 @@ type Manager struct {
 	vulnScans       *prometheus.CounterVec
 	licenseBlocked  *prometheus.CounterVec
 	licenseResolves *prometheus.CounterVec
+	ipBlocked       *prometheus.CounterVec
 
 	// scanner performs vulnerability lookups; nil disables the vuln gate. Scan
 	// jobs are queued and processed by RunVulnWorker so the serving path never
@@ -47,6 +48,19 @@ type Manager struct {
 	// blocks on a license lookup.
 	resolver     license.Resolver
 	resolveQueue chan resolveJob
+
+	// onApproval, when set, is invoked when a package is newly quarantined
+	// pending approval, so an outbound alarm can be dispatched to the repository's
+	// selected receivers. Best-effort and must not block; nil disables it.
+	onApproval func(repo, pkg, version, requestedBy string, receivers []string)
+}
+
+// SetApprovalNotifier registers a callback invoked when a package is newly
+// quarantined pending approval (one call per (repo, package) per suppression
+// window). receivers is the repository's selected receiver names. The callback
+// must not block the serving path.
+func (m *Manager) SetApprovalNotifier(fn func(repo, pkg, version, requestedBy string, receivers []string)) {
+	m.onApproval = fn
 }
 
 // NewManager creates a Manager. authz may be nil to disable authorization
@@ -87,12 +101,16 @@ func NewManager(engine *Engine, store *meta.Store, authz *auth.Service, rec *aud
 			Namespace: "forklift", Name: "license_resolves_total",
 			Help: "License resolutions performed, by result (resolved|unknown|error).",
 		}, []string{"result"}),
+		ipBlocked: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: "forklift", Name: "ip_blocked_total",
+			Help: "Requests refused by the per-repository source-IP access control list.",
+		}, []string{"repo"}),
 		scanQueue:    make(chan scanJob, 256),
 		resolveQueue: make(chan resolveJob, 256),
 	}
 	if reg != nil {
 		reg.MustRegister(m.approvalBlocked, m.denyBlocked, m.ttlExpired, m.vulnBlocked, m.vulnScans,
-			m.licenseBlocked, m.licenseResolves)
+			m.licenseBlocked, m.licenseResolves, m.ipBlocked)
 	}
 	return m
 }
@@ -129,6 +147,28 @@ func (m *Manager) authorize(w http.ResponseWriter, r *http.Request, repoName, ac
 		return false
 	}
 	return true
+}
+
+// ipAllowed enforces the repository's source-IP access control list. It returns
+// false and writes 403 when the ACL is enabled and the client IP is not in the
+// allow list. Requests routed through a group were already checked against the
+// group's ACL when it was resolved, so member-level checks are skipped, mirroring
+// authorize (Nexus semantics: the group governs access through it).
+func (m *Manager) ipAllowed(w http.ResponseWriter, r *http.Request, repoName string, cfg repoconfig.Config) bool {
+	if !cfg.IPACL.Enabled {
+		return true
+	}
+	if viaGroup(r.Context()) {
+		return true
+	}
+	if cfg.IPACL.Allowed(audit.ClientIP(r)) {
+		return true
+	}
+	if m.ipBlocked != nil {
+		m.ipBlocked.WithLabelValues(repoName).Inc()
+	}
+	http.Error(w, "forbidden: source IP not allowed", http.StatusForbidden)
+	return false
 }
 
 // actionForMethod maps an HTTP method to an RBAC action.
@@ -279,6 +319,9 @@ func (m *Manager) resolveRepo(w http.ResponseWriter, r *http.Request, format str
 	cfg, err := repoconfig.Parse(repo.ConfigJSON)
 	if err != nil {
 		http.Error(w, "invalid repository config", http.StatusInternalServerError)
+		return resolved{}, false
+	}
+	if !m.ipAllowed(w, r, repo.Name, cfg) {
 		return resolved{}, false
 	}
 	path := strings.TrimPrefix(chi.URLParam(r, "*"), "/")

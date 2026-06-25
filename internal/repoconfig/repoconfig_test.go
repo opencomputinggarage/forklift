@@ -150,3 +150,40 @@ func TestApprovalConfig(t *testing.T) {
 		t.Fatalf("approval default = %+v", d.Approval)
 	}
 }
+
+func TestIPACLAllowed(t *testing.T) {
+	acl := IPACLConfig{Enabled: true, Allow: []string{"203.0.113.5", "10.0.0.0/16", "2001:db8::/32", "  ", "bogus"}}
+	cases := map[string]bool{
+		"203.0.113.5":        true,  // exact IPv4
+		"203.0.113.6":        false, // outside
+		"10.0.5.7":           true,  // inside CIDR
+		"10.1.0.1":           false, // outside CIDR
+		"2001:db8::1":        true,  // inside IPv6 CIDR
+		"2001:dead::1":       false, // outside IPv6 CIDR
+		"::ffff:203.0.113.5": true,  // IPv4-mapped form of an allowed v4
+		"not-an-ip":          false, // unparseable client ip denied
+	}
+	for ip, want := range cases {
+		if got := acl.Allowed(ip); got != want {
+			t.Errorf("Allowed(%q) = %v, want %v", ip, got, want)
+		}
+	}
+}
+
+func TestIPACLValidate(t *testing.T) {
+	good := Default()
+	good.IPACL = IPACLConfig{Enabled: true, Allow: []string{"10.0.0.0/8", "203.0.113.1", " "}}
+	if err := good.Validate(); err != nil {
+		t.Fatalf("valid ip_acl rejected: %v", err)
+	}
+	bad := Default()
+	bad.IPACL = IPACLConfig{Enabled: true, Allow: []string{"10.0.0.0/99"}}
+	if err := bad.Validate(); err == nil {
+		t.Fatal("invalid CIDR accepted")
+	}
+	bad2 := Default()
+	bad2.IPACL = IPACLConfig{Allow: []string{"not-an-ip"}}
+	if err := bad2.Validate(); err == nil {
+		t.Fatal("invalid address accepted")
+	}
+}

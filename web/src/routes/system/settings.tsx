@@ -1,12 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -67,14 +63,14 @@ export function SettingsRoute() {
         </p>
       </div>
 
+      <Alert className="mb-4 border-border/80 bg-muted/40">
+        <Info className="size-4" aria-hidden="true" />
+        <AlertTitle>{t("settings.cardTitle")}</AlertTitle>
+        <AlertDescription>{t("settings.cardDescription")}</AlertDescription>
+      </Alert>
+
       <Card className="border-border/90 bg-card/95 shadow-none">
-        <CardHeader>
-          <CardTitle>{t("settings.cardTitle")}</CardTitle>
-          <CardDescription>
-            {t("settings.cardDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <SettingRow
             id="appearance"
             title={t("settings.appearance")}

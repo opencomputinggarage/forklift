@@ -23,6 +23,8 @@ const responseTypeOverrides = new Map([
   ["GET /api/v1/roles", "Role[]"],
   ["GET /api/v1/approvals", "ApprovalList"],
   ["GET /api/v1/approvals/count", "{ count: number }"],
+  // The OpenAPI schema is PackageApproval; the web client type is Approval.
+  ["GET /api/v1/approvals/{id}", "Approval"],
   ["GET /api/v1/version-denies", "VersionDenyList"],
 ]);
 

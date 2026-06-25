@@ -3,7 +3,7 @@
 // OpenAPI: forklift API 0.1.0
 
 import { queryOptions } from "@tanstack/react-query";
-import type { ApprovalList, AuditLogList, HAStatus, Me, Receiver, Repository, Role, Token, User, Version, VersionDenyList } from "@/api";
+import type { Approval, ApprovalList, ArtifactList, AuditLogList, HAStatus, Me, Receiver, RepoPermission, RepoToken, Repository, RepositoryName, Role, Token, UpstreamHealth, User, Version, VersionDenyList } from "@/api";
 
 type PathValue = string | number | boolean;
 type QueryValue = PathValue | null | undefined;
@@ -62,12 +62,18 @@ export const openApiQueryKeys = {
   listRepositories: () => key("GET", "/api/v1/repositories"),
   getRepository: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}", params),
   listRepositoryAuditLogs: (params: { path: { id: number }; query?: { event?: string; limit?: number; offset?: number } }) => key("GET", "/api/v1/repositories/{id}/audit-logs", params),
+  listRepositoryNames: () => key("GET", "/api/v1/repository-names"),
+  listRepositoryArtifacts: (params: { path: { id: number }; query?: { prefix?: string } }) => key("GET", "/api/v1/repositories/{id}/artifacts", params),
+  getRepositoryUpstreamHealth: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/upstream-health", params),
+  listRepositoryPermissions: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/permissions", params),
+  listRepositoryTokens: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/tokens", params),
   listTokens: () => key("GET", "/api/v1/tokens"),
   listUsers: () => key("GET", "/api/v1/users"),
   listUserTokens: (params: { path: { id: number } }) => key("GET", "/api/v1/users/{id}/tokens", params),
   listRoles: () => key("GET", "/api/v1/roles"),
   listApprovals: (params?: { query?: { repo?: string; status?: string; limit?: number; offset?: number } }) => key("GET", "/api/v1/approvals", params),
   getApprovalsCount: (params?: { query?: { repo?: string; status?: string } }) => key("GET", "/api/v1/approvals/count", params),
+  getApproval: (params: { path: { id: number } }) => key("GET", "/api/v1/approvals/{id}", params),
   listVersionDenies: (params?: { query?: { repo?: string; limit?: number; offset?: number } }) => key("GET", "/api/v1/version-denies", params),
   listGroupMappings: () => key("GET", "/api/v1/group-mappings"),
   getHa: () => key("GET", "/api/v1/ha"),
@@ -119,6 +125,51 @@ export const openApiQueryOptions = {
         requestJson<AuditLogList>(
           buildPath("/repositories/{id}/audit-logs", params.path),
           params?.query,
+        ),
+    }),
+  listRepositoryNames: () =>
+    queryOptions({
+      queryKey: openApiQueryKeys.listRepositoryNames(),
+      queryFn: () =>
+        requestJson<RepositoryName[]>(
+          buildPath("/repository-names", undefined),
+          undefined,
+        ),
+    }),
+  listRepositoryArtifacts: (params: { path: { id: number }; query?: { prefix?: string } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.listRepositoryArtifacts(params),
+      queryFn: () =>
+        requestJson<ArtifactList>(
+          buildPath("/repositories/{id}/artifacts", params.path),
+          params?.query,
+        ),
+    }),
+  getRepositoryUpstreamHealth: (params: { path: { id: number } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.getRepositoryUpstreamHealth(params),
+      queryFn: () =>
+        requestJson<UpstreamHealth>(
+          buildPath("/repositories/{id}/upstream-health", params.path),
+          undefined,
+        ),
+    }),
+  listRepositoryPermissions: (params: { path: { id: number } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.listRepositoryPermissions(params),
+      queryFn: () =>
+        requestJson<RepoPermission[]>(
+          buildPath("/repositories/{id}/permissions", params.path),
+          undefined,
+        ),
+    }),
+  listRepositoryTokens: (params: { path: { id: number } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.listRepositoryTokens(params),
+      queryFn: () =>
+        requestJson<RepoToken[]>(
+          buildPath("/repositories/{id}/tokens", params.path),
+          undefined,
         ),
     }),
   listTokens: () =>
@@ -173,6 +224,15 @@ export const openApiQueryOptions = {
         requestJson<{ count: number }>(
           buildPath("/approvals/count", undefined),
           params?.query,
+        ),
+    }),
+  getApproval: (params: { path: { id: number } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.getApproval(params),
+      queryFn: () =>
+        requestJson<Approval>(
+          buildPath("/approvals/{id}", params.path),
+          undefined,
         ),
     }),
   listVersionDenies: (params?: { query?: { repo?: string; limit?: number; offset?: number } }) =>

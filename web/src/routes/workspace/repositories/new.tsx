@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
+import { ArrowDown, ArrowUp, X } from "lucide-react";
 import { api, Repository, UpstreamHealth } from "@/api";
 import { useAuth } from "@/authContext";
 import { Select } from "@/components/app-ui/select";
@@ -12,9 +13,9 @@ import {
   TableBody,
   TableCell,
   TableRow,
+  TableWrap,
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldDescription,
@@ -22,6 +23,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/workspace/repositories/new")({
@@ -119,10 +121,18 @@ export function RepositoryNew() {
         Register a hosted, proxy, or group repository for package delivery.
       </PageDescription>
 
-      <Card size="sm" className="mb-4 max-w-[44rem]">
+      <Card size="sm" className="mb-4 max-w-[52rem]">
         <CardContent>
           <form onSubmit={submit} className="space-y-5">
-            <FieldGroup className="gap-4">
+            <section>
+              <div className="mb-4">
+                <h2 className="m-0 text-base font-semibold">Basics</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Choose the protocol and serving mode. The generated endpoint follows this selection.
+                </p>
+              </div>
+
+              <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="repository-name">
                   Name<span className="text-destructive">*</span>
@@ -157,7 +167,7 @@ export function RepositoryNew() {
 
               <Field>
                 <FieldLabel>Type<span className="text-destructive">*</span></FieldLabel>
-                <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Repository type">
+                <div className="grid gap-2 md:grid-cols-3" role="radiogroup" aria-label="Repository type">
                   {REPO_TYPES.map((t) => (
                     <Button
                       key={t.value}
@@ -166,7 +176,7 @@ export function RepositoryNew() {
                       role="radio"
                       aria-checked={type === t.value}
                       className={cn(
-                        "h-auto w-full flex-col items-start justify-start whitespace-normal rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
+                        "h-full w-full flex-col items-start justify-start whitespace-normal rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
                         type === t.value && "border-primary bg-primary/10"
                       )}
                       onClick={() => setType(t.value)}
@@ -177,12 +187,13 @@ export function RepositoryNew() {
                   ))}
                 </div>
               </Field>
-            </FieldGroup>
+              </FieldGroup>
+            </section>
 
             {type === "proxy" && (
-              <div className="space-y-3 border-t border-border pt-4">
-                <div>
-                  <h2 className="m-0 text-sm font-semibold">Proxy upstream</h2>
+              <section className="border-t border-border pt-5">
+                <div className="mb-4">
+                  <h2 className="m-0 text-base font-semibold">Proxy upstream</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Configure the remote registry and optional supply-chain cooldown.
                   </p>
@@ -205,10 +216,17 @@ export function RepositoryNew() {
 
                   <Field>
                     <FieldLabel>Age policy</FieldLabel>
-                    <label data-slot="checkbox-label" className="inline-flex items-center gap-2 rounded-lg border border-border bg-background/40 px-3 py-2 text-sm">
-                      <Checkbox checked={ageEnabled} onCheckedChange={(checked) => setAgeEnabled(checked === true)} />
+                    <label className="inline-flex items-center gap-2 text-sm">
+                      <Switch
+                        checked={ageEnabled}
+                        onCheckedChange={setAgeEnabled}
+                        aria-label="Block versions newer than a cooldown window"
+                      />
                       <span>Block versions newer than a cooldown window</span>
                     </label>
+                    <FieldDescription>
+                      Use this when newly published packages should cool down before serving.
+                    </FieldDescription>
                   </Field>
 
                   {ageEnabled && (
@@ -227,44 +245,43 @@ export function RepositoryNew() {
                     </Field>
                   )}
                 </FieldGroup>
-              </div>
+              </section>
             )}
 
             {type === "group" && (
-              <div className="space-y-3 border-t border-border pt-4">
-                <div>
-                  <h2 className="m-0 text-sm font-semibold">Members</h2>
+              <section className="border-t border-border pt-5">
+                <div className="mb-4">
+                  <h2 className="m-0 text-base font-semibold">Members</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Select member repositories in lookup order. The first hit wins.
                   </p>
                 </div>
 
-                <div className="rounded-lg border border-border/80 bg-background/40 p-3">
-                  <MemberList
-                    members={members}
-                    onChange={setMembers}
-                    repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
-                    repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))}
+                <MemberList
+                  members={members}
+                  onChange={setMembers}
+                  repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
+                  repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))}
+                />
+                <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-wrap">
+                  <Select
+                    value=""
+                    placeholder="add member..."
+                    onChange={(v) => v && setMembers([...members, v])}
+                    options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))}
                   />
-                  <div className="flex min-w-0 items-center gap-2 mt-3 max-sm:flex-wrap">
-                    <Select
-                      value=""
-                      placeholder="add member..."
-                      onChange={(v) => v && setMembers([...members, v])}
-                      options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))}
-                    />
-                  </div>
-                  {candidates.length === 0 && members.length === 0 && (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      No {format} repositories exist yet. Create the members first.
-                    </p>
-                  )}
                 </div>
-              </div>
+                {candidates.length === 0 && members.length === 0 && (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    No {format} repositories exist yet. Create the members first.
+                  </p>
+                )}
+              </section>
             )}
 
             {error && <Alert>{error}</Alert>}
-            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
+
+            <div className="flex min-w-0 items-center gap-2 border-t border-border pt-5 max-sm:flex-col max-sm:items-stretch">
               <Button type="submit" disabled={!valid}>Create repository</Button>
               <Button variant="outline" type="button" onClick={() => navigate({ to: "/workspace/repositories" })}>Cancel</Button>
             </div>
@@ -317,6 +334,7 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
   };
   if (members.length === 0) return <p className="text-muted-foreground">No members selected.</p>;
   return (
+    <TableWrap>
     <Table>
       <TableBody>
         {members.map((name, i) => {
@@ -332,17 +350,29 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
             </TableCell>
             <TableCell>{type ? <Badge>{type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
             <TableCell className="whitespace-nowrap text-right">
-              <Button variant="outline" size="sm" type="button" disabled={i === 0}
-                title="Move up" onClick={() => move(i, -1)}>↑</Button>{" "}
-              <Button variant="outline" size="sm" type="button" disabled={i === members.length - 1}
-                title="Move down" onClick={() => move(i, 1)}>↓</Button>{" "}
-              <Button variant="destructive" size="sm" type="button" title="Remove member"
-                onClick={() => onChange(members.filter((m) => m !== name))}>×</Button>
+              <div className="flex justify-end gap-1">
+                <Button variant="outline" size="icon-sm" type="button" disabled={i === 0}
+                  title="Move up" onClick={() => move(i, -1)}>
+                  <ArrowUp className="size-3.5" aria-hidden="true" />
+                  <span className="sr-only">Move up</span>
+                </Button>
+                <Button variant="outline" size="icon-sm" type="button" disabled={i === members.length - 1}
+                  title="Move down" onClick={() => move(i, 1)}>
+                  <ArrowDown className="size-3.5" aria-hidden="true" />
+                  <span className="sr-only">Move down</span>
+                </Button>
+                <Button variant="destructive" size="icon-sm" type="button" title="Remove member"
+                  onClick={() => onChange(members.filter((m) => m !== name))}>
+                  <X className="size-3.5" aria-hidden="true" />
+                  <span className="sr-only">Remove member</span>
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
           );
         })}
       </TableBody>
     </Table>
+    </TableWrap>
   );
 }

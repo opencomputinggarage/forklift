@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, Navigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { Approval, api } from "@/api";
 import { useAuth } from "@/authContext";
 import { ReviewModal, SeverityBar } from "./index";
@@ -35,6 +35,7 @@ function ApprovalDetailRoute() {
 // package before deciding. The decision itself is made in the shared ReviewModal.
 export function ApprovalDetail() {
   const { id } = useParams({ strict: false }) as { id?: string };
+  const navigate = useNavigate();
   const approvalId = Number(id);
   const [row, setRow] = useState<Approval | null>(null);
   const [error, setError] = useState("");
@@ -63,7 +64,7 @@ export function ApprovalDetail() {
         actions={
           <>
           <Button onClick={() => setReviewing(true)}>Review</Button>
-          <Button render={<Link to="/workspace/approvals" />} nativeButton={false} variant="outline">
+          <Button variant="outline" onClick={() => navigate({ to: "/workspace/approvals" })}>
             Back to approvals
           </Button>
           </>

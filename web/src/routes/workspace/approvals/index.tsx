@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "@/api";
 import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
@@ -245,6 +245,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
   // Maps repository name to id so the Repository column can link to its detail.
   repoIds?: Record<string, number>;
 }) {
+  const navigate = useNavigate();
   const [status, setStatus] = useState("pending");
   const [rows, setRows] = useState<Approval[]>([]);
   const [count, setCount] = useState(0);
@@ -316,8 +317,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right">
                     <Button
-                      render={<Link to="/workspace/approvals/$id" params={{ id: String(a.id) }} />}
-                      nativeButton={false}
+                      onClick={() => navigate({ to: "/workspace/approvals/$id", params: { id: String(a.id) } })}
                     >
                       Review
                     </Button>

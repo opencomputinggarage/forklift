@@ -269,8 +269,8 @@ body {
   text-rendering: geometricPrecision;
 }
 
-a { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
-a:hover { color: var(--accent); text-decoration: underline; }
+a:not([data-slot="button"]) { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
+a:not([data-slot="button"]):hover { color: var(--accent); text-decoration: underline; }
 
 @keyframes login-glow {
   from { opacity: 0.86; transform: scale(1); }

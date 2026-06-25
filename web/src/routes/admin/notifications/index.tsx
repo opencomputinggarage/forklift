@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, type Receiver } from "@/api";
 import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
@@ -128,7 +128,7 @@ export function Receivers() {
         <h2 className="m-0 text-base font-semibold">
           Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
         </h2>
-        <Button render={<Link to="/admin/notifications/new" />} nativeButton={false}>
+        <Button onClick={() => navigate({ to: "/admin/notifications/new" })}>
           Add receiver
         </Button>
       </div>

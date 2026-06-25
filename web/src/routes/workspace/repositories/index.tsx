@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Clock, ShieldCheck } from "lucide-react";
 import { api, humanSize, Me, repoEndpoint, Repository } from "@/api";
 import { useAuth } from "@/authContext";
@@ -122,6 +122,7 @@ function repoCells(r: Repository, canViewStatus: boolean) {
 }
 
 export function Repositories({ me }: { me: Me }) {
+  const navigate = useNavigate();
   const [repos, setRepos] = useState<Repository[]>([]);
   const [error, setError] = useState("");
   // Detail is read-only browsable by any authenticated user, so every name links
@@ -161,7 +162,7 @@ export function Repositories({ me }: { me: Me }) {
       <PageHeader
         title="Repositories"
         actions={me.admin && (
-          <Button render={<Link to="/workspace/repositories/new" />} nativeButton={false}>
+          <Button onClick={() => navigate({ to: "/workspace/repositories/new" })}>
             New repository
           </Button>
         )}

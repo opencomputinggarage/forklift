@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { Eye, EyeOff, LockKeyhole, X } from "lucide-react";
 import { api, Me, Role, Token, User } from "@/api";
 import { useAuth } from "@/authContext";
@@ -93,7 +93,7 @@ export function UserModify({ me }: { me: Me }) {
           </div>
         }
         actions={
-          <Button render={<Link to="/access/users" />} nativeButton={false} variant="outline">
+          <Button variant="outline" onClick={() => navigate({ to: "/access/users" })}>
             Back to users
           </Button>
         }
@@ -190,6 +190,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
 function TokensPanel({ user, tokens, canWrite, run }: {
   user: User; tokens: Token[]; canWrite: boolean; run: (p: Promise<unknown>) => void;
 }) {
+  const navigate = useNavigate();
   const [revokeId, setRevokeId] = useState<number | null>(null);
 
   return (
@@ -201,8 +202,7 @@ function TokensPanel({ user, tokens, canWrite, run }: {
         </h2>
         {canWrite && (
           <Button
-            render={<Link to="/access/users/$id/tokens/new" params={{ id: String(user.id) }} />}
-            nativeButton={false}
+            onClick={() => navigate({ to: "/access/users/$id/tokens/new", params: { id: String(user.id) } })}
           >
             New token
           </Button>

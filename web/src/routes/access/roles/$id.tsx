@@ -76,7 +76,7 @@ export function RoleModify({ me }: { me: Me }) {
       <PageHeader
         title={role.name}
         actions={
-        <Button render={<Link to="/access/roles" />} nativeButton={false} variant="outline">
+        <Button variant="outline" onClick={() => navigate({ to: "/access/roles" })}>
           Back to roles
         </Button>
         }

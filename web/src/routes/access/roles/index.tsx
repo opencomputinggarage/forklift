@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Me, Role } from "@/api";
 import { useAuth } from "@/authContext";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
@@ -20,6 +20,7 @@ function RolesRoute() {
 // Admin role directory (read-only). Roles and their permissions are defined on
 // /access/roles/new; this page only displays them.
 export function Roles({ me }: { me: Me }) {
+  const navigate = useNavigate();
   const [roles, setRoles] = useState<Role[]>([]);
   const [error, setError] = useState("");
   const columns: ColumnDef<Role>[] = [
@@ -64,8 +65,7 @@ export function Roles({ me }: { me: Me }) {
         <div className="text-right">
           <Button
             variant="outline"
-            render={<Link to="/access/roles/$id" params={{ id: String(row.original.id) }} />}
-            nativeButton={false}
+            onClick={() => navigate({ to: "/access/roles/$id", params: { id: String(row.original.id) } })}
           >
             Modify
           </Button>
@@ -83,7 +83,7 @@ export function Roles({ me }: { me: Me }) {
       <PageHeader
         title="Roles"
         actions={me.admin && (
-          <Button render={<Link to="/access/roles/new" />} nativeButton={false}>
+          <Button onClick={() => navigate({ to: "/access/roles/new" })}>
             Create role
           </Button>
         )}

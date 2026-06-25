@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, Me, User } from "@/api";
 import { useAuth } from "@/authContext";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
@@ -21,6 +21,7 @@ function UsersRoute() {
 // enable/disable, delete) happen on each user's Modify page; creation and its
 // initial role assignment happen on /access/users/new.
 export function Users({ me }: { me: Me }) {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState("");
   const columns: ColumnDef<User>[] = [
@@ -53,8 +54,7 @@ export function Users({ me }: { me: Me }) {
               key={r.id}
               variant="outline"
               size="xs"
-              render={<Link to="/access/roles/$id" params={{ id: String(r.id) }} />}
-              nativeButton={false}
+              onClick={() => navigate({ to: "/access/roles/$id", params: { id: String(r.id) } })}
             >
               {r.name}
             </Button>
@@ -83,8 +83,7 @@ export function Users({ me }: { me: Me }) {
         <div className="text-right">
           <Button
             variant="outline"
-            render={<Link to="/access/users/$id" params={{ id: String(row.original.id) }} />}
-            nativeButton={false}
+            onClick={() => navigate({ to: "/access/users/$id", params: { id: String(row.original.id) } })}
           >
             Modify
           </Button>
@@ -102,7 +101,7 @@ export function Users({ me }: { me: Me }) {
       <PageHeader
         title="Users"
         actions={me.admin && (
-          <Button render={<Link to="/access/users/new" />} nativeButton={false}>
+          <Button onClick={() => navigate({ to: "/access/users/new" })}>
             Create user
           </Button>
         )}

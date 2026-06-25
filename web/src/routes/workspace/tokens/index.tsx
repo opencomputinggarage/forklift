@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { api, Token } from "@/api";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
@@ -27,6 +27,7 @@ function parseScopes(json: string): Scope[] {
 }
 
 export function Tokens() {
+  const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [error, setError] = useState("");
   const [revokeId, setRevokeId] = useState<number | null>(null);
@@ -88,7 +89,7 @@ export function Tokens() {
       <PageHeader
         title="Personal access tokens"
         actions={
-          <Button render={<Link to="/workspace/tokens/new" />} nativeButton={false}>
+          <Button onClick={() => navigate({ to: "/workspace/tokens/new" })}>
             New token
           </Button>
         }

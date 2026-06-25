@@ -11,7 +11,7 @@ export function Logo({ size = 34 }: { size?: number }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-md bg-[#f2f3f5]",
+        "inline-flex shrink-0 items-center justify-center rounded-md bg-[var(--fx-logo-chip)]",
         compact ? "size-8" : "size-[34px]"
       )}
     >

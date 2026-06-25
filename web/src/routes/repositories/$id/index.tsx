@@ -297,7 +297,12 @@ function PolicyFlow({ config }: { config: RepoConfig }) {
     },
   ];
 
-  const arrow = <span className="pf-arrow" aria-hidden="true"><span className="pf-track" /><span className="pf-head" /></span>;
+  const arrow = (
+    <span className="inline-flex w-[30px] flex-none items-center self-center" aria-hidden="true">
+      <span className="h-0.5 flex-1 rounded-sm bg-[linear-gradient(90deg,var(--muted)_0_55%,transparent_55%_100%)] bg-[length:8px_2px] bg-repeat-x [animation:pf-flow_0.6s_linear_infinite] motion-reduce:animate-none" />
+      <span className="h-0 w-0 flex-none border-y-4 border-l-[5px] border-y-transparent border-l-muted-foreground" />
+    </span>
+  );
 
   return (
     <Panel>
@@ -310,20 +315,35 @@ function PolicyFlow({ config }: { config: RepoConfig }) {
           supply-chain policies. Dimmed gates are disabled. A <span className="text-destructive">block</span>/enforce
           gate can refuse the request; <span className="text-primary">warn</span> and audit gates only log and let it continue.
         </p>
-        <div className="policy-flow">
-          <span className="pf-terminal">Request</span>
+        <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+          <span className="self-center whitespace-nowrap text-[11px] tracking-[0.05em] text-muted-foreground uppercase">Request</span>
           {nodes.map((n, i) => (
             <Fragment key={n.name}>
               {arrow}
-              <div className={`pf-node ${n.enabled ? `pf-${n.severity}` : "pf-off"}`}>
-                <span className="pf-step">{i + 1}</span>
-                <span className="pf-name">{n.name}</span>
-                <span className="pf-action">{n.enabled ? n.action : "off"}</span>
+              <div
+                className={cn(
+                  "flex flex-none flex-col gap-0.5 rounded-[var(--radius)] border border-border bg-input px-3 py-2",
+                  n.enabled && n.severity === "block" && "border-destructive",
+                  n.enabled && n.severity === "warn" && "border-primary",
+                  !n.enabled && "border-dashed opacity-45",
+                )}
+              >
+                <span className="mb-0.5 inline-flex h-[22px] min-w-[22px] items-center justify-center self-start rounded-full border border-border bg-card px-[5px] text-sm font-bold text-foreground tabular-nums">{i + 1}</span>
+                <span className="whitespace-nowrap text-[13px] font-semibold">{n.name}</span>
+                <span
+                  className={cn(
+                    "whitespace-nowrap text-[11px] text-muted-foreground",
+                    n.enabled && n.severity === "block" && "text-destructive",
+                    n.enabled && n.severity === "warn" && "text-primary",
+                  )}
+                >
+                  {n.enabled ? n.action : "off"}
+                </span>
               </div>
             </Fragment>
           ))}
           {arrow}
-          <span className="pf-terminal">Served</span>
+          <span className="self-center whitespace-nowrap text-[11px] tracking-[0.05em] text-muted-foreground uppercase">Served</span>
         </div>
       </PanelBody>
     </Panel>
@@ -475,10 +495,10 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             onChange={(allow) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, allow } } })} />
         </Field>
         {aclRows.length > 0 && (
-          <div className="acl-summary">
+          <div className="mt-2.5 flex flex-col gap-1">
             {aclRows.map(({ entry, info }, i) => (
-              <div key={`${entry}-${i}`} className="acl-row">
-                <code>{entry}</code>
+              <div key={`${entry}-${i}`} className="flex flex-wrap items-baseline gap-2 text-xs">
+                <code className="font-mono text-foreground">{entry}</code>
                 {info.kind === "invalid" && <span className="text-destructive">invalid IP/CIDR</span>}
                 {info.kind === "single" && <span className="text-muted-foreground">single host · 1 address</span>}
                 {info.kind === "range" && (
@@ -486,7 +506,7 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
                 )}
               </div>
             ))}
-            <div className="acl-total">
+            <div className="mt-1 text-xs text-muted-foreground">
               Total allowed: {aclTotal <= ACL_MAX_SAFE
                 ? `${Number(aclTotal).toLocaleString()} ${aclTotal === 1n ? "address" : "addresses"}`
                 : "very large (includes a wide IPv6 range)"}

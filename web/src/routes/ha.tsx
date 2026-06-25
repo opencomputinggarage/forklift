@@ -13,6 +13,7 @@ import {
   TableWrap,
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/ha")({
   component: HAStatusRoute,
@@ -111,8 +112,15 @@ function HAStatusRoute() {
         <PanelBody>
           <Inline className="mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
             <h2 className="m-0 text-base font-semibold">Cluster status</h2>
-            <span className="refresh-badge" title="Auto-refreshes the HA status">
-              <span className="dot" aria-hidden="true" />auto-refresh {secsLeft}s
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-input px-[9px] py-0.5 text-[11px] text-muted-foreground tabular-nums"
+              title="Auto-refreshes the HA status"
+            >
+              <span
+                className="size-1.5 flex-none rounded-full bg-[var(--fx-success)] [animation:refresh-pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              auto-refresh {secsLeft}s
             </span>
           </Inline>
 
@@ -223,82 +231,93 @@ function HAArchitecture({ status }: { status: HAStatusType }) {
   // alone (single instance). The whole flow reads left to right.
   const apY = ha ? 38 : 122;
   const apCy = apY + 46;
+  const boxClass = "fill-[var(--input-bg)] stroke-border stroke-[1.5]";
+  const activeBoxClass = "stroke-[var(--fx-success)]";
+  const standbyBoxClass = "[stroke-dasharray:6_4]";
+  const edgeClass = "fill-none stroke-muted-foreground stroke-[1.5]";
+  const activeEdgeClass = "stroke-[var(--fx-success)]";
+  const dimEdgeClass = "opacity-50 [stroke-dasharray:6_4]";
+  const flowEdgeClass = "[stroke-dasharray:7_5] [animation:ha-edge-flow_0.7s_linear_infinite] motion-reduce:animate-none motion-reduce:[stroke-dasharray:none]";
+  const labelClass = "fill-foreground text-[13px]";
+  const monoLabelClass = "fill-foreground font-mono text-xs";
+  const subLabelClass = "fill-muted-foreground text-[11px]";
+  const tagClass = "text-[11px] tracking-[0.06em]";
 
   return (
-    <div className="ha-arch">
+    <div className="mt-3 w-full overflow-x-auto">
       <div className="mb-1.5 text-xs text-muted-foreground">Active / standby topology</div>
-      <svg className="ha-svg" viewBox="0 0 1080 340" role="img"
+      <svg className="block h-auto w-full min-w-[720px]" viewBox="0 0 1080 340" role="img"
         aria-label="High availability active/standby architecture">
         <defs>
           <marker id="ha-head" viewBox="0 0 8 8" markerWidth="7" markerHeight="7" refX="6.5" refY="4" orient="auto-start-reverse">
-            <path className="ha-head" d="M0,1 L7,4 L0,7 Z" />
+            <path className="fill-muted-foreground" d="M0,1 L7,4 L0,7 Z" />
           </marker>
           <marker id="ha-head-ok" viewBox="0 0 8 8" markerWidth="7" markerHeight="7" refX="6.5" refY="4" orient="auto-start-reverse">
-            <path className="ha-head ok" d="M0,1 L7,4 L0,7 Z" />
+            <path className="fill-[var(--fx-success)]" d="M0,1 L7,4 L0,7 Z" />
           </marker>
         </defs>
 
         {/* Client */}
-        <rect className="box" x="20" y="140" width="150" height="56" rx="8" />
-        <text className="lbl" x="95" y="164" textAnchor="middle">Client</text>
-        <text className="sub" x="95" y="181" textAnchor="middle">package managers</text>
+        <rect className={boxClass} x="20" y="140" width="150" height="56" rx="8" />
+        <text className={labelClass} x="95" y="164" textAnchor="middle">Client</text>
+        <text className={subLabelClass} x="95" y="181" textAnchor="middle">package managers</text>
 
         {/* Service */}
-        <rect className="box" x="250" y="134" width="180" height="68" rx="8" />
-        <text className="lbl" x="340" y="164" textAnchor="middle">Service (forklift)</text>
-        <text className="sub" x="340" y="182" textAnchor="middle">routes to leader</text>
+        <rect className={boxClass} x="250" y="134" width="180" height="68" rx="8" />
+        <text className={labelClass} x="340" y="164" textAnchor="middle">Service (forklift)</text>
+        <text className={subLabelClass} x="340" y="182" textAnchor="middle">routes to leader</text>
 
         {/* Client -> Service */}
-        <line className="edge flow" x1="170" y1="168" x2="250" y2="168" markerEnd="url(#ha-head)" />
-        <text className="sub" x="210" y="160" textAnchor="middle">HTTP</text>
+        <line className={cn(edgeClass, flowEdgeClass)} x1="170" y1="168" x2="250" y2="168" markerEnd="url(#ha-head)" />
+        <text className={subLabelClass} x="210" y="160" textAnchor="middle">HTTP</text>
 
         {/* Active pod — crowned, since this box is always the active leader. */}
-        <rect className="box active" x="540" y={apY} width="230" height="92" rx="8" />
-        <path className="crown"
+        <rect className={cn(boxClass, activeBoxClass)} x="540" y={apY} width="230" height="92" rx="8" />
+        <path className="fill-[var(--fx-success)]"
           d={`M644,${apY + 17} L644,${apY + 7} L649.5,${apY + 12} L655,${apY + 5} L660.5,${apY + 12} L666,${apY + 7} L666,${apY + 17} Z`} />
-        <text className="tag ok" x="655" y={apY + 33} textAnchor="middle">
+        <text className={cn(tagClass, "fill-[var(--fx-success)]")} x="655" y={apY + 33} textAnchor="middle">
           {ha ? "ACTIVE · LEADER" : "ACTIVE · SINGLE INSTANCE"}
         </text>
-        <text className="lbl mono" x="655" y={apY + 52} textAnchor="middle"><title>{activeName}</title>{trunc(activeName, 24)}</text>
-        {podSub(activeThis) && <text className="sub" x="655" y={apY + 72} textAnchor="middle">{podSub(activeThis)}</text>}
+        <text className={monoLabelClass} x="655" y={apY + 52} textAnchor="middle"><title>{activeName}</title>{trunc(activeName, 24)}</text>
+        {podSub(activeThis) && <text className={subLabelClass} x="655" y={apY + 72} textAnchor="middle">{podSub(activeThis)}</text>}
 
         {/* Service -> Active (active path) */}
-        <line className="edge active flow" x1="430" y1={ha ? 150 : 168} x2="540" y2={apCy} markerEnd="url(#ha-head-ok)" />
+        <line className={cn(edgeClass, activeEdgeClass, flowEdgeClass)} x1="430" y1={ha ? 150 : 168} x2="540" y2={apCy} markerEnd="url(#ha-head-ok)" />
 
         {/* Active -> Storage (single writer) */}
-        <line className="edge active flow" x1="770" y1={apCy} x2="900" y2={ha ? 150 : 168} markerEnd="url(#ha-head-ok)" />
-        <text className="sub" x="835" y={ha ? 108 : 160} textAnchor="middle">single writer</text>
+        <line className={cn(edgeClass, activeEdgeClass, flowEdgeClass)} x1="770" y1={apCy} x2="900" y2={ha ? 150 : 168} markerEnd="url(#ha-head-ok)" />
+        <text className={subLabelClass} x="835" y={ha ? 108 : 160} textAnchor="middle">single writer</text>
 
         {ha && (
           <>
             {/* Standby pod */}
-            <rect className="box standby" x="540" y="212" width="230" height="92" rx="8" />
-            <text className="tag muted" x="655" y="240" textAnchor="middle">STANDBY</text>
-            <text className="lbl mono" x="655" y="264" textAnchor="middle"><title>{standbyName}</title>{trunc(standbyName, 24)}</text>
-            {podSub(standbyThis) && <text className="sub" x="655" y="284" textAnchor="middle">{podSub(standbyThis)}</text>}
+            <rect className={cn(boxClass, standbyBoxClass)} x="540" y="212" width="230" height="92" rx="8" />
+            <text className={cn(tagClass, "fill-muted-foreground")} x="655" y="240" textAnchor="middle">STANDBY</text>
+            <text className={monoLabelClass} x="655" y="264" textAnchor="middle"><title>{standbyName}</title>{trunc(standbyName, 24)}</text>
+            {podSub(standbyThis) && <text className={subLabelClass} x="655" y="284" textAnchor="middle">{podSub(standbyThis)}</text>}
 
             {/* Service -> Standby (ready, not served) */}
-            <line className="edge dim" x1="430" y1="186" x2="540" y2="258" markerEnd="url(#ha-head)" />
-            <text className="sub" x="485" y="232" textAnchor="middle">ready</text>
+            <line className={cn(edgeClass, dimEdgeClass)} x1="430" y1="186" x2="540" y2="258" markerEnd="url(#ha-head)" />
+            <text className={subLabelClass} x="485" y="232" textAnchor="middle">ready</text>
 
             {/* Lease link between the two pods (vertical) */}
-            <line className="edge" x1="655" y1="132" x2="655" y2="210" markerStart="url(#ha-head)" markerEnd="url(#ha-head)" />
-            <text className="sub" x="678" y="166" textAnchor="start">Lease</text>
-            <text className="sub" x="678" y="182" textAnchor="start">leader election</text>
+            <line className={edgeClass} x1="655" y1="132" x2="655" y2="210" markerStart="url(#ha-head)" markerEnd="url(#ha-head)" />
+            <text className={subLabelClass} x="678" y="166" textAnchor="start">Lease</text>
+            <text className={subLabelClass} x="678" y="182" textAnchor="start">leader election</text>
 
             {/* Standby -> Storage */}
-            <line className="edge dim" x1="770" y1="258" x2="900" y2="186" markerEnd="url(#ha-head)" />
-            <text className="sub" x="835" y="232" textAnchor="middle">{s3 ? "syncs" : "standby"}</text>
+            <line className={cn(edgeClass, dimEdgeClass)} x1="770" y1="258" x2="900" y2="186" markerEnd="url(#ha-head)" />
+            <text className={subLabelClass} x="835" y="232" textAnchor="middle">{s3 ? "syncs" : "standby"}</text>
           </>
         )}
 
         {/* Storage */}
-        <rect className="box" x="900" y="124" width="170" height="88" rx="8" />
-        <text className="lbl" x="985" y="158" textAnchor="middle">{s3 ? "Object Storage" : "Block Storage"}</text>
-        <text className="sub mono" x="985" y="177" textAnchor="middle">
+        <rect className={boxClass} x="900" y="124" width="170" height="88" rx="8" />
+        <text className={labelClass} x="985" y="158" textAnchor="middle">{s3 ? "Object Storage" : "Block Storage"}</text>
+        <text className={cn(subLabelClass, "font-mono")} x="985" y="177" textAnchor="middle">
           <title>{status.storage_endpoint || "—"}</title>{trunc(status.storage_endpoint || "—", 24)}
         </text>
-        <text className="sub" x="985" y="194" textAnchor="middle">
+        <text className={subLabelClass} x="985" y="194" textAnchor="middle">
           {s3 ? (showFencing ? `fenced · token ${status.fencing_token}` : "fenced writes") : "single writer"}
         </text>
       </svg>

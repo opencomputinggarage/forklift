@@ -77,60 +77,129 @@
 }
 
 @theme inline {
-  --color-background: var(--bg);
-  --color-foreground: var(--text);
-  --color-card: var(--panel);
-  --color-card-foreground: var(--text);
-  --color-popover: var(--panel);
-  --color-popover-foreground: var(--text);
-  --color-primary: var(--accent);
-  --color-primary-foreground: #000;
-  --color-secondary: var(--panel-2);
-  --color-secondary-foreground: var(--text);
-  --color-muted: var(--panel-2);
-  --color-muted-foreground: var(--muted);
-  --color-accent: var(--accent);
-  --color-accent-foreground: #000;
-  --color-destructive: var(--danger);
-  --color-destructive-foreground: #fff;
-  --color-border: var(--border);
-  --color-input: var(--input-bg);
-  --color-ring: var(--accent);
-  --color-sidebar: var(--panel);
-  --color-sidebar-foreground: var(--text);
-  --color-sidebar-primary: var(--accent);
-  --color-sidebar-primary-foreground: #000;
-  --color-sidebar-accent: var(--panel-2);
-  --color-sidebar-accent-foreground: var(--text);
-  --color-sidebar-border: var(--border);
-  --color-sidebar-ring: var(--accent);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  --color-background: var(--fx-canvas);
+  --color-foreground: var(--fx-text);
+  --color-card: var(--fx-surface-1);
+  --color-card-foreground: var(--fx-text);
+  --color-popover: var(--fx-surface-2);
+  --color-popover-foreground: var(--fx-text);
+  --color-primary: var(--fx-accent);
+  --color-primary-foreground: var(--fx-accent-foreground);
+  --color-secondary: var(--fx-surface-2);
+  --color-secondary-foreground: var(--fx-text);
+  --color-muted: var(--fx-surface-2);
+  --color-muted-foreground: var(--fx-text-muted);
+  --color-accent: var(--fx-accent);
+  --color-accent-foreground: var(--fx-accent-foreground);
+  --color-destructive: var(--fx-danger);
+  --color-destructive-foreground: var(--fx-danger-foreground);
+  --color-border: var(--fx-border);
+  --color-input: var(--fx-input);
+  --color-ring: var(--fx-accent);
+  --color-sidebar: var(--fx-surface-1);
+  --color-sidebar-foreground: var(--fx-text);
+  --color-sidebar-primary: var(--fx-accent);
+  --color-sidebar-primary-foreground: var(--fx-accent-foreground);
+  --color-sidebar-accent: var(--fx-surface-2);
+  --color-sidebar-accent-foreground: var(--fx-text);
+  --color-sidebar-border: var(--fx-border);
+  --color-sidebar-ring: var(--fx-accent);
+  --radius-sm: var(--fx-radius-sm);
+  --radius-md: var(--fx-radius-md);
+  --radius-lg: var(--fx-radius-lg);
+  --radius-xl: var(--fx-radius-xl);
+  --radius-2xl: var(--fx-radius-2xl);
 }
 
-/* forklift UI: dark product console inspired by Linear, with forklift yellow as the only strong accent. */
+/* forklift UI design tokens: Linear-inspired product console with scarce forklift yellow accent. */
+:root,
+.dark {
+  --fx-canvas: #090b0f;
+  --fx-canvas-elevated: #0b0e13;
+  --fx-surface-1: #101318;
+  --fx-surface-2: #171b22;
+  --fx-surface-3: #1d232c;
+  --fx-input: #0d1015;
+  --fx-border: #252b35;
+  --fx-border-strong: #343c49;
+  --fx-text: #f4f6f8;
+  --fx-text-muted: #9aa3af;
+  --fx-text-subtle: #68717f;
+  --fx-accent: #ffd400;
+  --fx-accent-hover: #ffe04d;
+  --fx-accent-pressed: #d6b100;
+  --fx-accent-foreground: #000;
+  --fx-success: #32d583;
+  --fx-warning: #fdb022;
+  --fx-danger: #f97066;
+  --fx-danger-hover: #ff8a80;
+  --fx-danger-foreground: #fff;
+  --fx-radius-sm: 5px;
+  --fx-radius-md: 6px;
+  --fx-radius-lg: 8px;
+  --fx-radius-xl: 11px;
+  --fx-radius-2xl: 14px;
+  --fx-sidebar-width: 244px;
+  --fx-page-x: 32px;
+  --fx-page-y: 32px;
+  --fx-overlay-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --fx-logo-chip: #f2f3f5;
+  --fx-login-glow: rgba(255, 255, 255, 0.055);
+  --fx-login-wave: rgba(255, 255, 255, 0.045);
+  --fx-body-gradient-start: #0b0e13;
+  color-scheme: dark;
+}
+
+.light {
+  --fx-canvas: #f7f8fa;
+  --fx-canvas-elevated: #ffffff;
+  --fx-surface-1: #ffffff;
+  --fx-surface-2: #f1f3f5;
+  --fx-surface-3: #e9edf2;
+  --fx-input: #ffffff;
+  --fx-border: #d7dce3;
+  --fx-border-strong: #c1c8d2;
+  --fx-text: #111318;
+  --fx-text-muted: #5f6875;
+  --fx-text-subtle: #8a93a0;
+  --fx-accent: #d6b100;
+  --fx-accent-hover: #b99700;
+  --fx-accent-pressed: #8d7300;
+  --fx-accent-foreground: #111318;
+  --fx-success: #15803d;
+  --fx-warning: #b7791f;
+  --fx-danger: #c2413b;
+  --fx-danger-hover: #a8322d;
+  --fx-danger-foreground: #fff;
+  --fx-overlay-shadow: 0 24px 80px rgba(15, 23, 42, 0.16);
+  --fx-panel-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --fx-logo-chip: #eef1f5;
+  --fx-login-glow: rgba(17, 19, 24, 0.045);
+  --fx-login-wave: rgba(17, 19, 24, 0.05);
+  --fx-body-gradient-start: #ffffff;
+  color-scheme: light;
+}
+
 :root {
-  --bg: #090b0f;
-  --panel: #101318;
-  --panel-2: #171b22;
-  --panel-3: #1d232c;
-  --border: #252b35;
-  --border-strong: #343c49;
-  --text: #f4f6f8;
-  --muted: #9aa3af;
-  --subtle: #68717f;
-  --accent: #ffd400;
-  --accent-hover: #ffe04d;
-  --accent-pressed: #d6b100;
-  --success: #32d583;
-  --warning: #fdb022;
-  --danger: #f97066;
-  --danger-hover: #ff8a80;
-  --input-bg: #0d1015;
-  --radius: 8px;
+  --bg: var(--fx-canvas);
+  --panel: var(--fx-surface-1);
+  --panel-2: var(--fx-surface-2);
+  --panel-3: var(--fx-surface-3);
+  --border: var(--fx-border);
+  --border-strong: var(--fx-border-strong);
+  --text: var(--fx-text);
+  --muted: var(--fx-text-muted);
+  --subtle: var(--fx-text-subtle);
+  --accent: var(--fx-accent);
+  --accent-hover: var(--fx-accent-hover);
+  --accent-pressed: var(--fx-accent-pressed);
+  --success: var(--fx-success);
+  --warning: var(--fx-warning);
+  --danger: var(--fx-danger);
+  --danger-hover: var(--fx-danger-hover);
+  --input-bg: var(--fx-input);
+  --radius: var(--fx-radius-lg);
   --font-sans:
     "Noto Sans KR",
     ui-sans-serif,
@@ -155,7 +224,6 @@
     "Liberation Mono",
     "Noto Sans Mono CJK KR",
     monospace;
-  color-scheme: dark;
 }
 
 body {
@@ -164,8 +232,8 @@ body {
   overflow-x: hidden;
   font-family: var(--font-sans);
   background:
-    radial-gradient(circle at 50% -10%, color-mix(in oklch, var(--accent) 8%, transparent), transparent 34%),
-    linear-gradient(180deg, #0b0e13 0%, var(--bg) 280px);
+    radial-gradient(circle at 50% -10%, color-mix(in oklch, var(--fx-accent) 8%, transparent), transparent 34%),
+    linear-gradient(180deg, var(--fx-body-gradient-start) 0%, var(--fx-canvas) 280px);
   color: var(--text);
   font-size: 14px;
   letter-spacing: 0;
@@ -174,35 +242,6 @@ body {
 
 a { color: var(--text); text-decoration: none; text-underline-offset: 4px; }
 a:hover { color: var(--accent); text-decoration: underline; }
-
-.login-bg-base {
-  background:
-    radial-gradient(circle at 50% 0%, color-mix(in oklch, var(--accent) 16%, transparent), transparent 36%),
-    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.055), transparent 34%),
-    linear-gradient(180deg, #0b0e13 0%, var(--bg) 100%);
-  animation: login-glow 9s ease-in-out infinite alternate;
-}
-
-.login-bg-grid {
-  background:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 40px 40px;
-  opacity: 0.14;
-  animation: login-grid-drift 28s linear infinite;
-  mask-image: radial-gradient(circle at 50% 42%, #000 0%, #000 42%, transparent 78%);
-}
-
-.login-bg-wave {
-  background:
-    radial-gradient(ellipse 60% 18% at 50% 42%, color-mix(in oklch, var(--accent) 13%, transparent), transparent 62%),
-    repeating-radial-gradient(ellipse 78% 18% at 50% 42%, transparent 0 18px, rgba(255, 255, 255, 0.045) 19px 20px, transparent 22px 42px);
-  opacity: 0.34;
-  mix-blend-mode: screen;
-  transform: translate3d(0, 0, 0);
-  animation: login-wave 12s ease-in-out infinite;
-  mask-image: radial-gradient(ellipse at 50% 42%, #000 0%, #000 32%, transparent 70%);
-}
 
 @keyframes login-glow {
   from { opacity: 0.86; transform: scale(1); }
@@ -232,116 +271,6 @@ a:hover { color: var(--accent); text-decoration: underline; }
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .login-bg-base,
-  .login-bg-grid,
-  .login-bg-wave {
-    animation: none;
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Component CSS ported from the pre-refactor UI. These bespoke visualisations
-   (HA topology SVG, policy-evaluation flow) and small chips are kept as scoped
-   classes rather than Tailwind utilities. They resolve against the legacy
-   :root design tokens above, which the @theme block maps to Tailwind colours.
-   --------------------------------------------------------------------------- */
-.refresh-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 2px 9px; border-radius: 99px;
-  border: 1px solid var(--border); background: var(--input-bg);
-  font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
-}
-.refresh-badge .dot {
-  width: 6px; height: 6px; border-radius: 50%; flex: none;
-  background: #22c55e; animation: refresh-pulse 1.4s ease-in-out infinite;
-}
 @keyframes refresh-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-@media (prefers-reduced-motion: reduce) { .refresh-badge .dot { animation: none; } }
-
-/* Policy evaluation flow: the enabled supply-chain policies drawn left to right
-   in the order a proxy request is gated. Scrolls horizontally on narrow widths
-   instead of wrapping, so the flow always reads as one line. Node border colour
-   encodes whether the gate can stop a request: block/enforce (danger), warn
-   (accent), audit (muted). */
-.policy-flow { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-.policy-flow .pf-terminal {
-  align-self: center; color: var(--muted); font-size: 11px;
-  text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
-}
-/* Connector: a dashed track whose dashes march left to right (the request
-   flowing) plus a static arrowhead. */
-.policy-flow .pf-arrow { align-self: center; flex: none; display: inline-flex; align-items: center; width: 30px; }
-.policy-flow .pf-arrow .pf-track {
-  flex: 1; height: 2px; border-radius: 2px;
-  background-image: linear-gradient(90deg, var(--muted) 0 55%, transparent 55% 100%);
-  background-size: 8px 2px; background-repeat: repeat-x;
-  animation: pf-flow 0.6s linear infinite;
-}
-.policy-flow .pf-arrow .pf-head {
-  flex: none; width: 0; height: 0;
-  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
-  border-left: 5px solid var(--muted);
-}
 @keyframes pf-flow { from { background-position: 0 0; } to { background-position: 8px 0; } }
-.policy-flow .pf-node {
-  display: flex; flex-direction: column; gap: 2px; flex: none;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--input-bg); padding: 8px 12px;
-}
-.policy-flow .pf-name { font-weight: 600; font-size: 13px; white-space: nowrap; }
-.policy-flow .pf-action { font-size: 11px; color: var(--muted); white-space: nowrap; }
-/* Step number: a prominent circular badge marking evaluation order. */
-.policy-flow .pf-step {
-  align-self: flex-start; display: inline-flex; align-items: center; justify-content: center;
-  min-width: 22px; height: 22px; padding: 0 5px; margin-bottom: 2px;
-  border-radius: 99px; background: var(--panel); border: 1px solid var(--border);
-  font-size: 14px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums;
-}
-.policy-flow .pf-node.pf-block { border-color: var(--danger); }
-.policy-flow .pf-node.pf-block .pf-action { color: var(--danger); }
-.policy-flow .pf-node.pf-warn { border-color: var(--accent); }
-.policy-flow .pf-node.pf-warn .pf-action { color: var(--accent); }
-/* Disabled gate: drawn in place but dimmed with a dashed border. */
-.policy-flow .pf-node.pf-off { opacity: 0.45; border-style: dashed; }
-.policy-flow .pf-node.pf-off .pf-action { color: var(--muted); }
-@media (prefers-reduced-motion: reduce) {
-  .policy-flow .pf-arrow .pf-track { animation: none; }
-}
-
-/* Source-IP ACL breakdown: each allow entry resolved to its address range and
-   how many addresses the CIDR covers, plus a running total. */
-.acl-summary { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-.acl-summary .acl-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 12px; }
-.acl-summary .acl-row code { font-family: ui-monospace, monospace; color: var(--text); }
-.acl-summary .acl-total { margin-top: 4px; font-size: 12px; color: var(--muted); }
-
-/* HA active/standby architecture diagram (Admin > HA Status). An SVG that
-   reflects the live topology: the Service routes only to the active leader;
-   the standby stays Ready and is linked to the leader by the election Lease.
-   Active elements are green; standby/secondary paths are dashed and dimmed. */
-.ha-arch { width: 100%; overflow-x: auto; margin-top: 12px; }
-.ha-svg { display: block; width: 100%; min-width: 720px; height: auto; }
-.ha-svg .box { fill: var(--input-bg); stroke: var(--border); stroke-width: 1.5; }
-.ha-svg .box.active { stroke: #22c55e; }
-.ha-svg .box.standby { stroke-dasharray: 6 4; }
-.ha-svg .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
-.ha-svg .edge.active { stroke: #22c55e; }
-.ha-svg .edge.dim { stroke-dasharray: 6 4; opacity: 0.5; }
-.ha-svg .ha-head { fill: var(--muted); }
-.ha-svg .ha-head.ok { fill: #22c55e; }
-.ha-svg .crown { fill: #22c55e; }
-/* Live request-path edges: dashes march toward the arrowhead so the flow reads
-   as moving in real time. */
-.ha-svg .edge.flow { stroke-dasharray: 7 5; animation: ha-edge-flow 0.7s linear infinite; }
 @keyframes ha-edge-flow { to { stroke-dashoffset: -12; } }
-@media (prefers-reduced-motion: reduce) {
-  .ha-svg .edge.flow { animation: none; stroke-dasharray: none; }
-}
-.ha-svg .lbl { fill: var(--text); font-size: 13px; }
-.ha-svg .lbl.mono { font-family: ui-monospace, monospace; font-size: 12px; }
-.ha-svg .sub { fill: var(--muted); font-size: 11px; }
-.ha-svg .sub.mono { font-family: ui-monospace, monospace; }
-.ha-svg .tag { font-size: 11px; letter-spacing: 0.06em; }
-.ha-svg .tag.ok { fill: #22c55e; }
-.ha-svg .tag.muted { fill: var(--muted); }

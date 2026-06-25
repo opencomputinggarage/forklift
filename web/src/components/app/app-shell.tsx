@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   KeyRound,
   LogOut,
+  Search,
   Settings,
   SlidersHorizontal,
   UserRound,
@@ -45,11 +46,13 @@ export function AppShell() {
   return (
     <AuthProvider value={{ me }}>
       <TooltipProvider>
-        <div className="min-h-dvh bg-background lg:flex lg:items-start">
+        <div className="min-h-dvh bg-background text-foreground lg:flex lg:items-start">
           <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
-          <main className="w-full min-w-0 flex-1 px-[var(--fx-main-gutter-x)] py-[var(--fx-main-gutter-y)] max-sm:px-3 max-sm:py-4">
-            <div className="mx-auto w-full max-w-[var(--fx-content-max)]">
-              <Outlet />
+          <main className="w-full min-w-0 flex-1 px-[var(--fx-main-gutter-x)] py-[var(--fx-main-gutter-y)] max-lg:px-3 max-lg:py-3 max-sm:px-2 max-sm:py-2">
+            <div className="min-h-[calc(100dvh-(var(--fx-main-gutter-y)*2))] rounded-[var(--fx-radius-2xl)] border border-[var(--fx-border-subtle)] bg-[var(--fx-surface-panel)] shadow-[var(--fx-panel-highlight)] max-lg:min-h-[calc(100dvh-88px)] max-sm:rounded-[var(--fx-radius-lg)]">
+              <div className="mx-auto w-full max-w-[var(--fx-content-max)] px-[var(--fx-page-x)] py-[var(--fx-page-y)] max-sm:px-4 max-sm:py-5">
+                <Outlet />
+              </div>
             </div>
           </main>
         </div>
@@ -82,28 +85,32 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
     cn(
       "group flex shrink-0 items-center gap-2 rounded-md border px-2 py-1.5 text-[13px] leading-5 transition-colors hover:no-underline max-sm:px-2",
       active
-        ? "border-[var(--fx-border-subtle)] bg-[var(--fx-surface-selected)] text-foreground shadow-[inset_2px_0_0_var(--fx-accent)]"
-        : "border-transparent text-muted-foreground hover:border-[var(--fx-border-subtle)] hover:bg-[var(--fx-surface-hover)] hover:text-foreground"
+        ? "border-transparent bg-[var(--fx-surface-selected)] text-foreground"
+        : "border-transparent text-muted-foreground hover:bg-[var(--fx-surface-hover)] hover:text-foreground"
     );
 
   return (
-    <aside className="sticky top-0 z-40 flex h-dvh w-[var(--fx-sidebar-width)] shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--fx-border-subtle)] bg-[var(--fx-surface-panel)] px-2.5 py-3 shadow-[var(--fx-panel-highlight)] lg:self-start max-lg:h-auto max-lg:w-full max-lg:overflow-visible max-lg:border-r-0 max-lg:border-b max-lg:px-3 max-lg:py-2 max-sm:px-2">
-      <div className="px-1.5 pb-4 max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:pb-2 max-sm:px-1">
+    <aside className="sticky top-0 z-40 flex h-dvh w-[var(--fx-sidebar-width)] shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--fx-border-subtle)] bg-[var(--fx-sidebar-bg)] px-3 py-4 lg:self-start max-lg:h-auto max-lg:w-full max-lg:overflow-visible max-lg:border-r-0 max-lg:border-b max-lg:px-3 max-lg:py-2 max-sm:px-2">
+      <div className="px-1 pb-3 max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:pb-2 max-sm:px-1">
         <Link
           to="/workspace/repositories"
-          className="flex min-w-0 items-center gap-2.5 text-[20px] font-bold text-foreground hover:no-underline hover:opacity-85 max-sm:text-lg"
+          className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:no-underline hover:opacity-85"
         >
           <Logo />
           <span className="truncate">fork<span className="text-primary">lift</span></span>
         </Link>
         {version && (
-          <span className="ml-11 mt-0.5 block shrink-0 text-xs font-medium text-muted-foreground max-lg:m-0 max-sm:hidden">
+          <span className="ml-9 mt-1 block shrink-0 text-[11px] font-medium text-[var(--fx-text-subtle)] max-lg:m-0 max-sm:hidden">
             {version.version}
             {version.commit && version.commit !== "none" && (
               <span className="opacity-65"> ({version.commit.slice(0, 7)})</span>
             )}
           </span>
         )}
+      </div>
+      <div className="mb-2 flex h-7 items-center gap-2 rounded-md border border-[var(--fx-border-subtle)] bg-[var(--fx-surface-1)] px-2 text-[13px] text-[var(--fx-text-subtle)] max-lg:hidden">
+        <Search className="size-3.5" aria-hidden="true" />
+        <span>Search...</span>
       </div>
       <nav className="-mx-1 flex flex-col gap-0.5 px-1 max-lg:flex-row max-lg:overflow-x-auto max-lg:pb-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden">
         <NavGroup title={t("nav.group.workspace")}>
@@ -182,8 +189,8 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
 
 function NavGroup({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="contents lg:flex lg:flex-col lg:gap-0.5 lg:pt-3 first:lg:pt-0" aria-label={typeof title === "string" ? title : undefined}>
-      <div className="px-2 pb-1 text-[11px] font-medium uppercase leading-4 text-[var(--fx-text-subtle)] max-lg:hidden">
+    <section className="contents lg:flex lg:flex-col lg:gap-0.5 lg:pt-3.5 first:lg:pt-0" aria-label={typeof title === "string" ? title : undefined}>
+      <div className="px-2 pb-1 text-[13px] font-medium leading-4 text-[var(--fx-text-subtle)] max-lg:hidden">
         {title}
       </div>
       {children}

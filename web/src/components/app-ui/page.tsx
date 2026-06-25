@@ -14,11 +14,11 @@ function PageHeader({
   return (
     <div
       className={cn(
-        "mb-3 flex min-w-0 items-end justify-between gap-3 border-b border-[var(--fx-border-subtle)] pb-3 max-sm:flex-col max-sm:items-stretch",
+        "mb-4 flex min-w-0 items-end justify-between gap-3 max-sm:flex-col max-sm:items-stretch",
         className
       )}
     >
-      <h1 className="m-0 min-w-0 text-[1.35rem] leading-tight font-semibold tracking-normal max-sm:text-lg">
+      <h1 className="m-0 min-w-0 text-2xl leading-tight font-semibold tracking-normal max-sm:text-xl">
         {title}
       </h1>
       {actions && (

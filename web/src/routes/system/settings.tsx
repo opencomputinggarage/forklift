@@ -35,14 +35,14 @@ export function SettingsRoute() {
   const [theme, setTheme] = useState<ThemeMode>(() => readThemeMode());
   const [language, setLanguage] = useState<Language>(() => readLanguage());
   const themeOptions = [
-    { value: "system", label: t("settings.theme.system"), description: t("settings.theme.systemDescription") },
-    { value: "dark", label: t("settings.theme.dark"), description: t("settings.theme.darkDescription") },
-    { value: "light", label: t("settings.theme.light"), description: t("settings.theme.lightDescription") },
-  ] satisfies { value: ThemeMode; label: string; description: string }[];
+    { value: "system", label: t("settings.theme.system") },
+    { value: "dark", label: t("settings.theme.dark") },
+    { value: "light", label: t("settings.theme.light") },
+  ] satisfies { value: ThemeMode; label: string }[];
   const languageOptions = [
-    { value: "en", label: t("settings.language.en"), description: t("settings.language.enDescription") },
-    { value: "ko", label: t("settings.language.ko"), description: t("settings.language.koDescription") },
-  ] satisfies { value: Language; label: string; description: string }[];
+    { value: "en", label: t("settings.language.en") },
+    { value: "ko", label: t("settings.language.ko") },
+  ] satisfies { value: Language; label: string }[];
 
   const onThemeChange = (next: string) => {
     const nextTheme = next as ThemeMode;
@@ -91,12 +91,7 @@ export function SettingsRoute() {
               <SelectContent align="start">
                 {themeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <span className="flex min-w-0 flex-col">
-                      <span>{option.label}</span>
-                      <span className="text-xs leading-4 text-muted-foreground">
-                        {option.description}
-                      </span>
-                    </span>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -121,12 +116,7 @@ export function SettingsRoute() {
               <SelectContent align="start">
                 {languageOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <span className="flex min-w-0 flex-col">
-                      <span>{option.label}</span>
-                      <span className="text-xs leading-4 text-muted-foreground">
-                        {option.description}
-                      </span>
-                    </span>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>

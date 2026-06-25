@@ -1,15 +1,29 @@
 import { ReactNode, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
+import { Eye, EyeOff, LockKeyhole, X } from "lucide-react";
 import { api, Me, Role, Token, User } from "../../../api";
 import { useAuth } from "../../../authContext";
 import { ConfirmModal } from "../../../components/confirm-modal";
 import { Select } from "@/components/app-ui/select";
+import { Alert } from "@/components/app-ui/alert";
+import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+} from "@/components/app-ui/table";
 import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
 import { SourceBadge } from "@/components/app-ui/source-badge";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import { UserBadge } from "@/components/app-ui/user-badge";
 import { Toggle } from "../../../components/toggle";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/users/$id/")({
   component: UserModifyRoute,
@@ -57,8 +71,8 @@ export function UserModify({ me }: { me: Me }) {
       .catch((e) => setError(e.message));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId]);
 
-  if (error && !user) return <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>;
-  if (!user) return <div>Loading…</div>;
+  if (error && !user) return <Alert className="my-2.5">{error}</Alert>;
+  if (!user) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   const self = user.username === me.username;
 
@@ -69,13 +83,21 @@ export function UserModify({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
-        <h1>{user.username} <SourceBadge source={user.source} />{self && <UserBadge username="you" className="ml-2">you</UserBadge>}</h1>
-        <Button render={<Link to="/users" />} nativeButton={false} variant="outline">
-          Back to users
-        </Button>
-      </div>
-      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+      <PageHeader
+        title={
+          <Inline className="flex-wrap gap-2">
+            <span className="min-w-0 truncate">{user.username}</span>
+            <SourceBadge source={user.source} />
+            {self && <UserBadge username="you">you</UserBadge>}
+          </Inline>
+        }
+        actions={
+          <Button render={<Link to="/users" />} nativeButton={false} variant="outline">
+            Back to users
+          </Button>
+        }
+      />
+      {error && <Alert className="mb-4">{error}</Alert>}
 
       <AccountPanel user={user} />
       <RolesPanel user={user} roles={roles} run={run} canWrite={!!me.admin} />
@@ -93,17 +115,26 @@ export function UserModify({ me }: { me: Me }) {
 // editable here — only displayed.
 function AccountPanel({ user }: { user: User }) {
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Account</h2>
-      <label>Username</label>
-      <input type="text" value={user.username} readOnly />
-      <label>Email</label>
-      <input type="text" value={user.email || "—"} readOnly />
-      <label>Created</label>
-      <input type="text" value={user.created_at ? new Date(user.created_at).toLocaleString() : "—"} readOnly />
-      <label>Last login</label>
-      <input type="text" value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "never"} readOnly />
-    </div>
+    <Panel>
+      <PanelBody>
+        <h2 className="m-0 mb-4 text-base font-semibold">Account</h2>
+        <FieldGroup className="grid gap-4 sm:grid-cols-2">
+          <ReadOnlyField label="Username" value={user.username} />
+          <ReadOnlyField label="Email" value={user.email || "—"} />
+          <ReadOnlyField label="Created" value={user.created_at ? new Date(user.created_at).toLocaleString() : "—"} />
+          <ReadOnlyField label="Last login" value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "never"} />
+        </FieldGroup>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <Field>
+      <FieldLabel>{label}</FieldLabel>
+      <Input value={value} readOnly className="bg-muted/20 text-muted-foreground" />
+    </Field>
   );
 }
 
@@ -112,31 +143,42 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
   const assignable = roles.filter((r) => !user.roles.some((ur) => ur.id === r.id));
 
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Roles</h2>
-      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-4 text-base font-semibold">Roles</h2>
+      <Inline className="flex-wrap gap-1.5">
         {user.roles.map((r) => (
-          <RoleBadge key={r.id}>
-            {r.name}
+          <RoleBadge key={r.id} className="gap-1">
+            <span>{r.name}</span>
             {canWrite && (
-              <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove role"
-                onClick={() => run(api.removeRole(user.id, r.id))}>×</a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="-mr-1 size-4 rounded-full text-muted-foreground hover:bg-background/40 hover:text-foreground"
+                title="Remove role"
+                onClick={() => run(api.removeRole(user.id, r.id))}
+              >
+                <X className="size-3" aria-hidden="true" />
+                <span className="sr-only">Remove role</span>
+              </Button>
             )}
           </RoleBadge>
         ))}
-        {user.roles.length === 0 && <span className="muted">No roles assigned.</span>}
-      </div>
+        {user.roles.length === 0 && <span className="text-sm text-muted-foreground">No roles assigned.</span>}
+      </Inline>
       {canWrite && assignable.length > 0 && (
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12, gap: 6 }}>
+        <Inline className="mt-4 items-stretch max-sm:flex-col">
           <Select value={selected} onChange={setSelected} placeholder="add role…"
             options={assignable.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
           <Button variant="outline" type="button" disabled={!selected}
             onClick={() => { run(api.assignRole(user.id, Number(selected))); setSelected(""); }}>
             Add
           </Button>
-        </div>
+        </Inline>
       )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -150,10 +192,11 @@ function TokensPanel({ user, tokens, canWrite, run }: {
   const [revokeId, setRevokeId] = useState<number | null>(null);
 
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ marginBottom: 0 }}>
-          Access tokens <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· scoped credentials for package clients</span>
+    <Panel>
+      <PanelBody>
+      <div className="mb-4 flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+        <h2 className="m-0 text-base font-semibold">
+          Access tokens <span className="text-xs font-normal text-muted-foreground">· scoped credentials for package clients</span>
         </h2>
         {canWrite && (
           <Button
@@ -164,30 +207,32 @@ function TokensPanel({ user, tokens, canWrite, run }: {
           </Button>
         )}
       </div>
-      <table style={{ marginTop: 12 }}>
-        <thead><tr><th>Name</th><th>Description</th><th>Permissions</th><th>Created</th><th>Expires</th><th>Last used</th>{canWrite && <th></th>}</tr></thead>
-        <tbody>
+      <TableWrap>
+        <Table>
+        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Permissions</TableHead><TableHead>Created</TableHead><TableHead>Expires</TableHead><TableHead>Last used</TableHead>{canWrite && <TableHead></TableHead>}</TableRow></TableHeader>
+        <TableBody>
           {tokens.map((t) => (
-            <tr key={t.id}>
-              <td>{t.name}</td>
-              <td className="muted">{t.description}</td>
-              <td>
+            <TableRow key={t.id}>
+              <TableCell>{t.name}</TableCell>
+              <TableCell className="text-muted-foreground">{t.description}</TableCell>
+              <TableCell>
                 {parseScopes(t.scopes_json).map((s, i) => (
                   <PermissionBadge key={i} className="mr-1">
                     {s.repo_pattern}: {s.actions.join(",")}
                   </PermissionBadge>
                 ))}
-              </td>
-              <td className="muted">{t.created_at?.slice(0, 10)}</td>
-              <td className="muted">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</td>
-              <td className="muted">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</td>
-              {canWrite && <td><Button variant="destructive" onClick={() => setRevokeId(t.id)}>Revoke</Button></td>}
-            </tr>
+              </TableCell>
+              <TableCell className="text-muted-foreground">{t.created_at?.slice(0, 10)}</TableCell>
+              <TableCell className="text-muted-foreground">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</TableCell>
+              <TableCell className="text-muted-foreground">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</TableCell>
+              {canWrite && <TableCell><Button variant="destructive" onClick={() => setRevokeId(t.id)}>Revoke</Button></TableCell>}
+            </TableRow>
           ))}
-          {tokens.length === 0 && <tr><td colSpan={canWrite ? 7 : 6} className="muted">No tokens yet.</td></tr>}
-        </tbody>
-      </table>
-      {!canWrite && <p className="muted" style={{ marginBottom: 0 }}>Read-only: only administrators can create or revoke tokens.</p>}
+          {tokens.length === 0 && <TableRow><TableCell colSpan={canWrite ? 7 : 6} className="text-muted-foreground">No tokens yet.</TableCell></TableRow>}
+        </TableBody>
+        </Table>
+      </TableWrap>
+      {!canWrite && <p className="mb-0 mt-3 text-sm text-muted-foreground">Read-only: only administrators can create or revoke tokens.</p>}
       <ConfirmModal
         open={revokeId !== null}
         title="Revoke this token?"
@@ -197,7 +242,8 @@ function TokensPanel({ user, tokens, canWrite, run }: {
         onConfirm={() => { if (revokeId !== null) run(api.deleteUserToken(user.id, revokeId)); setRevokeId(null); }}
         onCancel={() => setRevokeId(null)}
       />
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -219,20 +265,32 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
   };
 
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Password</h2>
-      <label>New password</label>
-      <div className="relative [&_input]:pr-[58px]">
-        <input type={show ? "text" : "password"} value={password}
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-4 text-base font-semibold">Password</h2>
+      <Field>
+        <FieldLabel>New password</FieldLabel>
+        <div className="relative">
+        <Input className="pr-16" type={show ? "text" : "password"} value={password}
           onChange={(e) => { setPassword(e.target.value); setSaved(false); }} />
-        <button type="button" className="absolute top-px right-px bottom-px flex cursor-pointer items-center rounded-r-[var(--radius)] border-0 bg-transparent px-2.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setShow((s) => !s)}
-          aria-label={show ? "Hide password" : "Show password"}>{show ? "Hide" : "Show"}</button>
-      </div>
-      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12 }}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-0 top-0 h-full rounded-l-none text-muted-foreground"
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? "Hide password" : "Show password"}
+        >
+          {show ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+        </Button>
+        </div>
+      </Field>
+      <Inline className="mt-4 max-sm:flex-col max-sm:items-stretch">
         <Button type="button" disabled={!password} onClick={reset}>Reset password</Button>
-        {saved && <span className="muted">Password updated.</span>}
-      </div>
-    </div>
+        {saved && <span className="text-sm text-muted-foreground">Password updated.</span>}
+      </Inline>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -241,9 +299,10 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
 // it can never be locked out of the only guaranteed admin account.
 function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) => void }) {
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Account lockout</h2>
-      <p className="muted">
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-3 text-base font-semibold">Account lockout</h2>
+      <p className="text-sm leading-relaxed text-muted-foreground">
         When enabled, the account is locked after 5 consecutive failed password attempts and must be
         unlocked by an administrator. {user.protected && "The default admin account cannot be locked out."}
       </p>
@@ -254,15 +313,16 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
         onChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
       />
       {user.locked && (
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 14, gap: 10, alignItems: "center" }}>
+        <Inline className="mt-4 max-sm:flex-col max-sm:items-stretch">
           <StateBadge state="locked">Locked</StateBadge>
           <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>
             Unlock account
           </Button>
-        </div>
+        </Inline>
       )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -270,17 +330,12 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
 // managed-role notice. Used to explain why an edit control is locked.
 function LockNote({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]" style={{ borderColor: "var(--accent)", marginTop: 14, marginBottom: 0 }}>
-      <h2 style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8, fontSize: 15 }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-          style={{ color: "var(--accent)" }}>
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
+    <div className="mt-4 rounded-lg border border-primary/70 bg-primary/5 p-4">
+      <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold">
+        <LockKeyhole className="size-4 text-primary" aria-hidden="true" />
         {title}
       </h2>
-      <p className="muted" style={{ margin: 0 }}>{children}</p>
+      <p className="m-0 text-sm leading-relaxed text-muted-foreground">{children}</p>
     </div>
   );
 }
@@ -288,9 +343,10 @@ function LockNote({ title, children }: { title: string; children: ReactNode }) {
 function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: Promise<unknown>) => void }) {
   const lockedFromEditing = self || user.protected;
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Status</h2>
-      <p className="muted">
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-3 text-base font-semibold">Status</h2>
+      <p className="text-sm leading-relaxed text-muted-foreground">
         An <strong>active</strong> account can sign in to Forklift and use its credentials to pull and publish
         artifacts, while <strong>disabling</strong> immediately revokes that access by stopping all sessions and
         tokens. The account, its tokens and its role assignments are preserved, so disabling is a reversible
@@ -316,14 +372,15 @@ function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: 
         </LockNote>
       )}
       {user.locked && (
-        <p style={{ marginTop: 12, marginBottom: 0 }}>
+        <p className="mb-0 mt-3">
           <StateBadge state="locked">Locked</StateBadge>
-          <span className="muted" style={{ marginLeft: 8 }}>
+          <span className="ml-2 text-sm text-muted-foreground">
             Locked after too many failed password attempts — unlock it in Account lockout.
           </span>
         </p>
       )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -340,9 +397,10 @@ function DangerPanel({ user, self, onDeleted, onError }: {
     }
   };
   return (
-    <div className="mb-[18px] rounded-[10px] border border-destructive bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] [&_h2]:text-destructive" style={{ marginTop: 18 }}>
-      <h2>Danger zone</h2>
-      <p className="muted">
+    <Panel className="border-destructive/70">
+      <PanelBody>
+      <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
+      <p className="text-sm leading-relaxed text-muted-foreground">
         Deleting a user revokes all of their tokens and role assignments. This cannot be undone.
         {self && " You cannot delete your own account."}
       </p>
@@ -356,6 +414,7 @@ function DangerPanel({ user, self, onDeleted, onError }: {
         onConfirm={() => { setConfirm(false); del(); }}
         onCancel={() => setConfirm(false)}
       />
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }

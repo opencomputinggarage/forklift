@@ -158,20 +158,21 @@ export function RepositoryNew() {
                 <FieldLabel>Type<span className="text-destructive">*</span></FieldLabel>
                 <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Repository type">
                   {REPO_TYPES.map((t) => (
-                    <button
+                    <Button
                       key={t.value}
                       type="button"
+                      variant="ghost"
                       role="radio"
                       aria-checked={type === t.value}
                       className={cn(
-                        "rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
+                        "h-auto flex-col items-start justify-start rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
                         type === t.value && "border-primary bg-primary/10"
                       )}
                       onClick={() => setType(t.value)}
                     >
                       <div className={cn("mb-1 font-semibold", type === t.value && "text-primary")}>{t.title}</div>
                       <div className="text-xs leading-relaxed text-muted-foreground">{t.desc}</div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </Field>

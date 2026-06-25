@@ -42,7 +42,7 @@ export function UpstreamStatus({
 
   if (!withButton) return badge;
   return (
-    <span className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ gap: 10 }}>
+    <span className="flex items-center gap-2.5 max-sm:flex-col max-sm:items-stretch">
       {badge}
       <Button variant="outline" type="button" onClick={check} disabled={loading}>Recheck</Button>
     </span>

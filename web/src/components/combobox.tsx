@@ -1,4 +1,4 @@
-import { CSSProperties, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 // Combobox is an editable autocomplete input: it accepts free text (so wildcard
 // patterns like `*` or `maven-*` still work) while offering a filtered dropdown
 // of known values.
-export function Combobox({ value, onChange, options, placeholder, style, hints }: {
+export function Combobox({ value, onChange, options, placeholder, className, hints }: {
   value: string;
   onChange: (value: string) => void;
   options: string[];
   placeholder?: string;
-  style?: CSSProperties;
+  className?: string;
   // hints maps an option to a muted secondary label (e.g. a repository type)
   // shown in the dropdown; the picked value is still the option string itself.
   hints?: Record<string, string>;
@@ -72,7 +72,7 @@ export function Combobox({ value, onChange, options, placeholder, style, hints }
   };
 
   return (
-    <div ref={rootRef} className="relative" style={style}>
+    <div ref={rootRef} className={cn("relative", className)}>
       <Input value={value} placeholder={placeholder}
         role="combobox" aria-expanded={open} aria-autocomplete="list"
         onChange={(e) => { onChange(e.target.value); setOpen(true); setActive(-1); }}

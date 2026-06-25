@@ -4,9 +4,20 @@ import { Approval, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ReviewModal, SeverityBar } from "./index";
 import { Tooltip } from "../../components/tooltip";
+import { Alert } from "@/components/app-ui/alert";
+import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { UserBadge } from "@/components/app-ui/user-badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+} from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/approvals/$id")({
@@ -36,42 +47,49 @@ export function ApprovalDetail() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (error && !row) return <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>;
-  if (!row) return <div>Loading…</div>;
+  if (error && !row) return <Alert className="my-2.5">{error}</Alert>;
+  if (!row) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   return (
     <>
-      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
-        <h1 style={{ fontFamily: "var(--font-mono)" }}>
-          {row.package} <ApprovalStatusBadge status={row.status} />
-        </h1>
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch">
+      <PageHeader
+        title={
+          <Inline className="flex-wrap gap-2">
+            <span className="font-mono">{row.package}</span>
+            <ApprovalStatusBadge status={row.status} />
+          </Inline>
+        }
+        actions={
+          <>
           <Button onClick={() => setReviewing(true)}>Review</Button>
           <Button render={<Link to="/approvals" />} nativeButton={false} variant="outline">
             Back to approvals
           </Button>
-        </div>
-      </div>
-      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+          </>
+        }
+      />
+      {error && <Alert className="mb-4">{error}</Alert>}
 
-      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-        <h2>Request</h2>
+      <Panel>
+        <PanelBody>
+        <h2 className="m-0 mb-4 text-base font-semibold">Request</h2>
         <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
           <dt>Repository</dt><dd>{row.repo_name}</dd>
-          <dt>Package</dt><dd style={{ fontFamily: "var(--font-mono)" }}>{row.package}</dd>
+          <dt>Package</dt><dd className="font-mono">{row.package}</dd>
           <dt>Requested version</dt>
-          <dd style={{ fontFamily: "var(--font-mono)" }}>
-            {row.last_requested_version || <span className="muted">unknown (metadata request blocked before a version was resolved)</span>}
+          <dd className="font-mono">
+            {row.last_requested_version || <span className="text-muted-foreground">unknown (metadata request blocked before a version was resolved)</span>}
           </dd>
-          <dt>Requested by</dt><dd>{row.requested_by || <span className="muted">anonymous</span>}</dd>
+          <dt>Requested by</dt><dd>{row.requested_by || <span className="text-muted-foreground">anonymous</span>}</dd>
           <dt>Requests</dt><dd>{row.request_count}</dd>
-          <dt>First requested</dt><dd className="muted">{new Date(row.first_requested_at).toLocaleString()}</dd>
-          <dt>Last requested</dt><dd className="muted">{new Date(row.last_requested_at).toLocaleString()}</dd>
+          <dt>First requested</dt><dd className="text-muted-foreground">{new Date(row.first_requested_at).toLocaleString()}</dd>
+          <dt>Last requested</dt><dd className="text-muted-foreground">{new Date(row.last_requested_at).toLocaleString()}</dd>
           {row.decided_by && <><dt>Decided by</dt><dd>{row.decided_by}</dd></>}
-          {row.decided_at && <><dt>Decided at</dt><dd className="muted">{new Date(row.decided_at).toLocaleString()}</dd></>}
+          {row.decided_at && <><dt>Decided at</dt><dd className="text-muted-foreground">{new Date(row.decided_at).toLocaleString()}</dd></>}
           {row.note && <><dt>Note</dt><dd>{row.note}</dd></>}
         </dl>
-      </div>
+        </PanelBody>
+      </Panel>
 
       <OvsAnalysis row={row} />
 
@@ -98,16 +116,17 @@ function OvsAnalysis({ row }: { row: Approval }) {
   const pkgScope = row.vuln_scope === "package";
   const clean = row.vuln_severity === "none";
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Vulnerability analysis</h2>
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-4 text-base font-semibold">Vulnerability analysis</h2>
       {row.vuln_severity === undefined ? (
-        <p className="muted" style={{ marginBottom: 0 }}>
+        <p className="m-0 text-sm leading-relaxed text-muted-foreground">
           Not scanned yet. The scan runs asynchronously after the request is
           queued; reload in a moment.
         </p>
       ) : (
         <>
-          <div style={{ margin: "8px 0 18px" }}>
+          <div className="my-4">
             <SeverityBar severity={row.vuln_severity} counts={row.vuln_counts} scope={row.vuln_scope} source={row.vuln_source} scannedAt={row.vuln_scanned_at} size="lg" />
           </div>
           <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
@@ -122,9 +141,9 @@ function OvsAnalysis({ row }: { row: Approval }) {
             <dt>Scope</dt>
             <dd>{pkgScope ? "Package-level (all versions; requested version unknown)" : `Version ${row.last_requested_version}`}</dd>
             <dt>Scanned at</dt>
-            <dd className="muted">{row.vuln_scanned_at ? new Date(row.vuln_scanned_at).toLocaleString() : "n/a"}</dd>
+            <dd className="text-muted-foreground">{row.vuln_scanned_at ? new Date(row.vuln_scanned_at).toLocaleString() : "n/a"}</dd>
             <dt>Duration</dt>
-            <dd className="muted">{row.vuln_scan_ms != null ? `${row.vuln_scan_ms} ms` : "n/a"}</dd>
+            <dd className="text-muted-foreground">{row.vuln_scan_ms != null ? `${row.vuln_scan_ms} ms` : "n/a"}</dd>
           </dl>
           {advisories.length > 0 ? (
             <AdvisoryTable advisories={advisories} />
@@ -135,11 +154,12 @@ function OvsAnalysis({ row }: { row: Approval }) {
               ))}
             </ul>
           ) : (
-            <p style={{ marginBottom: 0 }}>No known advisories.</p>
+            <p className="mb-0">No known advisories.</p>
           )}
         </>
       )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -202,35 +222,35 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg" style={{ marginTop: 16 }}>
-      <table>
-        <thead>
-          <tr>
-            <th style={{ width: 56 }}><SortBtn k="idx">#</SortBtn></th>
-            <th><SortBtn k="id">Advisory ID</SortBtn></th>
-            <th><SortBtn k="severity">Severity</SortBtn></th>
-            <th>
+    <TableWrap className="mt-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-14"><SortBtn k="idx">#</SortBtn></TableHead>
+            <TableHead><SortBtn k="id">Advisory ID</SortBtn></TableHead>
+            <TableHead><SortBtn k="severity">Severity</SortBtn></TableHead>
+            <TableHead>
               <SortBtn k="cvss">CVSS</SortBtn>
               <Tooltip text="This is the CVSS version 3.x base score, which ranges from 0 to 10 and is calculated from the advisory's CVSS vector. A higher number means a more severe vulnerability. A score of 9.0 or above is critical, 7.0 or above is high, 4.0 or above is medium, and anything above 0 is low.">
                 <span className="ml-[5px] text-[0.85em] text-muted-foreground">ⓘ</span>
               </Tooltip>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {sorted.map(({ a, i }) => (
-            <tr key={a.id}>
-              <td className="muted">{i + 1}</td>
-              <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+            <TableRow key={a.id}>
+              <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+              <TableCell className="font-mono text-xs">
                 <a className="underline underline-offset-4 hover:no-underline" href={`https://osv.dev/${a.id}`} target="_blank" rel="noreferrer">{a.id}</a>
-              </td>
-              <td><SeverityBadge severity={a.severity} /></td>
-              <td style={{ fontVariantNumeric: "tabular-nums" }}>{a.score || <span className="muted">n/a</span>}</td>
-            </tr>
+              </TableCell>
+              <TableCell><SeverityBadge severity={a.severity} /></TableCell>
+              <TableCell className="tabular-nums">{a.score || <span className="text-muted-foreground">n/a</span>}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </TableWrap>
   );
 }
 
@@ -239,17 +259,19 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
 // in are not enumerable and so are not shown.
 function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>
-        Reviewers <span className="muted" style={{ fontWeight: 400, fontSize: 12 }}>· users who can approve this repository</span>
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-4 text-base font-semibold">
+        Reviewers <span className="text-xs font-normal text-muted-foreground">· users who can approve this repository</span>
       </h2>
       {!reviewers || reviewers.length === 0 ? (
-        <p className="muted" style={{ marginBottom: 0 }}>No users currently have approve permission for this repository.</p>
+        <p className="mb-0 text-sm text-muted-foreground">No users currently have approve permission for this repository.</p>
       ) : (
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 8 }}>
+        <Inline className="flex-wrap gap-2">
           {reviewers.map((u) => <UserBadge key={u} username={u} />)}
-        </div>
+        </Inline>
       )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }

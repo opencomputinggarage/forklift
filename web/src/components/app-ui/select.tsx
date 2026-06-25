@@ -1,5 +1,3 @@
-import { CSSProperties } from "react";
-
 import {
   Select as SelectRoot,
   SelectContent,
@@ -20,14 +18,14 @@ export function Select({
   options,
   onChange,
   placeholder,
-  style,
+  className,
   size,
 }: {
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
   placeholder?: string;
-  style?: CSSProperties;
+  className?: string;
   size?: "sm";
 }) {
   const hasEmptyOption = options.some((o) => o.value === "");
@@ -41,8 +39,7 @@ export function Select({
     >
       <SelectTrigger
         size={size ?? "default"}
-        style={style}
-        className={cn("w-full", style?.width && "w-auto")}
+        className={cn("w-full", className)}
       >
         <SelectValue placeholder={placeholder ?? ""} />
       </SelectTrigger>

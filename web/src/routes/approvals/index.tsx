@@ -3,9 +3,22 @@ import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
+import { Alert } from "@/components/app-ui/alert";
+import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Select } from "@/components/app-ui/select";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+} from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +38,7 @@ function ApprovalsRoute() {
 // package across all versions ("package", shown with a "pkg" suffix), the
 // latter used when the requested version is unknown.
 export function ApprovalVulnBadge({ severity, ids, scope }: { severity?: string; ids?: string[]; scope?: string }) {
-  if (severity === undefined) return <span className="muted">not scanned</span>;
+  if (severity === undefined) return <span className="text-muted-foreground">not scanned</span>;
   const pkgScope = scope === "package";
   const suffix = pkgScope ? " · pkg" : "";
   const scopeTitle = pkgScope ? "package-level scan (requested version unknown)" : "scan for the requested version";
@@ -44,6 +57,12 @@ const SEV_ORDER = ["critical", "high", "medium", "low"] as const;
 export const SEV_COLOR: Record<string, string> = {
   critical: "#e5484d", high: "#f77f00", medium: "#f5a623", low: "#9aa1ac",
 };
+const SEV_BG_CLASS: Record<string, string> = {
+  critical: "bg-[#e5484d]",
+  high: "bg-[#f77f00]",
+  medium: "bg-[#f5a623]",
+  low: "bg-[#9aa1ac]",
+};
 
 // SeverityBar renders the per-level advisory counts as a segmented stacked bar
 // (segment width proportional to count, coloured by severity). size "sm" (the
@@ -60,9 +79,9 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
   severity?: string; counts?: Record<string, number>; scope?: string;
   source?: string; scannedAt?: string | null; size?: "sm" | "lg";
 }) {
-  const [pop, setPop] = useState<{ top: number; left: number } | null>(null);
+  const [pop, setPop] = useState(false);
   // Unscanned has no provenance to show, so it stays a plain muted label.
-  if (severity === undefined) return <span className="muted">not scanned</span>;
+  if (severity === undefined) return <span className="text-muted-foreground">not scanned</span>;
   const c = counts ?? {};
   const total = SEV_ORDER.reduce((n, s) => n + (c[s] ?? 0), 0);
   // Clean = scanned with no advisories (severity "none"), or a scanned result
@@ -71,17 +90,16 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
   const clean = severity === "none" || total === 0;
   const suffix = scope === "package" ? " · pkg" : "";
   const label = size === "lg" ? `${total} vuln${total !== 1 ? "s" : ""}${suffix}` : `${total}`;
-  const open = (e: { currentTarget: HTMLElement }) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    setPop({ top: r.bottom + 8, left: r.left + r.width / 2 });
-  };
-  const segs = SEV_ORDER.map((s) => (c[s] ? (
-    <span key={s} className="h-full min-w-[3px]" style={{ flexGrow: c[s], background: SEV_COLOR[s] }} />
-  ) : null));
+  const open = () => setPop(true);
+  const segs = SEV_ORDER.flatMap((s) =>
+    Array.from({ length: c[s] ?? 0 }, (_, i) => (
+      <span key={`${s}-${i}`} className={cn("h-full min-w-[3px] flex-1", SEV_BG_CLASS[s])} />
+    ))
+  );
   return (
-    <span className={cn("inline-flex cursor-help items-center gap-2 outline-none", size === "lg" && "gap-3")} tabIndex={0}
-      onMouseEnter={open} onMouseLeave={() => setPop(null)}
-      onFocus={open} onBlur={() => setPop(null)}>
+    <span className={cn("relative inline-flex cursor-help items-center gap-2 outline-none", size === "lg" && "gap-3")} tabIndex={0}
+      onMouseEnter={open} onMouseLeave={() => setPop(false)}
+      onFocus={open} onBlur={() => setPop(false)}>
       {clean ? (
         <SeverityBadge severity="none">clean{suffix}</SeverityBadge>
       ) : (
@@ -99,9 +117,8 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
       )}
       {pop && (
         <span
-          className="pointer-events-none fixed z-[200] flex w-max -translate-x-1/2 flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+          className="pointer-events-none absolute top-full left-1/2 z-[200] mt-2 flex w-max -translate-x-1/2 flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
           role="tooltip"
-          style={{ top: pop.top, left: pop.left }}
         >
           <span className="text-xs font-semibold">
             {clean
@@ -114,7 +131,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
             <span className="flex min-w-[150px] flex-col gap-1">
               {SEV_ORDER.map((s) => (
                 <span key={s} className="flex items-center gap-[9px] text-xs leading-[1.2]">
-                  <span className="size-[9px] shrink-0 rounded-[2px]" style={{ background: SEV_COLOR[s] }} />
+                  <span className={cn("size-[9px] shrink-0 rounded-[2px]", SEV_BG_CLASS[s])} />
                   <span className="capitalize text-foreground">{s}</span>
                   <span className="ml-auto font-semibold tabular-nums">{c[s] ?? 0}</span>
                 </span>
@@ -174,14 +191,16 @@ export function Approvals() {
 
   return (
     <>
-      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
-        <h1>Approvals</h1>
+      <PageHeader
+        title="Approvals"
+        actions={
         <Button onClick={() => setPreApproving(true)}>Add decision</Button>
-      </div>
-      <p className="-mt-2 mb-[22px] max-w-[820px] text-[13px] leading-[1.55] text-muted-foreground">
+        }
+      />
+      <PageDescription>
         Quarantine queue for proxied packages. Approve or reject pending requests before a
         proxy serves them, and block specific poisoned versions outright.
-      </p>
+      </PageDescription>
       <ApprovalList
         repo={repo}
         showRepo
@@ -190,7 +209,7 @@ export function Approvals() {
         repoNames={repoOptions}
         repoIds={repoIdByName}
         filters={
-          <Select style={{ width: 200 }} value={repo} onChange={setRepo}
+          <Select className="w-full sm:w-[200px]" value={repo} onChange={setRepo}
             options={[
               { value: "", label: "all repositories" },
               ...repoOptions.map((name) => ({ value: name, label: name })),
@@ -247,76 +266,78 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
 
   return (
     <>
-      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginBottom: 14 }}>
-        <Select style={{ width: 160 }} value={status}
+      <Inline className="mb-4 items-stretch max-sm:flex-col">
+        <Select className="w-full sm:w-[160px]" value={status}
           onChange={(v) => { setStatus(v); setOffset(0); }}
           options={[
             ...STATUSES.map((s) => ({ value: s, label: s })),
             { value: "", label: "all statuses" },
           ]} />
         {filters}
-        <span className="muted">{count} total</span>
+        <span className="flex items-center text-sm text-muted-foreground">{count} total</span>
         {/* Bulk approve is always offered; the repository is chosen inside the
             modal (defaulting to the active filter), so it works from the global
             queue too. Hidden only when there are no proxy repos to target. */}
         {repoNames.length > 0 && (
-          <Button style={{ marginLeft: "auto" }}
+          <Button className="sm:ml-auto"
             disabled={pendingCount === 0}
             title={pendingCount === 0 ? "No pending approvals" : undefined}
             onClick={() => setApprovingAll(true)}>Approve all pending</Button>
         )}
-      </div>
-      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
-      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+      </Inline>
+      {error && <Alert className="mb-4">{error}</Alert>}
+      <Panel>
+        <PanelBody>
         {rows.length === 0 ? (
-          <p className="muted">No {status || "approval"} requests.</p>
+          <p className="m-0 text-sm text-muted-foreground">No {status || "approval"} requests.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg">
-          <table>
-            <thead>
-              <tr>
-                {showRepo && <th>Repository</th>}
-                <th>Package</th><th>Version</th><th>Vuln</th><th>Requested by</th><th>Requests</th>
-                <th>Last requested</th><th>Status</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <TableWrap>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {showRepo && <TableHead>Repository</TableHead>}
+                <TableHead>Package</TableHead><TableHead>Version</TableHead><TableHead>Vuln</TableHead><TableHead>Requested by</TableHead><TableHead>Requests</TableHead>
+                <TableHead>Last requested</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((a) => (
-                <tr key={a.id}>
-                  {showRepo && <td>{repoLink(a.repo_name, repoIds)}</td>}
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{a.package}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{a.last_requested_version || <span className="muted">unknown</span>}</td>
-                  <td><SeverityBar severity={a.vuln_severity} counts={a.vuln_counts} scope={a.vuln_scope} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></td>
-                  <td>{a.requested_by || <span className="muted">anonymous</span>}</td>
-                  <td>{a.request_count}</td>
-                  <td className="muted">{new Date(a.last_requested_at).toLocaleString()}</td>
-                  <td>
+                <TableRow key={a.id}>
+                  {showRepo && <TableCell>{repoLink(a.repo_name, repoIds)}</TableCell>}
+                  <TableCell className="font-mono text-xs">{a.package}</TableCell>
+                  <TableCell className="font-mono text-xs">{a.last_requested_version || <span className="text-muted-foreground">unknown</span>}</TableCell>
+                  <TableCell><SeverityBar severity={a.vuln_severity} counts={a.vuln_counts} scope={a.vuln_scope} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
+                  <TableCell>{a.requested_by || <span className="text-muted-foreground">anonymous</span>}</TableCell>
+                  <TableCell>{a.request_count}</TableCell>
+                  <TableCell className="text-muted-foreground">{new Date(a.last_requested_at).toLocaleString()}</TableCell>
+                  <TableCell>
                     <ApprovalStatusBadge status={a.status} title={a.note ? `${a.decided_by}: ${a.note}` : a.decided_by} />
-                  </td>
-                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-right">
                     <Button
                       render={<Link to="/approvals/$id" params={{ id: String(a.id) }} />}
                       nativeButton={false}
                     >
                       Review
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-          </div>
+            </TableBody>
+          </Table>
+          </TableWrap>
         )}
         {count > PAGE && (
-          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12 }}>
+          <Inline className="mt-3 max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
             <Button variant="outline" disabled={offset + PAGE >= count}
               onClick={() => setOffset(offset + PAGE)}>Older</Button>
-            <span className="muted">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
-          </div>
+            <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
+          </Inline>
         )}
-      </div>
+        </PanelBody>
+      </Panel>
       {approvingAll && (
         <ApproveAllModal
           repoNames={repoNames}
@@ -370,33 +391,37 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
   const single = repoNames.length === 1;
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
-        <h2>Approve all pending</h2>
-        <form onSubmit={submit}>
-          <label>Proxy repository</label>
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="m-0 mb-4 text-base font-semibold">Approve all pending</h2>
+        <form onSubmit={submit} className="space-y-4">
+          <Field>
+          <FieldLabel>Proxy repository</FieldLabel>
           {single ? (
-            <input value={repo} disabled />
+            <Input value={repo} disabled />
           ) : (
             <Select value={repo} onChange={setRepo}
               options={repoNames.map((name) => ({ value: name, label: name }))} />
           )}
-          <p className="muted" style={{ marginTop: 10 }}>
+          </Field>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {pending === null
               ? "Counting pending requests…"
               : pending === 0
                 ? `No pending requests on ${repo}.`
                 : `All ${pending} pending ${pending === 1 ? "request" : "requests"} on ${repo} will be approved and served (age policy still applies). This cannot be undone in bulk.`}
           </p>
-          <label>Note (optional)</label>
-          <input value={note} autoFocus placeholder="reason for the record"
+          <Field>
+          <FieldLabel>Note (optional)</FieldLabel>
+          <Input value={note} autoFocus placeholder="reason for the record"
             onChange={(e) => setNote(e.target.value)} />
-          {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
-          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+          </Field>
+          {error && <Alert>{error}</Alert>}
+          <Inline className="justify-end max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={busy || !repo || !pending}>
               {busy ? "Approving…" : pending ? `Approve ${pending}` : "Approve"}
             </Button>
-          </div>
+          </Inline>
         </form>
       </div>
     </div>
@@ -431,21 +456,23 @@ export function ReviewModal({ row, onDone, onCancel }: {
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
-        <h2>Review "{row.package}"</h2>
-        <p className="muted">
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="m-0 mb-3 text-base font-semibold">Review "{row.package}"</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Approve to serve all versions from {row.repo_name} (age policy still
           applies); reject to block the package, including already-cached content.
         </p>
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginBottom: 12 }}>
-          <span className="muted">Vulnerabilities:</span>
+        <Inline className="mb-3 max-sm:flex-col max-sm:items-stretch">
+          <span className="text-sm text-muted-foreground">Vulnerabilities:</span>
           <ApprovalVulnBadge severity={row.vuln_severity} ids={row.vuln_ids} scope={row.vuln_scope} />
-        </div>
-        <label>Note (optional)</label>
-        <input value={note} autoFocus placeholder="reason for the record"
+        </Inline>
+        <Field>
+        <FieldLabel>Note (optional)</FieldLabel>
+        <Input value={note} autoFocus placeholder="reason for the record"
           onChange={(e) => setNote(e.target.value)} />
-        {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+        </Field>
+        {error && <Alert className="mt-4">{error}</Alert>}
+        <Inline className="mt-4 justify-end max-sm:flex-col max-sm:items-stretch">
           <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
           {row.status !== "rejected" && (
             <Button variant="destructive" type="button" disabled={busy !== null}
@@ -455,7 +482,7 @@ export function ReviewModal({ row, onDone, onCancel }: {
             <Button type="button" disabled={busy !== null}
               onClick={() => decide("approve")}>{busy === "approve" ? "Approving…" : "Approve"}</Button>
           )}
-        </div>
+        </Inline>
       </div>
     </div>
   );
@@ -502,56 +529,58 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
 
   return (
     <>
-      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0" style={{ marginTop: 32 }}>
-        <h2 style={{ marginBottom: 0 }}>Version denies</h2>
+      <div className="mb-4 mt-8 flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+        <h2 className="m-0 text-base font-semibold">Version denies</h2>
         <Button variant="destructive" onClick={() => setAdding(true)}>Deny version</Button>
       </div>
-      <p className="muted" style={{ marginTop: 4 }}>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         Blocks one exact version even when the package is approved. Applies
         immediately, including already-cached copies.
       </p>
-      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
-      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
+      {error && <Alert className="mb-4">{error}</Alert>}
+      <Panel>
+        <PanelBody>
         {rows.length === 0 ? (
-          <p className="muted">No denied versions.</p>
+          <p className="m-0 text-sm text-muted-foreground">No denied versions.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg">
-          <table>
-            <thead>
-              <tr>
-                {showRepo && <th>Repository</th>}
-                <th>Package</th><th>Version</th><th>Reason</th>
-                <th>Denied by</th><th>Denied at</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <TableWrap>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {showRepo && <TableHead>Repository</TableHead>}
+                <TableHead>Package</TableHead><TableHead>Version</TableHead><TableHead>Reason</TableHead>
+                <TableHead>Denied by</TableHead><TableHead>Denied at</TableHead><TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((d) => (
-                <tr key={d.id}>
-                  {showRepo && <td>{repoLink(d.repo_name, repoIds)}</td>}
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{d.package}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{d.version}</td>
-                  <td>{d.reason || <span className="muted">none</span>}</td>
-                  <td>{d.created_by || <span className="muted">unknown</span>}</td>
-                  <td className="muted">{new Date(d.created_at).toLocaleString()}</td>
-                  <td style={{ textAlign: "right" }}>
+                <TableRow key={d.id}>
+                  {showRepo && <TableCell>{repoLink(d.repo_name, repoIds)}</TableCell>}
+                  <TableCell className="font-mono text-xs">{d.package}</TableCell>
+                  <TableCell className="font-mono text-xs">{d.version}</TableCell>
+                  <TableCell>{d.reason || <span className="text-muted-foreground">none</span>}</TableCell>
+                  <TableCell>{d.created_by || <span className="text-muted-foreground">unknown</span>}</TableCell>
+                  <TableCell className="text-muted-foreground">{new Date(d.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="text-right">
                     <Button variant="outline" onClick={() => setRemoving(d)}>Remove</Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-          </div>
+            </TableBody>
+          </Table>
+          </TableWrap>
         )}
         {count > PAGE && (
-          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12 }}>
+          <Inline className="mt-3 max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
             <Button variant="outline" disabled={offset + PAGE >= count}
               onClick={() => setOffset(offset + PAGE)}>Older</Button>
-            <span className="muted">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
-          </div>
+            <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
+          </Inline>
         )}
-      </div>
+        </PanelBody>
+      </Panel>
       {adding && (
         <DenyVersionModal
           repoNames={repoNames}
@@ -600,32 +629,40 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
-        <h2>Deny version</h2>
-        <p className="muted">
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="m-0 mb-3 text-base font-semibold">Deny version</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Only this exact version is blocked; other versions keep flowing.
           Cached copies stop being served immediately.
         </p>
-        <form onSubmit={submit}>
-          <label>Proxy repository</label>
+        <form onSubmit={submit} className="space-y-4">
+          <Field>
+          <FieldLabel>Proxy repository</FieldLabel>
           <Select value={repo} onChange={setRepo}
             options={repoNames.map((name) => ({ value: name, label: name }))} />
-          <label>Package</label>
-          <input value={pkg} placeholder="lodash, @scope/pkg, group:artifact…"
+          </Field>
+          <Field>
+          <FieldLabel>Package</FieldLabel>
+          <Input value={pkg} placeholder="lodash, @scope/pkg, group:artifact…"
             onChange={(e) => setPkg(e.target.value)} />
-          <label>Version</label>
-          <input value={version} placeholder="4.17.99 (go modules: v1.2.3)"
+          </Field>
+          <Field>
+          <FieldLabel>Version</FieldLabel>
+          <Input value={version} placeholder="4.17.99 (go modules: v1.2.3)"
             onChange={(e) => setVersion(e.target.value)} />
-          <label>Reason (optional)</label>
-          <input value={reason} placeholder="CVE, IOC, incident reference…"
+          </Field>
+          <Field>
+          <FieldLabel>Reason (optional)</FieldLabel>
+          <Input value={reason} placeholder="CVE, IOC, incident reference…"
             onChange={(e) => setReason(e.target.value)} />
-          {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
-          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+          </Field>
+          {error && <Alert>{error}</Alert>}
+          <Inline className="justify-end max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button variant="destructive" type="submit" disabled={!repo || !pkg.trim() || !version.trim()}>
               Deny
             </Button>
-          </div>
+          </Inline>
         </form>
       </div>
     </div>
@@ -657,28 +694,36 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
-      <div className="w-[380px] max-w-[90vw] rounded-[10px] border border-border bg-card p-[22px] shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
-        <h2>Add decision</h2>
-        <form onSubmit={submit}>
-          <label>Proxy repository</label>
+      <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="m-0 mb-4 text-base font-semibold">Add decision</h2>
+        <form onSubmit={submit} className="space-y-4">
+          <Field>
+          <FieldLabel>Proxy repository</FieldLabel>
           <Select value={repo} onChange={setRepo}
             options={repoNames.map((name) => ({ value: name, label: name }))} />
-          <label>Package</label>
-          <input value={pkg} placeholder="lodash, @scope/pkg, group:artifact…"
+          </Field>
+          <Field>
+          <FieldLabel>Package</FieldLabel>
+          <Input value={pkg} placeholder="lodash, @scope/pkg, group:artifact…"
             onChange={(e) => setPkg(e.target.value)} />
-          <label>Decision</label>
+          </Field>
+          <Field>
+          <FieldLabel>Decision</FieldLabel>
           <Select value={decision} onChange={setDecision}
             options={[
               { value: "approved", label: "approved" },
               { value: "rejected", label: "rejected" },
             ]} />
-          <label>Note (optional)</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} />
-          {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
-          <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ justifyContent: "flex-end", marginTop: 18 }}>
+          </Field>
+          <Field>
+          <FieldLabel>Note (optional)</FieldLabel>
+          <Input value={note} onChange={(e) => setNote(e.target.value)} />
+          </Field>
+          {error && <Alert>{error}</Alert>}
+          <Inline className="justify-end max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={!repo || !pkg.trim()}>Save</Button>
-          </div>
+          </Inline>
         </form>
       </div>
     </div>

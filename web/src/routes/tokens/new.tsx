@@ -222,14 +222,16 @@ export function TokenNew() {
                 {scopes.map((s, i) => (
                   <Badge key={`${s.repo_pattern}-${i}`} className="font-mono">
                     {s.repo_pattern}: {s.actions.join(",")}
-                    <button
-                      className="ml-1.5 inline-flex cursor-pointer items-center text-muted-foreground hover:text-foreground"
+                    <Button
+                      className="-mr-1 ml-1 size-4 rounded-full text-muted-foreground hover:bg-background/40 hover:text-foreground"
+                      size="icon-xs"
+                      variant="ghost"
                       type="button"
                       title="Remove permission"
                       onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}
                     >
                       <X className="size-3" aria-hidden="true" />
-                    </button>
+                    </Button>
                   </Badge>
                 ))}
                   {scopes.length === 0 && (

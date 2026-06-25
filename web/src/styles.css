@@ -239,37 +239,3 @@ a:hover { color: var(--accent); text-decoration: underline; }
     animation: none;
   }
 }
-h1 { font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: 0; margin: 0 0 18px; }
-h2 { font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: 0; margin: 0 0 12px; }
-
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--border); }
-th {
-  color: var(--subtle); font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: 0;
-  background: color-mix(in oklch, var(--panel) 88%, #000 12%);
-}
-tbody tr { transition: background 0.12s ease; }
-tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
-tbody tr:last-child td { border-bottom: 0; }
-
-label:not([data-slot]) { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 5px; }
-
-input, textarea {
-  width: 100%; padding: 8px 10px; background: var(--input-bg); color: var(--text);
-  border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
-}
-input:hover, textarea:hover { border-color: var(--border-strong); }
-input:focus, textarea:focus {
-  outline: none; border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent);
-}
-/* Read-only fields (e.g. identity-provider-owned username/email): shown for
-   reference, visually muted to signal they cannot be edited here. */
-input[readonly], textarea[readonly] {
-  color: var(--muted); background: transparent; cursor: default;
-}
-input[readonly]:focus, textarea[readonly]:focus { border-color: var(--border); }
-textarea { font-family: inherit; resize: vertical; }
-
-.muted { color: var(--muted); }

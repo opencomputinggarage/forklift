@@ -167,18 +167,8 @@ export function Repositories({ me }: { me: Me }) {
       <Panel>
         <PanelBody>
         <Table className="table-fixed">
-          <colgroup>
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "31%" }} />
-            <col style={{ width: "9%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "11%" }} />
-            <col style={{ width: "9%" }} />
-          </colgroup>
           <TableHeader>
-            <TableRow><TableHead>Name</TableHead><TableHead>Format</TableHead><TableHead>Type</TableHead><TableHead>Endpoint (forklift)</TableHead><TableHead>Artifacts</TableHead><TableHead>Size</TableHead><TableHead>Upstream</TableHead><TableHead>Security</TableHead></TableRow>
+            <TableRow><TableHead className="w-[16%]">Name</TableHead><TableHead className="w-[8%]">Format</TableHead><TableHead className="w-[8%]">Type</TableHead><TableHead className="w-[31%]">Endpoint (forklift)</TableHead><TableHead className="w-[9%]">Artifacts</TableHead><TableHead className="w-[8%]">Size</TableHead><TableHead className="w-[11%]">Upstream</TableHead><TableHead className="w-[9%]">Security</TableHead></TableRow>
           </TableHeader>
           <TableBody>
             {topLevel.flatMap((r) => {
@@ -190,10 +180,10 @@ export function Repositories({ me }: { me: Me }) {
                   <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                     {isGroup ? (
                       <span className="flex min-w-0 items-center gap-1">
-                        <button type="button" className="px-0.5 text-xs text-muted-foreground hover:text-foreground" aria-expanded={open}
+                        <Button type="button" variant="ghost" size="icon-xs" className="size-5 text-muted-foreground hover:text-foreground" aria-expanded={open}
                           aria-label={open ? "Collapse group" : "Expand group"} onClick={() => toggle(r.id)}>
                           {open ? "▾" : "▸"}
-                        </button>
+                        </Button>
                         {nameNode(r.id, r.name)}
                         <span className="text-xs text-muted-foreground">({members.length})</span>
                       </span>

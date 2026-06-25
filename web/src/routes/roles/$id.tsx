@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
+import { LockKeyhole, X } from "lucide-react";
 import { api, Me, Role, User } from "../../api";
 import { useAuth } from "../../authContext";
 import { ConfirmModal } from "../../components/confirm-modal";
 import { Combobox } from "../../components/combobox";
+import { Alert } from "@/components/app-ui/alert";
+import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { CountBadge, StateBadge } from "@/components/app-ui/status-badge";
 import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
 import { SourceBadge } from "@/components/app-ui/source-badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrap,
+} from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/roles/$id")({
   component: RoleModifyRoute,
@@ -43,8 +56,8 @@ export function RoleModify({ me }: { me: Me }) {
       .catch((e) => setError(e.message));
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [roleId]);
 
-  if (error && !role) return <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>;
-  if (!role) return <div>Loading…</div>;
+  if (error && !role) return <Alert className="my-2.5">{error}</Alert>;
+  if (!role) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   const run = (p: Promise<unknown>) => {
     setError("");
@@ -59,30 +72,29 @@ export function RoleModify({ me }: { me: Me }) {
 
   return (
     <>
-      <div className="mb-[18px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start [&_h1]:m-0">
-        <h1>{role.name}</h1>
+      <PageHeader
+        title={role.name}
+        actions={
         <Button render={<Link to="/roles" />} nativeButton={false} variant="outline">
           Back to roles
         </Button>
-      </div>
-      {role.description && <p className="-mt-2 mb-[22px] max-w-[820px] text-[13px] leading-[1.55] text-muted-foreground">{role.description}</p>}
+        }
+      />
+      {role.description && <PageDescription>{role.description}</PageDescription>}
       {role.managed && (
-        <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]" style={{ borderColor: "var(--accent)" }}>
-          <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-              style={{ color: "var(--accent)" }}>
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
+        <Panel className="border-primary/70">
+          <PanelBody>
+          <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
+            <LockKeyhole className="size-4 text-primary" aria-hidden="true" />
             Managed role
           </h2>
-          <p className="muted" style={{ margin: 0 }}>
+          <p className="m-0 text-sm leading-relaxed text-muted-foreground">
             This role was configured by a Forklift administrator in the declarative RBAC policy so it cannot be edited here. To change its permissions or delete it ask an administrator to update the policy file and restart forklift.
           </p>
-        </div>
+          </PanelBody>
+        </Panel>
       )}
-      {error && <div className="my-2.5 rounded-[var(--radius)] border border-[color-mix(in_oklch,var(--danger)_48%,var(--border))] bg-[color-mix(in_oklch,var(--panel-2)_88%,var(--danger)_12%)] px-[11px] py-[9px] text-foreground">{error}</div>}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
       <PermissionsPanel role={role} run={run} canWrite={editable} />
       <AssignedUsersPanel members={members} />
@@ -95,27 +107,29 @@ export function RoleModify({ me }: { me: Me }) {
 // itself is managed on each user's detail page, so this is read-only with links.
 function AssignedUsersPanel({ members }: { members: User[] }) {
   return (
-      <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-4 text-base font-semibold">
         Assigned users <CountBadge className="ml-1.5">{members.length}</CountBadge>
       </h2>
       {members.length === 0
-        ? <p className="muted">No users have this role. Assign it from a user's detail page.</p>
+        ? <p className="m-0 text-sm text-muted-foreground">No users have this role. Assign it from a user's detail page.</p>
         : (
           // Same column structure and order as the Users page; the username
           // links to that user's detail page.
-          <table>
-            <thead>
-              <tr><th>Username</th><th>Source</th><th>Email</th><th>Roles</th><th>Status</th><th>Last login</th></tr>
-            </thead>
-            <tbody>
+          <TableWrap>
+          <Table>
+            <TableHeader>
+              <TableRow><TableHead>Username</TableHead><TableHead>Source</TableHead><TableHead>Email</TableHead><TableHead>Roles</TableHead><TableHead>Status</TableHead><TableHead>Last login</TableHead></TableRow>
+            </TableHeader>
+            <TableBody>
               {members.map((u) => (
-                <tr key={u.id}>
-                  <td style={{ whiteSpace: "nowrap" }}><Link to="/users/$id" params={{ id: String(u.id) }}>{u.username}</Link></td>
-                  <td><SourceBadge source={u.source} /></td>
-                  <td className="muted">{u.email || "-"}</td>
-                  <td>
-                    <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
+                <TableRow key={u.id}>
+                  <TableCell className="whitespace-nowrap"><Link to="/users/$id" params={{ id: String(u.id) }}>{u.username}</Link></TableCell>
+                  <TableCell><SourceBadge source={u.source} /></TableCell>
+                  <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
+                  <TableCell>
+                    <Inline className="flex-wrap gap-1.5">
                       {u.roles.map((r) => (
                         <RoleBadge
                           key={r.id}
@@ -124,23 +138,25 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                           {r.name}
                         </RoleBadge>
                       ))}
-                      {u.roles.length === 0 && <span className="muted">none</span>}
-                    </div>
-                  </td>
-                  <td>
+                      {u.roles.length === 0 && <span className="text-muted-foreground">none</span>}
+                    </Inline>
+                  </TableCell>
+                  <TableCell>
                     {u.disabled
                       ? <StateBadge state="disabled">disabled</StateBadge>
                       : <StateBadge state="active">active</StateBadge>}
-                  </td>
-                  <td className="muted" style={{ whiteSpace: "nowrap" }} title={u.last_login_at ?? undefined}>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-muted-foreground" title={u.last_login_at ?? undefined}>
                     {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
+          </TableWrap>
         )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -169,35 +185,46 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
   };
 
   return (
-    <div className="mb-[18px] rounded-[10px] border border-border bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]">
-      <h2>Permissions</h2>
-      <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ flexWrap: "wrap", gap: 6 }}>
+    <Panel>
+      <PanelBody>
+      <h2 className="m-0 mb-4 text-base font-semibold">Permissions</h2>
+      <Inline className="flex-wrap gap-1.5">
         {role.permissions.map((p) => (
-          <PermissionBadge key={p.id}>
-            {p.repo_pattern}: {p.actions.join(",")}
+          <PermissionBadge key={p.id} className="gap-1">
+            <span>{p.repo_pattern}: {p.actions.join(",")}</span>
             {canWrite && (
-              <a style={{ marginLeft: 6, cursor: "pointer" }} title="Remove permission"
-                onClick={() => run(api.deletePermission(role.id, p.id))}>×</a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="-mr-1 size-4 rounded-full text-muted-foreground hover:bg-background/40 hover:text-foreground"
+                title="Remove permission"
+                onClick={() => run(api.deletePermission(role.id, p.id))}
+              >
+                <X className="size-3" aria-hidden="true" />
+                <span className="sr-only">Remove permission</span>
+              </Button>
             )}
           </PermissionBadge>
         ))}
-        {role.permissions.length === 0 && <span className="muted">No permissions granted.</span>}
-      </div>
+        {role.permissions.length === 0 && <span className="text-sm text-muted-foreground">No permissions granted.</span>}
+      </Inline>
       {canWrite && (
-        <div className="flex items-center gap-2.5 max-[760px]:flex-col max-[760px]:items-stretch" style={{ marginTop: 12, flexWrap: "wrap", gap: 8 }}>
-          <Combobox style={{ width: 200 }} value={pattern} onChange={setPattern}
+        <Inline className="mt-4 flex-wrap items-stretch gap-2 max-sm:flex-col">
+          <Combobox className="w-full sm:w-[200px]" value={pattern} onChange={setPattern}
             options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
           {ACTIONS.map((a) => (
-            <label key={a} className="flex items-center gap-2 [&_input]:w-auto" style={{ margin: 0, fontSize: 12 }}>
-              <input type="checkbox" checked={actions.includes(a)} onChange={() => toggle(a)} />
+            <label key={a} className="flex items-center gap-2 text-xs">
+              <Checkbox checked={actions.includes(a)} onCheckedChange={() => toggle(a)} />
               <span>{a}</span>
             </label>
           ))}
           <Button variant="outline" type="button"
             disabled={!pattern.trim() || actions.length === 0} onClick={add}>Add</Button>
-        </div>
+        </Inline>
       )}
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -214,9 +241,10 @@ function DangerPanel({ role, onDeleted, onError }: {
     }
   };
   return (
-    <div className="mb-[18px] rounded-[10px] border border-destructive bg-[linear-gradient(180deg,color-mix(in_oklch,var(--panel)_96%,#fff_4%),var(--panel))] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] [&_h2]:text-destructive" style={{ marginTop: 18 }}>
-      <h2>Danger zone</h2>
-      <p className="muted">Users and group mappings holding this role lose its permissions immediately. This cannot be undone.</p>
+    <Panel className="border-destructive/70">
+      <PanelBody>
+      <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
+      <p className="text-sm leading-relaxed text-muted-foreground">Users and group mappings holding this role lose its permissions immediately. This cannot be undone.</p>
       <Button variant="destructive" type="button" onClick={() => setConfirm(true)}>Delete role</Button>
       <ConfirmModal
         open={confirm}
@@ -227,6 +255,7 @@ function DangerPanel({ role, onDeleted, onError }: {
         onConfirm={() => { setConfirm(false); del(); }}
         onCancel={() => setConfirm(false)}
       />
-    </div>
+      </PanelBody>
+    </Panel>
   );
 }

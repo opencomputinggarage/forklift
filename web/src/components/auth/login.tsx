@@ -18,6 +18,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function Login({ onLogin }: { onLogin: () => void | Promise<void> }) {
@@ -46,6 +47,7 @@ function LoginForm({
   className,
   ...props
 }: ComponentProps<"div"> & { onLogin: () => void | Promise<void> }) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -79,10 +81,10 @@ function LoginForm({
       <Card className="w-full min-w-0 border-border/90 bg-card/95 text-card-foreground shadow-2xl shadow-black/30 backdrop-blur">
         <CardHeader className="gap-2 px-5 pt-5 sm:px-6 sm:pt-6">
           <CardTitle className="text-2xl font-semibold tracking-normal">
-            Sign in to forklift
+            {t("login.title")}
           </CardTitle>
           <CardDescription className="leading-6 break-words">
-            Manage repository policies, approvals, and scoped tokens.
+            {t("login.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">
@@ -90,12 +92,12 @@ function LoginForm({
             <FieldGroup className="gap-5">
               <Field data-invalid={Boolean(error)}>
                 <FieldLabel htmlFor="username">
-                  Username
+                  {t("login.username")}
                 </FieldLabel>
                 <Input
                   id="username"
                   className="h-11 border-border bg-background/70"
-                  placeholder="Username"
+                  placeholder={t("login.username")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
@@ -106,13 +108,13 @@ function LoginForm({
               </Field>
               <Field data-invalid={Boolean(error)}>
                 <FieldLabel htmlFor="password">
-                  Password
+                  {t("login.password")}
                 </FieldLabel>
                 <Input
                   id="password"
                   className="h-11 border-border bg-background/70"
                   type="password"
-                  placeholder="Password"
+                  placeholder={t("login.password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
@@ -124,11 +126,11 @@ function LoginForm({
               <Field className="gap-3 pt-1">
                 <Button className="h-11 w-full" disabled={busy} type="submit">
                   {busy ? (
-                    "Signing in..."
+                    t("login.signingIn")
                   ) : (
                     <>
                       <KeyRound data-icon="inline-start" aria-hidden="true" />
-                      Sign in
+                      {t("login.signIn")}
                     </>
                   )}
                 </Button>
@@ -139,11 +141,11 @@ function LoginForm({
                     variant="outline"
                     className="h-11 w-full border-border bg-background/70"
                   >
-                    Sign in with Keycloak
+                    {t("login.keycloak")}
                   </Button>
                 )}
                 <FieldDescription className="text-center">
-                  Access is limited by your assigned role.
+                  {t("login.accessNote")}
                 </FieldDescription>
               </Field>
             </FieldGroup>

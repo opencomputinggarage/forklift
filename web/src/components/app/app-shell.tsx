@@ -8,9 +8,11 @@ import { Logo } from "@/components/app/logo";
 import { Button } from "@/components/ui/button";
 import { openApiQueryOptions } from "@/generated/openapi-query-options";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function AppShell() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const meQueryOptions = openApiQueryOptions.getMe();
   const { data: me, isLoading } = useQuery({
@@ -21,7 +23,7 @@ export function AppShell() {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: meQueryOptions.queryKey });
 
-  if (isLoading) return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
+  if (isLoading) return <div className="flex min-h-screen w-full items-center justify-center">{t("common.loading")}</div>;
 
   if (!me?.authenticated) {
     return <Login onLogin={refresh} />;
@@ -42,6 +44,7 @@ export function AppShell() {
 }
 
 function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const canApprove = Boolean(me.admin || me.approver);
   const { data: repoCount = null } = useQuery({
@@ -54,7 +57,9 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
     enabled: canApprove,
   });
   const { data: version = null } = useQuery({
-    ...openApiQueryOptions.getVersion(),
+    queryKey: openApiQueryOptions.getVersion().queryKey,
+    queryFn: () => api.version().catch(() => null),
+    retry: false,
     staleTime: Infinity,
   });
 
@@ -87,33 +92,36 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
       </div>
       <nav className="-mx-1 flex flex-col gap-1 px-1 max-lg:flex-row max-lg:overflow-x-auto max-lg:pb-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden">
         <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/repositories">
-          <span>Repositories</span>
+          <span>{t("nav.repositories")}</span>
           {repoCount !== null && <Badge className="ml-2 min-w-5 justify-center px-1.5 lg:ml-auto">{repoCount}</Badge>}
         </Link>
-        <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/tokens">Access Tokens</Link>
+        <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/tokens">{t("nav.tokens")}</Link>
         {canApprove && (
           <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/approvals">
-            <span>Approvals</span>
+            <span>{t("nav.approvals")}</span>
             {pendingCount !== null && pendingCount > 0 && <Badge className="ml-2 min-w-5 justify-center bg-primary text-primary-foreground lg:ml-auto">{pendingCount}</Badge>}
           </Link>
         )}
-        {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/users">Users</Link>}
-        {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/roles">Roles</Link>}
-        {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/notifications">Notifications</Link>}
-        {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/ha">HA Status</Link>}
+        {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/users">{t("nav.users")}</Link>}
+        {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/roles">{t("nav.roles")}</Link>}
+        {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/notifications">{t("nav.notifications")}</Link>}
+        {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/ha">{t("nav.ha")}</Link>}
+        <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/settings">{t("nav.settings")}</Link>
       </nav>
       <div className="flex-1" />
       <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3 max-lg:mt-2 max-lg:flex-row max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:overflow-x-auto max-lg:pt-2 max-sm:flex-wrap max-sm:items-stretch">
-        <a className={navLinkClass()} href="/api-docs" target="_blank" rel="noreferrer">API Docs</a>
+        <a className={navLinkClass()} href="/api-docs" target="_blank" rel="noreferrer">{t("nav.apiDocs")}</a>
         <div className="min-w-0 px-2 text-xs text-muted-foreground max-lg:flex max-lg:items-center max-lg:gap-2 max-lg:px-0 max-sm:w-full max-sm:justify-between">
-          <div className="truncate">{me.username} {me.admin ? "(admin)" : me.auditor ? "(auditor)" : ""}</div>
+          <div className="truncate">
+            {me.username} {me.admin ? `(${t("role.admin")})` : me.auditor ? `(${t("role.auditor")})` : ""}
+          </div>
           <Button
             className="mt-2 w-full max-lg:mt-0 max-lg:w-auto max-sm:shrink-0"
             variant="outline"
             type="button"
             onClick={() => { onLogout(); navigate({ to: "/" }); }}
           >
-            Log Out
+            {t("nav.logout")}
           </Button>
         </div>
       </div>

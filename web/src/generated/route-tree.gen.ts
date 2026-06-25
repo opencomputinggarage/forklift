@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './../routes/__root'
+import { Route as SettingsRouteImport } from './../routes/settings'
 import { Route as HaRouteImport } from './../routes/ha'
 import { Route as SplatRouteImport } from './../routes/$'
 import { Route as IndexRouteImport } from './../routes/index'
@@ -33,6 +34,11 @@ import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositorie
 import { Route as RepositoriesIdTabRouteImport } from './../routes/repositories/$id/$tab'
 import { Route as UsersIdTokensNewRouteImport } from './../routes/users/$id/tokens/new'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HaRoute = HaRouteImport.update({
   id: '/ha',
   path: '/ha',
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
+  '/settings': typeof SettingsRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
+  '/settings': typeof SettingsRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
+  '/settings': typeof SettingsRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/ha'
+    | '/settings'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/ha'
+    | '/settings'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/ha'
+    | '/settings'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -303,6 +315,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   HaRoute: typeof HaRoute
+  SettingsRoute: typeof SettingsRoute
   ApprovalsIdRoute: typeof ApprovalsIdRoute
   NotificationsIdRoute: typeof NotificationsIdRoute
   NotificationsNewRoute: typeof NotificationsNewRoute
@@ -323,6 +336,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ha': {
       id: '/ha'
       path: '/ha'
@@ -518,6 +538,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   HaRoute: HaRoute,
+  SettingsRoute: SettingsRoute,
   ApprovalsIdRoute: ApprovalsIdRoute,
   NotificationsIdRoute: NotificationsIdRoute,
   NotificationsNewRoute: NotificationsNewRoute,

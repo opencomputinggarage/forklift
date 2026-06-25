@@ -54,16 +54,16 @@ export function RepositoryDetail({ me }: { me: Me }) {
   if (!repo) return error ? <Alert>{error}</Alert> : <div className="text-sm text-muted-foreground">Loading…</div>;
 
   // Tabs follow Nexus-style privileges: every authenticated reader can browse
-  // Artifacts; Approvals needs the approve action; Permissions, Audit and
-  // Settings are for admins and auditors (auditors see them read-only). Direct
-  // URL access to a hidden tab redirects to Artifacts.
+  // Artifacts; Approvals needs the approve action; Permissions, Audit, Security
+  // and Settings are for admins and auditors (auditors see them read-only).
+  // Direct URL access to a hidden tab redirects to Artifacts.
   const gated = repo.type === "proxy" && Boolean(repo.config.approval?.enabled);
   const canApprove = me.admin || me.approver;
   const canAdminView = me.admin || me.auditor;
   const tabs = [
     { key: "artifacts", label: "Artifacts" },
     ...(repo.type === "proxy" && canApprove ? [{ key: "approvals", label: "Approvals" }] : []),
-    ...(canAdminView ? [{ key: "permissions", label: "Permissions" }, { key: "audit", label: "Audit" }, { key: "settings", label: "Settings" }] : []),
+    ...(canAdminView ? [{ key: "permissions", label: "Permissions" }, { key: "audit", label: "Audit" }, { key: "security", label: "Security" }, { key: "settings", label: "Settings" }] : []),
   ];
 
   if (!tabs.some((t) => t.key === tab)) {
@@ -112,6 +112,7 @@ export function RepositoryDetail({ me }: { me: Me }) {
           <VersionDenies repo={repo.name} showRepo={false} repoNames={[repo.name]} />
         </>
       )}
+      {tab === "security" && <Security repo={repo} setRepo={setRepo} canWrite={!!me.admin} />}
       {tab === "settings" && <Settings repo={repo} setRepo={setRepo} canWrite={!!me.admin} />}
     </>
   );
@@ -358,31 +359,6 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [purged, setPurged] = useState<number | null>(null);
 
-  // Receivers offered as approval-notification targets (managed under
-  // Notifications). Loaded for proxy repos, where the approval gate runs.
-  const [receivers, setReceivers] = useState<Receiver[]>([]);
-  useEffect(() => {
-    if (repo.type === "proxy") api.listReceivers().then(setReceivers).catch(() => setReceivers([]));
-  }, [repo.type]);
-  // Sample-alarm preview / send state for the approval notification panel.
-  const [sampleBusy, setSampleBusy] = useState<"" | "preview" | "send">("");
-  const [sampleErr, setSampleErr] = useState("");
-  const [preview, setPreview] = useState<{ payload: Record<string, string>; receivers: { name: string; exists: boolean; enabled: boolean }[] } | null>(null);
-  const [sampleResults, setSampleResults] = useState<{ name: string; ok: boolean; error?: string }[] | null>(null);
-
-  const doPreview = async () => {
-    setSampleErr(""); setSampleResults(null); setSampleBusy("preview");
-    try { setPreview(await api.previewRepoSample(repo.id)); }
-    catch (e) { setSampleErr((e as Error).message); }
-    finally { setSampleBusy(""); }
-  };
-  const doSendSample = async () => {
-    setSampleErr(""); setPreview(null); setSampleBusy("send");
-    try { setSampleResults((await api.sendRepoSample(repo.id)).results); }
-    catch (e) { setSampleErr((e as Error).message); }
-    finally { setSampleBusy(""); }
-  };
-
   const purge = async () => {
     setError("");
     setPurged(null);
@@ -413,26 +389,6 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   };
 
   const cache = repo.config.cache;
-  const age = repo.config.age_policy;
-  // Older repos may predate the approval config section.
-  const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
-  const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
-  const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
-  // Source-IP ACL applies to every repository type (including group entry).
-  const ipacl = repo.config.ip_acl ?? { enabled: false, allow: [] };
-  // Approval-notification receivers selected for this repository.
-  const selectedReceivers = repo.config.notify?.receivers ?? [];
-  const setSelectedReceivers = (next: string[]) =>
-    setRepo({ ...repo, config: { ...repo.config, notify: { ...repo.config.notify, receivers: next } } });
-
-  // Resolve each allow entry to a range/count for the breakdown shown below the
-  // textarea, and a running total (capped at the safe-integer range).
-  const aclRows = (ipacl.allow ?? []).map((entry) => ({ entry, info: aclEntryInfo(entry) }));
-  let aclTotal = 0n;
-  for (const { info } of aclRows) {
-    if (info.kind === "single") aclTotal += 1n;
-    else if (info.kind === "range") aclTotal += info.count;
-  }
 
   return (
     <>
@@ -475,50 +431,6 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
         ) : (
           <StateBadge state={repo.disabled ? "offline" : "online"}>{repo.disabled ? "Offline" : "Online"}</StateBadge>
         )}
-        </PanelBody>
-      </Panel>
-
-      <h2 className="mt-6 mb-3 border-b border-border pb-[7px] text-xs font-semibold text-muted-foreground uppercase tracking-normal">Access control</h2>
-
-      <Panel>
-        <PanelBody>
-        <h2 className="m-0 mb-4 text-base font-semibold">Source IP ACL <span className="text-xs font-normal text-muted-foreground">· allow list</span></h2>
-        <Toggle
-          checked={ipacl.enabled}
-          label="Restrict access by client source IP"
-          onChange={(v) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, enabled: v } } })}
-        />
-        <Field className="mt-4">
-          <FieldLabel>Allowed IPs / CIDRs (one per line)</FieldLabel>
-          <LinesInput rows={4} placeholder={"10.0.0.0/16\n203.0.113.5\n2001:db8::/32"}
-            value={ipacl.allow ?? []}
-            onChange={(allow) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, allow } } })} />
-        </Field>
-        {aclRows.length > 0 && (
-          <div className="mt-2.5 flex flex-col gap-1">
-            {aclRows.map(({ entry, info }, i) => (
-              <div key={`${entry}-${i}`} className="flex flex-wrap items-baseline gap-2 text-xs">
-                <code className="font-mono text-foreground">{entry}</code>
-                {info.kind === "invalid" && <span className="text-destructive">invalid IP/CIDR</span>}
-                {info.kind === "single" && <span className="text-muted-foreground">single host · 1 address</span>}
-                {info.kind === "range" && (
-                  <span className="text-muted-foreground">{info.first} – {info.last} · {fmtCount(info.count, info.exp)}</span>
-                )}
-              </div>
-            ))}
-            <div className="mt-1 text-xs text-muted-foreground">
-              Total allowed: {aclTotal <= ACL_MAX_SAFE
-                ? `${Number(aclTotal).toLocaleString()} ${aclTotal === 1n ? "address" : "addresses"}`
-                : "very large (includes a wide IPv6 range)"}
-            </div>
-          </div>
-        )}
-        <p className="mb-0 mt-4 text-sm leading-relaxed text-muted-foreground">
-          When enabled, only requests from a matching source IP are served; others get 403. The client IP is
-          the first X-Forwarded-For hop set by your ingress, falling back to the TCP peer address. An empty
-          list blocks everything. For a group, this guards entry to the group; member repositories are not
-          re-checked on group fan-out.
-        </p>
         </PanelBody>
       </Panel>
 
@@ -565,8 +477,184 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
         </Panel>
       )}
 
+      {repo.type !== "group" && (
+        <Panel>
+          <PanelBody>
+          <h2 className="m-0 mb-4 text-base font-semibold">Artifact Retention <span className="text-xs font-normal text-muted-foreground">· idle auto-delete</span></h2>
+          <Field>
+            <FieldLabel>Idle TTL (e.g. 7d, 2w, 0 = keep forever)</FieldLabel>
+              <Input value={repo.config.retention?.idle_ttl ?? ""}
+                placeholder="0"
+                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, retention: { idle_ttl: e.target.value } } })} />
+          </Field>
+          <p className="mb-0 mt-4 text-sm text-muted-foreground">Artifacts not served for this long are deleted automatically; each removal is recorded in the audit log. Based on last-served time.</p>
+          </PanelBody>
+        </Panel>
+      )}
+
+      </fieldset>
+
+      {error && <Alert className="mb-4">{error}</Alert>}
+      {saved && <div className="mb-4 text-sm text-muted-foreground">Saved.</div>}
+      {canWrite && <Button onClick={save}>Save changes</Button>}
+
+      {canWrite && (
+      <>
+      <ConfirmModal
+        open={confirmPurge}
+        title={`Purge all artifacts in "${repo.name}"?`}
+        message="This removes every cached or hosted artifact in the repository. The repository and its settings stay. A proxy will re-cache on demand; hosted uploads cannot be recovered."
+        confirmLabel="Purge artifacts"
+        danger
+        onConfirm={purge}
+        onCancel={() => setConfirmPurge(false)}
+      />
+
+      <Panel className="mt-4 border-destructive/70">
+        <PanelBody>
+        <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
+        {repo.type !== "group" && (
+          <>
+            <p className="text-sm leading-relaxed text-muted-foreground">Purging removes all cached/hosted artifacts but keeps the repository and its settings. This cannot be undone.</p>
+            {purged !== null && <div className="mb-3 text-sm text-muted-foreground">Purged {purged} {purged === 1 ? "artifact" : "artifacts"}.</div>}
+            <Button variant="destructive" onClick={() => setConfirmPurge(true)}>Purge all artifacts</Button>
+            <div className="my-4 border-t border-border" />
+          </>
+        )}
+        <p className="text-sm leading-relaxed text-muted-foreground">Deleting a repository removes its cached/hosted artifacts. This cannot be undone.</p>
+        <Button variant="destructive" onClick={() => setConfirmDelete(true)}>Delete repository</Button>
+        </PanelBody>
+      </Panel>
+      </>
+      )}
+    </>
+  );
+}
+
+// Security collects everything that governs who may reach the repository and
+// what is allowed to pass: the source-IP allow list (every repo type) and, for
+// a proxy, the supply-chain gates (age, package approval, vulnerability and
+// license policy). Saving writes the whole repo config, same as Settings.
+function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: Repository) => void; canWrite: boolean }) {
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  // Receivers offered as approval-notification targets (managed under
+  // Notifications). Loaded for proxy repos, where the approval gate runs.
+  const [receivers, setReceivers] = useState<Receiver[]>([]);
+  useEffect(() => {
+    if (repo.type === "proxy") api.listReceivers().then(setReceivers).catch(() => setReceivers([]));
+  }, [repo.type]);
+  // Sample-alarm preview / send state for the approval notification panel.
+  const [sampleBusy, setSampleBusy] = useState<"" | "preview" | "send">("");
+  const [sampleErr, setSampleErr] = useState("");
+  const [preview, setPreview] = useState<{ payload: Record<string, string>; receivers: { name: string; exists: boolean; enabled: boolean }[] } | null>(null);
+  const [sampleResults, setSampleResults] = useState<{ name: string; ok: boolean; error?: string }[] | null>(null);
+
+  const doPreview = async () => {
+    setSampleErr(""); setSampleResults(null); setSampleBusy("preview");
+    try { setPreview(await api.previewRepoSample(repo.id)); }
+    catch (e) { setSampleErr((e as Error).message); }
+    finally { setSampleBusy(""); }
+  };
+  const doSendSample = async () => {
+    setSampleErr(""); setPreview(null); setSampleBusy("send");
+    try { setSampleResults((await api.sendRepoSample(repo.id)).results); }
+    catch (e) { setSampleErr((e as Error).message); }
+    finally { setSampleBusy(""); }
+  };
+
+  const save = async () => {
+    setError("");
+    setSaved(false);
+    try {
+      await api.updateRepository(repo.id, { upstream_url: repo.upstream_url, config: repo.config });
+      setSaved(true);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const age = repo.config.age_policy;
+  // Older repos may predate the approval config section.
+  const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
+  const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
+  const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
+  // Source-IP ACL applies to every repository type (including group entry).
+  const ipacl = repo.config.ip_acl ?? { enabled: false, allow: [] };
+  // Approval-notification receivers selected for this repository.
+  const selectedReceivers = repo.config.notify?.receivers ?? [];
+  const setSelectedReceivers = (next: string[]) =>
+    setRepo({ ...repo, config: { ...repo.config, notify: { ...repo.config.notify, receivers: next } } });
+
+  // Resolve each allow entry to a range/count for the breakdown shown below the
+  // textarea, and a running total (capped at the safe-integer range).
+  const aclRows = (ipacl.allow ?? []).map((entry) => ({ entry, info: aclEntryInfo(entry) }));
+  let aclTotal = 0n;
+  for (const { info } of aclRows) {
+    if (info.kind === "single") aclTotal += 1n;
+    else if (info.kind === "range") aclTotal += info.count;
+  }
+
+  return (
+    <>
+      {!canWrite && (
+        <p className="mt-0 text-sm text-muted-foreground">
+          Read-only view. You can review the configuration but not change it.
+        </p>
+      )}
+
+      {/* For an auditor (canWrite=false) the whole form is disabled via
+          fieldset[disabled], which blocks every control (mouse and keyboard);
+          they can read the configuration but not change it. */}
+      <fieldset className="m-0 min-w-0 border-0 p-0 disabled:opacity-65" disabled={!canWrite}>
+
+      <h2 className="mt-0 mb-3 border-b border-border pb-[7px] text-xs font-semibold text-muted-foreground uppercase tracking-normal">Access control</h2>
+
+      <Panel>
+        <PanelBody>
+        <h2 className="m-0 mb-4 text-base font-semibold">Source IP ACL <span className="text-xs font-normal text-muted-foreground">· allow list</span></h2>
+        <Toggle
+          checked={ipacl.enabled}
+          label="Restrict access by client source IP"
+          onChange={(v) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, enabled: v } } })}
+        />
+        <Field className="mt-4">
+          <FieldLabel>Allowed IPs / CIDRs (one per line)</FieldLabel>
+          <LinesInput rows={4} placeholder={"10.0.0.0/16\n203.0.113.5\n2001:db8::/32"}
+            value={ipacl.allow ?? []}
+            onChange={(allow) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, allow } } })} />
+        </Field>
+        {aclRows.length > 0 && (
+          <div className="mt-2.5 flex flex-col gap-1">
+            {aclRows.map(({ entry, info }, i) => (
+              <div key={`${entry}-${i}`} className="flex flex-wrap items-baseline gap-2 text-xs">
+                <code className="font-mono text-foreground">{entry}</code>
+                {info.kind === "invalid" && <span className="text-destructive">invalid IP/CIDR</span>}
+                {info.kind === "single" && <span className="text-muted-foreground">single host · 1 address</span>}
+                {info.kind === "range" && (
+                  <span className="text-muted-foreground">{info.first} – {info.last} · {fmtCount(info.count, info.exp)}</span>
+                )}
+              </div>
+            ))}
+            <div className="mt-1 text-xs text-muted-foreground">
+              Total allowed: {aclTotal <= ACL_MAX_SAFE
+                ? `${Number(aclTotal).toLocaleString()} ${aclTotal === 1n ? "address" : "addresses"}`
+                : "very large (includes a wide IPv6 range)"}
+            </div>
+          </div>
+        )}
+        <p className="mb-0 mt-4 text-sm leading-relaxed text-muted-foreground">
+          When enabled, only requests from a matching source IP are served; others get 403. The client IP is
+          the first X-Forwarded-For hop set by your ingress, falling back to the TCP peer address. An empty
+          list blocks everything. For a group, this guards entry to the group; member repositories are not
+          re-checked on group fan-out.
+        </p>
+        </PanelBody>
+      </Panel>
+
       {repo.type === "proxy" && (
-        <h2 className="mt-6 mb-3 border-b border-border pb-[7px] text-xs font-semibold text-muted-foreground uppercase tracking-normal">Security <span className="font-normal normal-case">· supply-chain policies</span></h2>
+        <h2 className="mt-6 mb-3 border-b border-border pb-[7px] text-xs font-semibold text-muted-foreground uppercase tracking-normal">Supply chain <span className="font-normal normal-case">· policies</span></h2>
       )}
 
       {/* The evaluation-order flow only makes sense for the proxy serving path. */}
@@ -793,56 +881,11 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
         </Panel>
       )}
 
-      {repo.type !== "group" && (
-        <Panel>
-          <PanelBody>
-          <h2 className="m-0 mb-4 text-base font-semibold">Artifact Retention <span className="text-xs font-normal text-muted-foreground">· idle auto-delete</span></h2>
-          <Field>
-            <FieldLabel>Idle TTL (e.g. 7d, 2w, 0 = keep forever)</FieldLabel>
-              <Input value={repo.config.retention?.idle_ttl ?? ""}
-                placeholder="0"
-                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, retention: { idle_ttl: e.target.value } } })} />
-          </Field>
-          <p className="mb-0 mt-4 text-sm text-muted-foreground">Artifacts not served for this long are deleted automatically; each removal is recorded in the audit log. Based on last-served time.</p>
-          </PanelBody>
-        </Panel>
-      )}
-
       </fieldset>
 
       {error && <Alert className="mb-4">{error}</Alert>}
       {saved && <div className="mb-4 text-sm text-muted-foreground">Saved.</div>}
       {canWrite && <Button onClick={save}>Save changes</Button>}
-
-      {canWrite && (
-      <>
-      <ConfirmModal
-        open={confirmPurge}
-        title={`Purge all artifacts in "${repo.name}"?`}
-        message="This removes every cached or hosted artifact in the repository. The repository and its settings stay. A proxy will re-cache on demand; hosted uploads cannot be recovered."
-        confirmLabel="Purge artifacts"
-        danger
-        onConfirm={purge}
-        onCancel={() => setConfirmPurge(false)}
-      />
-
-      <Panel className="mt-4 border-destructive/70">
-        <PanelBody>
-        <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
-        {repo.type !== "group" && (
-          <>
-            <p className="text-sm leading-relaxed text-muted-foreground">Purging removes all cached/hosted artifacts but keeps the repository and its settings. This cannot be undone.</p>
-            {purged !== null && <div className="mb-3 text-sm text-muted-foreground">Purged {purged} {purged === 1 ? "artifact" : "artifacts"}.</div>}
-            <Button variant="destructive" onClick={() => setConfirmPurge(true)}>Purge all artifacts</Button>
-            <div className="my-4 border-t border-border" />
-          </>
-        )}
-        <p className="text-sm leading-relaxed text-muted-foreground">Deleting a repository removes its cached/hosted artifacts. This cannot be undone.</p>
-        <Button variant="destructive" onClick={() => setConfirmDelete(true)}>Delete repository</Button>
-        </PanelBody>
-      </Panel>
-      </>
-      )}
     </>
   );
 }

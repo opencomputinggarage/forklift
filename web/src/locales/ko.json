@@ -5,6 +5,7 @@
   "nav.approvals": "승인",
   "nav.users": "사용자",
   "nav.roles": "역할",
+  "nav.admin": "관리",
   "nav.notifications": "알림",
   "nav.ha": "HA 상태",
   "nav.settings": "설정",

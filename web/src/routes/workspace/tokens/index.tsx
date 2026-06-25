@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { api, Token } from "@/api";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
-import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,8 +68,8 @@ export function Tokens() {
 
       {error && <Alert className="mb-4">{error}</Alert>}
 
-      <Panel>
-        <PanelBody>
+      <Card size="sm" className="mb-4">
+        <CardContent>
           <TableWrap>
           <Table>
             <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Permissions</TableHead><TableHead>Created</TableHead><TableHead>Expires</TableHead><TableHead>Last used</TableHead><TableHead /></TableRow></TableHeader>
@@ -94,8 +95,8 @@ export function Tokens() {
             </TableBody>
           </Table>
           </TableWrap>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
 
       <ConfirmModal
         open={revokeId !== null}

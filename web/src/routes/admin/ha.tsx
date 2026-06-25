@@ -119,7 +119,7 @@ export function HAStatusPanel() {
 
       <Card size="sm" className="mb-4">
         <CardContent>
-          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
+          <div className="flex min-w-0 items-center gap-2 mb-4 max-sm:flex-wrap justify-between gap-3 max-sm:flex-col max-sm:items-start">
             <h2 className="m-0 text-base font-semibold">Cluster status</h2>
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-2 max-sm:w-full max-sm:justify-between">
               <span

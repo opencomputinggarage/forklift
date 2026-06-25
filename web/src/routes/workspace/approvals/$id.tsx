@@ -55,7 +55,7 @@ export function ApprovalDetail() {
     <>
       <PageHeader
         title={
-          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="font-mono">{row.package}</span>
             <ApprovalStatusBadge status={row.status} />
           </div>
@@ -268,7 +268,7 @@ function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
       {!reviewers || reviewers.length === 0 ? (
         <p className="mb-0 text-sm text-muted-foreground">No users currently have approve permission for this repository.</p>
       ) : (
-        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {reviewers.map((u) => <UserBadge key={u} username={u} />)}
         </div>
       )}

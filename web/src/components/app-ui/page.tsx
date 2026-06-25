@@ -1,6 +1,5 @@
 import * as React from "react"
 
-import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 function PageHeader({
@@ -46,33 +45,4 @@ function PageDescription({
   )
 }
 
-function Panel({ className, ...props }: React.ComponentProps<typeof Card>) {
-  return (
-    <Card
-      size="sm"
-      className={cn(
-        "mb-4 w-full min-w-0 max-w-full bg-[var(--fx-surface-panel)] shadow-[var(--fx-panel-highlight)]",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function PanelBody({
-  className,
-  ...props
-}: React.ComponentProps<typeof CardContent>) {
-  return <CardContent className={cn("min-w-0 px-3 max-sm:px-2.5", className)} {...props} />
-}
-
-function Inline({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("flex min-w-0 items-center gap-2 max-sm:flex-wrap", className)}
-      {...props}
-    />
-  )
-}
-
-export { Inline, PageDescription, PageHeader, Panel, PanelBody }
+export { PageDescription, PageHeader }

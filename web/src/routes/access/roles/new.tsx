@@ -146,7 +146,7 @@ export function RoleNew() {
               </div>
 
               <div className="min-h-10 rounded-lg border border-border bg-muted/20 p-2">
-                <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   {permissions.map((p, i) => (
                     <Badge key={`${p.repo_pattern}-${i}`} className="font-mono">
                       {p.repo_pattern}: {p.actions.join(",")}

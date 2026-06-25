@@ -134,7 +134,7 @@ export function TokenNew() {
         </PageDescription>
         <Card size="sm" className="mb-4 max-w-[40rem]">
           <CardContent>
-            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap items-stretch max-sm:flex-col">
+            <div className="flex min-w-0 items-stretch gap-2 max-sm:flex-wrap max-sm:flex-col">
               <div className="min-h-8 flex-1 overflow-x-auto rounded-lg border border-border bg-muted px-3 py-2 font-mono text-xs">
                 {created}
               </div>
@@ -219,7 +219,7 @@ export function TokenNew() {
               </div>
 
               <div className="min-h-10 rounded-lg border border-border bg-muted/20 p-2">
-                <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 {scopes.map((s, i) => (
                   <Badge key={`${s.repo_pattern}-${i}`} className="font-mono">
                     {s.repo_pattern}: {s.actions.join(",")}

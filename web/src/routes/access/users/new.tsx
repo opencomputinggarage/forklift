@@ -133,7 +133,7 @@ export function UserNew() {
                   <FieldLabel htmlFor="password">
                     Password<span className="text-destructive">*</span>
                   </FieldLabel>
-                  <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap items-stretch max-sm:flex-col">
+                  <div className="flex min-w-0 items-stretch gap-2 max-sm:flex-wrap max-sm:flex-col">
                     <Input
                       id="password"
                       type={show ? "text" : "password"}

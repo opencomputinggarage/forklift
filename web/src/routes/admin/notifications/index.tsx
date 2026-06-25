@@ -5,7 +5,8 @@ import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -83,16 +84,16 @@ export function Receivers() {
         repository's approval queue. Each repository chooses which receivers to notify in its Settings.
       </PageDescription>
 
-      <Panel>
-        <PanelBody>
-          <Inline className="mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
+      <Card size="sm" className="mb-4">
+        <CardContent>
+          <div className="flex min-w-0 items-center gap-2 mb-4 max-sm:flex-wrap justify-between gap-3 max-sm:flex-col max-sm:items-start">
             <h2 className="m-0 text-base font-semibold">
               Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
             </h2>
             <Button render={<Link to="/admin/notifications/new" />} nativeButton={false}>
               Add receiver
             </Button>
-          </Inline>
+          </div>
           {error && <Alert className="mb-4">{error}</Alert>}
           {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
           {!receivers ? (
@@ -127,7 +128,7 @@ export function Receivers() {
                           : <Badge variant="outline">disabled</Badge>}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Inline className="justify-end gap-2">
+                        <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap gap-2">
                           <Button variant="outline" type="button" disabled={testing === r.id}
                             onClick={() => sendTest(r)}>
                             {testing === r.id ? "Sending…" : "Test"}
@@ -139,7 +140,7 @@ export function Receivers() {
                           <Button variant="destructive" type="button" onClick={() => setDeleting(r)}>
                             Delete
                           </Button>
-                        </Inline>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -150,8 +151,8 @@ export function Receivers() {
           <p className="mb-0 mt-4 text-sm text-muted-foreground">
             The webhook URL is never shown again after it is saved. Leave it blank when editing to keep the current URL.
           </p>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
 
       <ConfirmModal
         open={deleting !== null}

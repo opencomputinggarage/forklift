@@ -246,7 +246,7 @@ export function RepositoryNew() {
                     repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
                     repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))}
                   />
-                  <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-3">
+                  <div className="flex min-w-0 items-center gap-2 mt-3 max-sm:flex-wrap">
                     <Select
                       value=""
                       placeholder="add member..."

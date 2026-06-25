@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { api, Me, User } from "@/api";
 import { useAuth } from "@/authContext";
-import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,8 +53,8 @@ export function Users({ me }: { me: Me }) {
       </PageDescription>
       {error && <Alert className="mb-4">{error}</Alert>}
 
-      <Panel>
-        <PanelBody>
+      <Card size="sm" className="mb-4">
+        <CardContent>
           <h2 className="mb-3 text-base font-semibold">Users</h2>
           <TableWrap>
           <Table>
@@ -108,8 +109,8 @@ export function Users({ me }: { me: Me }) {
             </TableBody>
           </Table>
           </TableWrap>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
     </>
   );
 }

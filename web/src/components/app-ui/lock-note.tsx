@@ -1,7 +1,7 @@
 import * as React from "react";
 import { LockKeyhole } from "lucide-react";
 
-import { Panel, PanelBody } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // LockNote is an accent-bordered callout with a padlock icon, a bold title and a
@@ -18,14 +18,14 @@ export function LockNote({
   className?: string;
 }) {
   return (
-    <Panel className={cn("border-primary/70", className)}>
-      <PanelBody>
+    <Card size="sm" className={cn("mb-4 border-primary/70", className)}>
+      <CardContent>
         <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
           <LockKeyhole className="size-4 text-primary" aria-hidden="true" />
           {title}
         </h2>
         <p className="m-0 text-sm leading-relaxed text-muted-foreground">{children}</p>
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }

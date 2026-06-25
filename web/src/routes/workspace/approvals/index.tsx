@@ -4,7 +4,8 @@ import { Approval, Repository, VersionDeny, api } from "@/api";
 import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/app-ui/select";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import {
@@ -269,7 +270,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
 
   return (
     <>
-      <Inline className="mb-4 items-stretch max-sm:flex-col">
+      <div className="flex min-w-0 items-center gap-2 mb-4 max-sm:flex-wrap items-stretch max-sm:flex-col">
         <Select className="w-full sm:w-[160px]" value={status}
           onChange={(v) => { setStatus(v); setOffset(0); }}
           options={[
@@ -287,10 +288,10 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
             title={pendingCount === 0 ? "No pending approvals" : undefined}
             onClick={() => setApprovingAll(true)}>Approve all pending</Button>
         )}
-      </Inline>
+      </div>
       {error && <Alert className="mb-4">{error}</Alert>}
-      <Panel>
-        <PanelBody>
+      <Card size="sm" className="mb-4">
+        <CardContent>
         {rows.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">No {status || "approval"} requests.</p>
         ) : (
@@ -331,16 +332,16 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
           </TableWrap>
         )}
         {count > PAGE && (
-          <Inline className="mt-3 max-sm:flex-col max-sm:items-stretch">
+          <div className="flex min-w-0 items-center gap-2 mt-3 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
             <Button variant="outline" disabled={offset + PAGE >= count}
               onClick={() => setOffset(offset + PAGE)}>Older</Button>
             <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
-          </Inline>
+          </div>
         )}
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
       {approvingAll && (
         <ApproveAllModal
           repoNames={repoNames}
@@ -419,12 +420,12 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
             onChange={(e) => setNote(e.target.value)} />
           </Field>
           {error && <Alert>{error}</Alert>}
-          <Inline className="justify-end max-sm:flex-col max-sm:items-stretch">
+          <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={busy || !repo || !pending}>
               {busy ? "Approving…" : pending ? `Approve ${pending}` : "Approve"}
             </Button>
-          </Inline>
+          </div>
         </form>
       </div>
     </div>
@@ -465,17 +466,17 @@ export function ReviewModal({ row, onDone, onCancel }: {
           Approve to serve all versions from {row.repo_name} (age policy still
           applies); reject to block the package, including already-cached content.
         </p>
-        <Inline className="mb-3 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mb-3 max-sm:flex-col max-sm:items-stretch">
           <span className="text-sm text-muted-foreground">Vulnerabilities:</span>
           <ApprovalVulnBadge severity={row.vuln_severity} ids={row.vuln_ids} scope={row.vuln_scope} />
-        </Inline>
+        </div>
         <Field>
         <FieldLabel>Note (optional)</FieldLabel>
         <Input value={note} autoFocus placeholder="reason for the record"
           onChange={(e) => setNote(e.target.value)} />
         </Field>
         {error && <Alert className="mt-4">{error}</Alert>}
-        <Inline className="mt-4 justify-end max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap justify-end max-sm:flex-col max-sm:items-stretch">
           <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
           {row.status !== "rejected" && (
             <Button variant="destructive" type="button" disabled={busy !== null}
@@ -485,7 +486,7 @@ export function ReviewModal({ row, onDone, onCancel }: {
             <Button type="button" disabled={busy !== null}
               onClick={() => decide("approve")}>{busy === "approve" ? "Approving…" : "Approve"}</Button>
           )}
-        </Inline>
+        </div>
       </div>
     </div>
   );
@@ -541,8 +542,8 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
         immediately, including already-cached copies.
       </p>
       {error && <Alert className="mb-4">{error}</Alert>}
-      <Panel>
-        <PanelBody>
+      <Card size="sm" className="mb-4">
+        <CardContent>
         {rows.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">No denied versions.</p>
         ) : (
@@ -574,16 +575,16 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
           </TableWrap>
         )}
         {count > PAGE && (
-          <Inline className="mt-3 max-sm:flex-col max-sm:items-stretch">
+          <div className="flex min-w-0 items-center gap-2 mt-3 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
             <Button variant="outline" disabled={offset + PAGE >= count}
               onClick={() => setOffset(offset + PAGE)}>Older</Button>
             <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
-          </Inline>
+          </div>
         )}
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
       {adding && (
         <DenyVersionModal
           repoNames={repoNames}
@@ -660,12 +661,12 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
             onChange={(e) => setReason(e.target.value)} />
           </Field>
           {error && <Alert>{error}</Alert>}
-          <Inline className="justify-end max-sm:flex-col max-sm:items-stretch">
+          <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button variant="destructive" type="submit" disabled={!repo || !pkg.trim() || !version.trim()}>
               Deny
             </Button>
-          </Inline>
+          </div>
         </form>
       </div>
     </div>
@@ -723,10 +724,10 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           {error && <Alert>{error}</Alert>}
-          <Inline className="justify-end max-sm:flex-col max-sm:items-stretch">
+          <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
             <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
             <Button type="submit" disabled={!repo || !pkg.trim()}>Save</Button>
-          </Inline>
+          </div>
         </form>
       </div>
     </div>

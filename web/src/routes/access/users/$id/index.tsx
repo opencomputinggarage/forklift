@@ -86,7 +86,7 @@ export function UserModify({ me }: { me: Me }) {
     <>
       <PageHeader
         title={
-          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="min-w-0 truncate">{user.username}</span>
             <SourceBadge source={user.source} />
             {self && <UserBadge username="you">you</UserBadge>}
@@ -147,7 +147,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
     <Card size="sm" className="mb-4">
       <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">Roles</h2>
-      <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {user.roles.map((r) => (
           <RoleBadge key={r.id} className="gap-1">
             <span>{r.name}</span>
@@ -169,7 +169,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
         {user.roles.length === 0 && <span className="text-sm text-muted-foreground">No roles assigned.</span>}
       </div>
       {canWrite && assignable.length > 0 && (
-        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 items-stretch max-sm:flex-col">
+        <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap items-stretch max-sm:flex-col">
           <Select value={selected} onChange={setSelected} placeholder="add role…"
             options={assignable.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
           <Button variant="outline" type="button" disabled={!selected}
@@ -286,7 +286,7 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
         </Button>
         </div>
       </Field>
-      <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 max-sm:flex-col max-sm:items-stretch">
+      <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
         <Button type="button" disabled={!password} onClick={reset}>Reset password</Button>
         {saved && <span className="text-sm text-muted-foreground">Password updated.</span>}
       </div>
@@ -314,7 +314,7 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
         onChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
       />
       {user.locked && (
-        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
           <StateBadge state="locked">Locked</StateBadge>
           <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>

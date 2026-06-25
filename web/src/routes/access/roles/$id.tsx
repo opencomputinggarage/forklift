@@ -130,7 +130,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                   <TableCell><SourceBadge source={u.source} /></TableCell>
                   <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
                   <TableCell>
-                    <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       {u.roles.map((r) => (
                         <RoleBadge
                           key={r.id}
@@ -189,7 +189,7 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
     <Card size="sm" className="mb-4">
       <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">Permissions</h2>
-      <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {role.permissions.map((p) => (
           <PermissionBadge key={p.id} className="gap-1">
             <span>{p.repo_pattern}: {p.actions.join(",")}</span>
@@ -211,7 +211,7 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
         {role.permissions.length === 0 && <span className="text-sm text-muted-foreground">No permissions granted.</span>}
       </div>
       {canWrite && (
-        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 flex-wrap items-stretch gap-2 max-sm:flex-col">
+        <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap flex-wrap items-stretch gap-2 max-sm:flex-col">
           <Combobox className="w-full sm:w-[200px]" value={pattern} onChange={setPattern}
             options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
           {ACTIONS.map((a) => (

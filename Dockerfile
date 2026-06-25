@@ -1,6 +1,12 @@
 # Build the React UI first; its output is embedded into the Go binary.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 WORKDIR /web
+# Run pnpm non-interactively and don't let `pnpm run` reinstall before scripts:
+# the deps were installed with --ignore-scripts (esbuild's build script is
+# skipped; its binary ships via a platform optional dependency), and a pre-run
+# reinstall would re-trip that gate and abort without a TTY.
+ENV CI=true
+ENV npm_config_verify_deps_before_run=false
 COPY web/package.json web/pnpm-lock.yaml ./
 # --ignore-scripts: pnpm 11 fails a fresh non-interactive install when a
 # dependency (esbuild) has an unapproved build script. esbuild ships its binary
@@ -8,6 +14,10 @@ COPY web/package.json web/pnpm-lock.yaml ./
 # safe and the later `pnpm run build` (vite) still works.
 RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && pnpm install --frozen-lockfile --ignore-scripts
 COPY web/ ./
+# `pnpm run build` runs generate:queries, which reads the OpenAPI spec from
+# outside web/ (../internal/openapi/openapi.yaml -> /internal/...). Make it
+# available in this stage.
+COPY internal/openapi/openapi.yaml /internal/openapi/openapi.yaml
 RUN pnpm run build
 
 # Statically linked Go binary on scratch. Cross-compilation happens inside the

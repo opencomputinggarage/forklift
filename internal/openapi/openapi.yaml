@@ -133,6 +133,145 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/AuditLog" }
         "404": { description: Not found }
+  /api/v1/repository-names:
+    get:
+      tags: [repositories]
+      summary: List repository names (any authenticated user) for token-scope autocomplete
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Slim repository list (name, format, type)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RepositoryName" }
+  /api/v1/repositories/check-upstream:
+    post:
+      tags: [repositories]
+      summary: Probe an upstream URL for reachability before creating a proxy (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, description: Absolute http(s) URL to probe. }
+      responses:
+        "200":
+          description: Connectivity result (any HTTP response counts as reachable)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpstreamHealth" }
+        "400": { description: url is required }
+  /api/v1/repositories/{id}/artifacts:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [repositories]
+      summary: List a repository's artifacts (any user who can read the repository)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: prefix, in: query, schema: { type: string }, description: Filter by artifact path prefix. }
+      responses:
+        "200":
+          description: Artifacts with aggregate count and total size
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactList" }
+        "404": { description: Not found }
+    delete:
+      tags: [repositories]
+      summary: Delete one artifact, or purge all artifacts in the repository (admin)
+      description: >
+        With a "path" query parameter, deletes that single artifact (204). Without it,
+        purges every artifact in the repository and returns the number deleted (200).
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: path, in: query, schema: { type: string }, description: Artifact path to delete. Omit to purge all artifacts. }
+      responses:
+        "200":
+          description: Purged all artifacts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: integer }
+        "204": { description: Single artifact deleted }
+        "404": { description: Not found }
+  /api/v1/repositories/{id}/disabled:
+    post:
+      tags: [repositories]
+      summary: Take a repository offline or back online (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [disabled]
+              properties:
+                disabled: { type: boolean }
+      responses:
+        "200":
+          description: Updated repository
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Repository" }
+        "404": { description: Not found }
+  /api/v1/repositories/{id}/upstream-health:
+    get:
+      tags: [repositories]
+      summary: Probe a proxy repository's upstream health (admin/auditor)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Connectivity result (applicable=false for non-proxy repositories)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpstreamHealth" }
+        "404": { description: Not found }
+  /api/v1/repositories/{id}/permissions:
+    get:
+      tags: [repositories]
+      summary: List role permissions granting access to this repository (admin/auditor)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Role permissions whose pattern matches this repository
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RepoPermission" }
+        "404": { description: Not found }
+  /api/v1/repositories/{id}/tokens:
+    get:
+      tags: [repositories]
+      summary: List personal access tokens that can reach this repository (admin/auditor)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Tokens reaching this repository
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RepoToken" }
+        "404": { description: Not found }
   /api/v1/tokens:
     get:
       tags: [tokens]
@@ -391,6 +530,20 @@ paths:
                   approved: { type: integer }
         "400": { description: Missing repo or repo is not a proxy }
         "404": { description: Repository not found }
+  /api/v1/approvals/{id}:
+    get:
+      tags: [approvals]
+      summary: Get a package approval by id
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Package approval
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PackageApproval" }
+        "404": { description: Not found }
   /api/v1/approvals/{id}/approve:
     post:
       tags: [approvals]
@@ -503,6 +656,15 @@ paths:
       security: [{ basicAuth: [] }, { bearerAuth: [] }]
       responses:
         "201": { description: Created }
+  /api/v1/group-mappings/{id}:
+    delete:
+      tags: [group-mappings]
+      summary: Delete a group-to-role mapping (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Deleted }
 
   /api/v1/ha:
     get:
@@ -841,3 +1003,65 @@ components:
         description: { type: string }
         webhook_url: { type: string, description: Absolute http(s) URL (Slack/Mattermost incoming webhook). }
         enabled: { type: boolean, default: true }
+    RepositoryName:
+      type: object
+      description: Slim repository shape returned by /repository-names for token-scope autocomplete.
+      properties:
+        name: { type: string }
+        format: { type: string }
+        type: { type: string, enum: [hosted, proxy, group] }
+    Artifact:
+      type: object
+      properties:
+        path: { type: string }
+        version: { type: string }
+        size: { type: integer, format: int64 }
+        content_type: { type: string }
+        published_at: { type: [string, "null"], format: date-time }
+        cached_at: { type: string, format: date-time }
+        last_accessed_at: { type: string, format: date-time }
+        max_severity: { type: string, description: Highest vulnerability severity from the stored scan, if any. }
+        vuln_ids: { type: array, items: { type: string } }
+        vuln_counts: { type: object, additionalProperties: { type: integer }, description: Vulnerability count per severity. }
+        vuln_source: { type: string }
+        vuln_scanned_at: { type: [string, "null"], format: date-time }
+        licenses: { type: array, items: { type: string }, description: Resolved SPDX license ids. }
+        license_source: { type: string }
+        license_resolved_at: { type: [string, "null"], format: date-time }
+    ArtifactList:
+      type: object
+      properties:
+        count: { type: integer }
+        total_size: { type: integer, format: int64 }
+        artifacts:
+          type: array
+          items: { $ref: "#/components/schemas/Artifact" }
+    UpstreamHealth:
+      type: object
+      properties:
+        applicable: { type: boolean, description: False for non-proxy repositories (nothing to probe). }
+        reachable: { type: boolean }
+        status: { type: integer, description: HTTP status returned by the probe, when reachable. }
+        latency_ms: { type: integer, format: int64 }
+        error: { type: string }
+    RepoPermission:
+      type: object
+      description: A role permission whose repo pattern grants access to a repository.
+      properties:
+        role_id: { type: integer }
+        role: { type: string }
+        repo_pattern: { type: string }
+        actions: { type: array, items: { type: string } }
+        user_count: { type: integer }
+    RepoToken:
+      type: object
+      description: A personal access token that can reach a repository (scoped match or unscoped, inheriting owner roles).
+      properties:
+        token_id: { type: integer }
+        name: { type: string }
+        owner: { type: string }
+        repo_pattern: { type: string }
+        actions: { type: array, items: { type: string } }
+        unscoped: { type: boolean }
+        expires_at: { type: [string, "null"], format: date-time }
+        last_used_at: { type: [string, "null"], format: date-time }

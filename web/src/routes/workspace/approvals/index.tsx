@@ -204,21 +204,24 @@ export function Approvals() {
         Quarantine queue for proxied packages. Approve or reject pending requests before a
         proxy serves them, and block specific poisoned versions outright.
       </PageDescription>
-      <ApprovalList
-        repo={repo}
-        showRepo
-        reloadKey={reloadKey}
-        onRows={setRows}
-        repoNames={repoOptions}
-        repoIds={repoIdByName}
-        filters={
-          <Select className="w-full sm:w-[200px]" value={repo} onChange={setRepo}
-            options={[
-              { value: "", label: "all repositories" },
-              ...repoOptions.map((name) => ({ value: name, label: name })),
-            ]} />
-        }
-      />
+      <div className="space-y-9">
+        <ApprovalList
+          repo={repo}
+          showRepo
+          reloadKey={reloadKey}
+          onRows={setRows}
+          repoNames={repoOptions}
+          repoIds={repoIdByName}
+          filters={
+            <Select className="w-full sm:w-[200px]" value={repo} onChange={setRepo}
+              options={[
+                { value: "", label: "all repositories" },
+                ...repoOptions.map((name) => ({ value: name, label: name })),
+              ]} />
+          }
+        />
+        <VersionDenies repo={repo} showRepo repoNames={repoOptions} repoIds={repoIdByName} />
+      </div>
       {preApproving && (
         <PreApproveModal
           repoNames={repoOptions}
@@ -226,7 +229,6 @@ export function Approvals() {
           onCancel={() => setPreApproving(false)}
         />
       )}
-      <VersionDenies repo={repo} showRepo repoNames={repoOptions} repoIds={repoIdByName} />
     </>
   );
 }
@@ -269,49 +271,76 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
   useEffect(() => { load(); }, [load]);
 
   return (
-    <>
-      <div className="flex min-w-0 items-center gap-2 mb-4 max-sm:flex-wrap items-stretch max-sm:flex-col">
-        <Select className="w-full sm:w-[160px]" value={status}
-          onChange={(v) => { setStatus(v); setOffset(0); }}
-          options={[
-            ...STATUSES.map((s) => ({ value: s, label: s })),
-            { value: "", label: "all statuses" },
-          ]} />
-        {filters}
-        <span className="flex items-center text-sm text-muted-foreground">{count} total</span>
+    <section aria-labelledby="approval-queue-title">
+      <div className="mb-3 flex min-w-0 items-end justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+        <div className="min-w-0">
+          <h2 id="approval-queue-title" className="m-0 text-base font-semibold">Approval queue</h2>
+          <p className="m-0 mt-1 text-sm leading-6 text-muted-foreground">
+            Review quarantined package requests across proxy repositories.
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground max-sm:justify-between">
+          <span>{count.toLocaleString()} total</span>
+          <span className="h-4 w-px bg-border" aria-hidden="true" />
+          <span>{pendingCount.toLocaleString()} pending</span>
+        </div>
+      </div>
+
+      <div className="mb-3 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 flex-1 items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+          <Select className="w-full sm:w-[160px]" value={status}
+            onChange={(v) => { setStatus(v); setOffset(0); }}
+            options={[
+              ...STATUSES.map((s) => ({ value: s, label: s })),
+              { value: "", label: "all statuses" },
+            ]} />
+          {filters}
+        </div>
         {/* Bulk approve is always offered; the repository is chosen inside the
             modal (defaulting to the active filter), so it works from the global
             queue too. Hidden only when there are no proxy repos to target. */}
         {repoNames.length > 0 && (
-          <Button className="sm:ml-auto"
+          <Button
+            className="shrink-0"
             disabled={pendingCount === 0}
             title={pendingCount === 0 ? "No pending approvals" : undefined}
-            onClick={() => setApprovingAll(true)}>Approve all pending</Button>
+            onClick={() => setApprovingAll(true)}
+          >
+            Approve all pending
+          </Button>
         )}
       </div>
       {error && <Alert className="mb-4">{error}</Alert>}
       {rows.length === 0 ? (
-        <p className="m-0 text-sm text-muted-foreground">No {status || "approval"} requests.</p>
+        <div className="rounded-md border border-dashed border-[var(--fx-border-subtle)] px-3 py-8 text-center text-sm text-muted-foreground">
+          No {status || "approval"} requests.
+        </div>
       ) : (
         <TableWrap>
-          <Table>
+          <Table className="min-w-[900px] table-fixed">
             <TableHeader>
               <TableRow>
-                {showRepo && <TableHead>Repository</TableHead>}
-                <TableHead>Package</TableHead><TableHead>Version</TableHead><TableHead>Vuln</TableHead><TableHead>Requested by</TableHead><TableHead>Requests</TableHead>
-                <TableHead>Last requested</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
+                {showRepo && <TableHead className="w-[13%]">Repository</TableHead>}
+                <TableHead className="w-[22%]">Package</TableHead>
+                <TableHead className="w-[10%]">Version</TableHead>
+                <TableHead className="w-[9%]">Vuln</TableHead>
+                <TableHead className="w-[13%]">Requested by</TableHead>
+                <TableHead className="w-[7%]">Requests</TableHead>
+                <TableHead className="w-[15%]">Last requested</TableHead>
+                <TableHead className="w-[8%]">Status</TableHead>
+                <TableHead className="w-[72px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((a) => (
                 <TableRow key={a.id}>
-                  {showRepo && <TableCell>{repoLink(a.repo_name, repoIds)}</TableCell>}
-                  <TableCell className="font-mono text-xs">{a.package}</TableCell>
+                  {showRepo && <TableCell className="truncate" title={a.repo_name}>{repoLink(a.repo_name, repoIds)}</TableCell>}
+                  <TableCell className="max-w-[260px] truncate font-mono text-xs" title={a.package}>{a.package}</TableCell>
                   <TableCell className="font-mono text-xs">{a.last_requested_version || <span className="text-muted-foreground">unknown</span>}</TableCell>
                   <TableCell><SeverityBar severity={a.vuln_severity} counts={a.vuln_counts} scope={a.vuln_scope} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
-                  <TableCell>{a.requested_by || <span className="text-muted-foreground">anonymous</span>}</TableCell>
-                  <TableCell>{a.request_count}</TableCell>
-                  <TableCell className="text-muted-foreground">{new Date(a.last_requested_at).toLocaleString()}</TableCell>
+                  <TableCell className="truncate" title={a.requested_by || "anonymous"}>{a.requested_by || <span className="text-muted-foreground">anonymous</span>}</TableCell>
+                  <TableCell className="tabular-nums">{a.request_count}</TableCell>
+                  <TableCell className="truncate text-muted-foreground" title={new Date(a.last_requested_at).toLocaleString()}>{new Date(a.last_requested_at).toLocaleString()}</TableCell>
                   <TableCell>
                     <ApprovalStatusBadge status={a.status} title={a.note ? `${a.decided_by}: ${a.note}` : a.decided_by} />
                   </TableCell>
@@ -345,7 +374,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
           onCancel={() => setApprovingAll(false)}
         />
       )}
-    </>
+    </section>
   );
 }
 
@@ -527,37 +556,45 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
   };
 
   return (
-    <>
-      <div className="mb-4 mt-8 flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
-        <h2 className="m-0 text-base font-semibold">Version denies</h2>
-        <Button variant="destructive" onClick={() => setAdding(true)}>Deny version</Button>
+    <section aria-labelledby="version-denies-title">
+      <div className="mb-3 flex items-end justify-between gap-3 border-t border-[var(--fx-border-subtle)] pt-7 max-sm:flex-col max-sm:items-stretch">
+        <div>
+          <h2 id="version-denies-title" className="m-0 text-base font-semibold">Version denies</h2>
+          <p className="m-0 mt-1 text-sm leading-6 text-muted-foreground">
+            Blocks one exact version even when the package is approved. Applies
+            immediately, including already-cached copies.
+          </p>
+        </div>
+        <Button className="shrink-0" variant="destructive" onClick={() => setAdding(true)}>Deny version</Button>
       </div>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        Blocks one exact version even when the package is approved. Applies
-        immediately, including already-cached copies.
-      </p>
       {error && <Alert className="mb-4">{error}</Alert>}
       {rows.length === 0 ? (
-        <p className="m-0 text-sm text-muted-foreground">No denied versions.</p>
+        <div className="rounded-md border border-dashed border-[var(--fx-border-subtle)] px-3 py-8 text-center text-sm text-muted-foreground">
+          No denied versions.
+        </div>
       ) : (
         <TableWrap>
-          <Table>
+          <Table className="min-w-[860px] table-fixed">
             <TableHeader>
               <TableRow>
-                {showRepo && <TableHead>Repository</TableHead>}
-                <TableHead>Package</TableHead><TableHead>Version</TableHead><TableHead>Reason</TableHead>
-                <TableHead>Denied by</TableHead><TableHead>Denied at</TableHead><TableHead></TableHead>
+                {showRepo && <TableHead className="w-[14%]">Repository</TableHead>}
+                <TableHead className="w-[24%]">Package</TableHead>
+                <TableHead className="w-[12%]">Version</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead className="w-[12%]">Denied by</TableHead>
+                <TableHead className="w-[16%]">Denied at</TableHead>
+                <TableHead className="w-[76px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((d) => (
                 <TableRow key={d.id}>
-                  {showRepo && <TableCell>{repoLink(d.repo_name, repoIds)}</TableCell>}
-                  <TableCell className="font-mono text-xs">{d.package}</TableCell>
+                  {showRepo && <TableCell className="truncate" title={d.repo_name}>{repoLink(d.repo_name, repoIds)}</TableCell>}
+                  <TableCell className="max-w-[260px] truncate font-mono text-xs" title={d.package}>{d.package}</TableCell>
                   <TableCell className="font-mono text-xs">{d.version}</TableCell>
-                  <TableCell>{d.reason || <span className="text-muted-foreground">none</span>}</TableCell>
-                  <TableCell>{d.created_by || <span className="text-muted-foreground">unknown</span>}</TableCell>
-                  <TableCell className="text-muted-foreground">{new Date(d.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="truncate" title={d.reason || "none"}>{d.reason || <span className="text-muted-foreground">none</span>}</TableCell>
+                  <TableCell className="truncate" title={d.created_by || "unknown"}>{d.created_by || <span className="text-muted-foreground">unknown</span>}</TableCell>
+                  <TableCell className="truncate text-muted-foreground" title={new Date(d.created_at).toLocaleString()}>{new Date(d.created_at).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" onClick={() => setRemoving(d)}>Remove</Button>
                   </TableCell>
@@ -594,7 +631,7 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
         onConfirm={() => removing && remove(removing)}
         onCancel={() => setRemoving(null)}
       />
-    </>
+    </section>
   );
 }
 

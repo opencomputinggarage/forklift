@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { api, type Me } from "@/api";
 import { AuthProvider } from "@/authContext";
+import { I18nLiteralBridge } from "@/components/app/i18n-literal-bridge";
 import { Login } from "@/components/auth/login";
 import { Logo } from "@/components/app/logo";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export function AppShell() {
   return (
     <AuthProvider value={{ me }}>
       <TooltipProvider>
+        <I18nLiteralBridge />
         <div className="min-h-dvh bg-background text-foreground lg:flex lg:items-start">
           <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
           <main className="w-full min-w-0 flex-1 px-[var(--fx-main-gutter-x)] py-[var(--fx-main-gutter-y)] max-lg:px-3 max-lg:py-3 max-sm:px-2 max-sm:py-2">

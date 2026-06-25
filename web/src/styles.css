@@ -94,7 +94,7 @@
   --color-destructive: var(--fx-danger);
   --color-destructive-foreground: var(--fx-danger-foreground);
   --color-border: var(--fx-border);
-  --color-input: var(--fx-input);
+  --color-input: var(--fx-input-border);
   --color-ring: var(--fx-accent);
   --color-sidebar: var(--fx-surface-1);
   --color-sidebar-foreground: var(--fx-text);
@@ -124,6 +124,7 @@
   --fx-surface-hover: #171a22;
   --fx-surface-selected: #1a1f29;
   --fx-input: #0b0d12;
+  --fx-input-border: #343b48;
   --fx-control: #10131a;
   --fx-control-hover: #171b23;
   --fx-border: #242933;
@@ -177,6 +178,7 @@
   --fx-surface-hover: #f1f4f7;
   --fx-surface-selected: #e9edf3;
   --fx-input: #ffffff;
+  --fx-input-border: #c1c8d2;
   --fx-control: #ffffff;
   --fx-control-hover: #f3f5f8;
   --fx-border: #d7dce3;

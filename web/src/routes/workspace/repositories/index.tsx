@@ -4,11 +4,11 @@ import { Clock, ShieldCheck } from "lucide-react";
 import { api, humanSize, Me, repoEndpoint, Repository } from "@/api";
 import { useAuth } from "@/authContext";
 import { UpstreamStatus } from "@/components/feedback/upstream-status";
-import { Tooltip } from "@/components/overlays/tooltip";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -81,15 +81,21 @@ function SecurityIcons({ repo }: { repo: Repository }) {
       : "Package approval is on. An admin must approve a package before this proxy serves it.";
   return (
     <span className="inline-flex items-center gap-2">
-      <Tooltip text={ageTip}>
-        <span className={cn("inline-flex text-muted-foreground", age.enabled && "text-primary")}>
-          <Clock className="size-4" aria-hidden="true" />
-        </span>
+      <Tooltip>
+        <TooltipTrigger render={<span tabIndex={0} aria-label="Age policy" />}>
+          <span className={cn("inline-flex text-muted-foreground", age.enabled && "text-primary")}>
+            <Clock className="size-4" aria-hidden="true" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{ageTip}</TooltipContent>
       </Tooltip>
-      <Tooltip text={approvalTip}>
-        <span className={cn("inline-flex text-muted-foreground", approval.enabled && "text-primary")}>
-          <ShieldCheck className="size-4" aria-hidden="true" />
-        </span>
+      <Tooltip>
+        <TooltipTrigger render={<span tabIndex={0} aria-label="Package approval" />}>
+          <span className={cn("inline-flex text-muted-foreground", approval.enabled && "text-primary")}>
+            <ShieldCheck className="size-4" aria-hidden="true" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{approvalTip}</TooltipContent>
       </Tooltip>
     </span>
   );

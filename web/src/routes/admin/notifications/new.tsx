@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { LockKeyhole } from "lucide-react";
 import { api } from "@/api";
 import { useAuth } from "@/authContext";
 import { Alert } from "@/components/app-ui/alert";
-import { LockNote } from "@/components/app-ui/lock-note";
 import { PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
-import { Toggle } from "@/components/inputs/toggle";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/admin/notifications/new")({
   component: AdminReceiverNewRoute,
@@ -120,16 +120,30 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
               {testErr && <span className="text-sm text-destructive">{testErr}</span>}
             </div>
 
-            <Toggle checked={form.enabled} label={form.enabled ? "Enabled" : "Disabled"}
-              onChange={(v) => setForm({ ...form, enabled: v })} />
+            <label className="inline-flex items-center gap-2 text-sm">
+              <Switch
+                checked={form.enabled}
+                onCheckedChange={(v) => setForm({ ...form, enabled: v })}
+                aria-label={form.enabled ? "Enabled" : "Disabled"}
+              />
+              <span>{form.enabled ? "Enabled" : "Disabled"}</span>
+            </label>
           </FieldGroup>
 
           {error && <Alert className="mt-4">{error}</Alert>}
 
-          <LockNote title="Webhook URL is write-only" className="mt-5">
-            The webhook URL cannot be viewed again after you save it. You can only replace it with a new one.
-            Keep a copy somewhere safe before you save.
-          </LockNote>
+          <Card size="sm" className="mt-5 border-primary/70">
+            <CardContent>
+              <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
+                <LockKeyhole className="size-4 text-primary" aria-hidden="true" />
+                Webhook URL is write-only
+              </h2>
+              <p className="m-0 text-sm leading-relaxed text-muted-foreground">
+                The webhook URL cannot be viewed again after you save it. You can only replace it with a new one.
+                Keep a copy somewhere safe before you save.
+              </p>
+            </CardContent>
+          </Card>
 
           <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-5">
             <Button type="button" disabled={!form.name.trim()} onClick={save}>

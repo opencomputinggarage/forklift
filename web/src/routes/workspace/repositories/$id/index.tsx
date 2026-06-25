@@ -23,13 +23,13 @@ import {
   TableRow,
   TableWrap,
 } from "@/components/app-ui/table";
-import { Toggle } from "@/components/inputs/toggle";
 import { MemberList } from "../new";
 import { ApprovalList, SeverityBar, VersionDenies } from "../../approvals/index";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -421,14 +421,17 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             : "This repository is online and serving the package protocols."}
         </p>
         {canWrite ? (
-          <Toggle
-            checked={!repo.disabled}
-            label={repo.disabled ? "Offline" : "Online"}
-            onChange={(online) => {
-              setError("");
-              api.setRepositoryDisabled(repo.id, !online).then(setRepo).catch((e) => setError((e as Error).message));
-            }}
-          />
+          <label className="inline-flex items-center gap-2 text-sm">
+            <Switch
+              checked={!repo.disabled}
+              onCheckedChange={(online) => {
+                setError("");
+                api.setRepositoryDisabled(repo.id, !online).then(setRepo).catch((e) => setError((e as Error).message));
+              }}
+              aria-label={repo.disabled ? "Offline" : "Online"}
+            />
+            <span>{repo.disabled ? "Offline" : "Online"}</span>
+          </label>
         ) : (
           <StateBadge state={repo.disabled ? "offline" : "online"}>{repo.disabled ? "Offline" : "Online"}</StateBadge>
         )}
@@ -615,11 +618,14 @@ function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
       <Card size="sm" className="mb-4">
         <CardContent>
         <h2 className="m-0 mb-4 text-base font-semibold">Source IP ACL <span className="text-xs font-normal text-muted-foreground">· allow list</span></h2>
-        <Toggle
-          checked={ipacl.enabled}
-          label="Restrict access by client source IP"
-          onChange={(v) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, enabled: v } } })}
-        />
+        <label className="inline-flex items-center gap-2 text-sm">
+          <Switch
+            checked={ipacl.enabled}
+            onCheckedChange={(v) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, enabled: v } } })}
+            aria-label="Restrict access by client source IP"
+          />
+          <span>Restrict access by client source IP</span>
+        </label>
         <Field className="mt-4">
           <FieldLabel>Allowed IPs / CIDRs (one per line)</FieldLabel>
           <LinesInput rows={4} placeholder={"10.0.0.0/16\n203.0.113.5\n2001:db8::/32"}

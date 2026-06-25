@@ -3,10 +3,10 @@ import { createFileRoute, Link, Navigate, useParams } from "@tanstack/react-rout
 import { Approval, api } from "@/api";
 import { useAuth } from "@/authContext";
 import { ReviewModal, SeverityBar } from "./index";
-import { Tooltip } from "@/components/overlays/tooltip";
 import { Alert } from "@/components/app-ui/alert";
 import { PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { UserBadge } from "@/components/app-ui/user-badge";
@@ -232,8 +232,13 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
             <TableHead><SortBtn k="severity">Severity</SortBtn></TableHead>
             <TableHead>
               <SortBtn k="cvss">CVSS</SortBtn>
-              <Tooltip text="This is the CVSS version 3.x base score, which ranges from 0 to 10 and is calculated from the advisory's CVSS vector. A higher number means a more severe vulnerability. A score of 9.0 or above is critical, 7.0 or above is high, 4.0 or above is medium, and anything above 0 is low.">
-                <span className="ml-[5px] text-[0.85em] text-muted-foreground">ⓘ</span>
+              <Tooltip>
+                <TooltipTrigger render={<span tabIndex={0} aria-label="CVSS help" />}>
+                  <span className="ml-[5px] text-[0.85em] text-muted-foreground">ⓘ</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  This is the CVSS version 3.x base score, which ranges from 0 to 10 and is calculated from the advisory&apos;s CVSS vector. A higher number means a more severe vulnerability. A score of 9.0 or above is critical, 7.0 or above is high, 4.0 or above is medium, and anything above 0 is low.
+                </TooltipContent>
               </Tooltip>
             </TableHead>
           </TableRow>

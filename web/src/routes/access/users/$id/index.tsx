@@ -21,10 +21,10 @@ import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
 import { SourceBadge } from "@/components/app-ui/source-badge";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import { UserBadge } from "@/components/app-ui/user-badge";
-import { Toggle } from "@/components/inputs/toggle";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/access/users/$id/")({
   component: UserModifyRoute,
@@ -307,12 +307,15 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
         When enabled, the account is locked after 5 consecutive failed password attempts and must be
         unlocked by an administrator. {user.protected && "The default admin account cannot be locked out."}
       </p>
-      <Toggle
-        checked={user.lockout_enabled}
-        disabled={user.protected}
-        label={user.lockout_enabled ? "Lockout enabled" : "Lockout disabled"}
-        onChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
-      />
+      <label className="inline-flex items-center gap-2 text-sm">
+        <Switch
+          checked={user.lockout_enabled}
+          disabled={user.protected}
+          onCheckedChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
+          aria-label={user.lockout_enabled ? "Lockout enabled" : "Lockout disabled"}
+        />
+        <span>{user.lockout_enabled ? "Lockout enabled" : "Lockout disabled"}</span>
+      </label>
       {user.locked && (
         <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
           <StateBadge state="locked">Locked</StateBadge>
@@ -353,12 +356,15 @@ function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: 
         tokens. The account, its tokens and its role assignments are preserved, so disabling is a reversible
         alternative to deletion that you can undo at any time by re-enabling.
       </p>
-      <Toggle
-        checked={!user.disabled}
-        disabled={lockedFromEditing}
-        label={user.disabled ? "Account disabled" : "Account active"}
-        onChange={(v) => run(api.updateUser(user.id, { disabled: !v }))}
-      />
+      <label className="inline-flex items-center gap-2 text-sm">
+        <Switch
+          checked={!user.disabled}
+          disabled={lockedFromEditing}
+          onCheckedChange={(v) => run(api.updateUser(user.id, { disabled: !v }))}
+          aria-label={user.disabled ? "Account disabled" : "Account active"}
+        />
+        <span>{user.disabled ? "Account disabled" : "Account active"}</span>
+      </label>
       {user.protected ? (
         <LockNote title="Status locked">
           This is the default administrator account, created when Forklift first started. Its status is locked

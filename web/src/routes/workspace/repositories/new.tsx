@@ -16,6 +16,7 @@ import {
   TableWrap,
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldDescription,
@@ -23,7 +24,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/workspace/repositories/new")({
@@ -217,9 +217,9 @@ export function RepositoryNew() {
                   <Field>
                     <FieldLabel>Age policy</FieldLabel>
                     <label className="inline-flex items-center gap-2 text-sm">
-                      <Switch
+                      <Checkbox
                         checked={ageEnabled}
-                        onCheckedChange={setAgeEnabled}
+                        onCheckedChange={(checked) => setAgeEnabled(checked === true)}
                         aria-label="Block versions newer than a cooldown window"
                       />
                       <span>Block versions newer than a cooldown window</span>

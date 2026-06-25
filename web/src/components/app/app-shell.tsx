@@ -144,11 +144,11 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
         </NavGroup>
         {me.admin && (
           <NavGroup title={t("nav.group.admin")}>
-            <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/notifications">
+            <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/admin/notifications">
               <Bell className="size-4 opacity-75 group-hover:opacity-100" aria-hidden="true" />
               {t("nav.notifications")}
             </Link>
-            <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/ha">
+            <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/admin/ha">
               <SlidersHorizontal className="size-4 opacity-75 group-hover:opacity-100" aria-hidden="true" />
               {t("nav.ha")}
             </Link>

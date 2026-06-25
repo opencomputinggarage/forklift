@@ -16,9 +16,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/ha")({
-  // HA Status now lives as a tab on the Admin page; keep this path as a
-  // redirect so existing deep links resolve.
-  component: () => <Navigate to="/admin/$tab" params={{ tab: "ha" }} replace />,
+  component: () => <Navigate to="/admin/ha" replace />,
 });
 
 // How often the HA status is re-fetched; the header shows a live countdown to

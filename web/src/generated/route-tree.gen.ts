@@ -30,10 +30,14 @@ import { Route as RepositoriesIdRouteImport } from './../routes/repositories/$id
 import { Route as NotificationsNewRouteImport } from './../routes/notifications/new'
 import { Route as NotificationsIdRouteImport } from './../routes/notifications/$id'
 import { Route as ApprovalsIdRouteImport } from './../routes/approvals/$id'
+import { Route as AdminNotificationsRouteImport } from './../routes/admin/notifications'
+import { Route as AdminHaRouteImport } from './../routes/admin/ha'
 import { Route as AdminTabRouteImport } from './../routes/admin/$tab'
 import { Route as UsersIdIndexRouteImport } from './../routes/users/$id/index'
 import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositories/$id/index'
 import { Route as RepositoriesIdTabRouteImport } from './../routes/repositories/$id/$tab'
+import { Route as AdminNotificationsNewRouteImport } from './../routes/admin/notifications/new'
+import { Route as AdminNotificationsIdRouteImport } from './../routes/admin/notifications/$id'
 import { Route as UsersIdTokensNewRouteImport } from './../routes/users/$id/tokens/new'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -141,6 +145,16 @@ const ApprovalsIdRoute = ApprovalsIdRouteImport.update({
   path: '/approvals/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/admin/notifications',
+  path: '/admin/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminHaRoute = AdminHaRouteImport.update({
+  id: '/admin/ha',
+  path: '/admin/ha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminTabRoute = AdminTabRouteImport.update({
   id: '/admin/$tab',
   path: '/admin/$tab',
@@ -161,6 +175,16 @@ const RepositoriesIdTabRoute = RepositoriesIdTabRouteImport.update({
   path: '/$tab',
   getParentRoute: () => RepositoriesIdRoute,
 } as any)
+const AdminNotificationsNewRoute = AdminNotificationsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminNotificationsRoute,
+} as any)
+const AdminNotificationsIdRoute = AdminNotificationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminNotificationsRoute,
+} as any)
 const UsersIdTokensNewRoute = UsersIdTokensNewRouteImport.update({
   id: '/tokens/new',
   path: '/tokens/new',
@@ -173,6 +197,8 @@ export interface FileRoutesByFullPath {
   '/ha': typeof HaRoute
   '/settings': typeof SettingsRoute
   '/admin/$tab': typeof AdminTabRoute
+  '/admin/ha': typeof AdminHaRoute
+  '/admin/notifications': typeof AdminNotificationsRouteWithChildren
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -190,6 +216,8 @@ export interface FileRoutesByFullPath {
   '/roles/': typeof RolesIndexRoute
   '/tokens/': typeof TokensIndexRoute
   '/users/': typeof UsersIndexRoute
+  '/admin/notifications/$id': typeof AdminNotificationsIdRoute
+  '/admin/notifications/new': typeof AdminNotificationsNewRoute
   '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
   '/repositories/$id/': typeof RepositoriesIdIndexRoute
   '/users/$id/': typeof UsersIdIndexRoute
@@ -201,6 +229,8 @@ export interface FileRoutesByTo {
   '/ha': typeof HaRoute
   '/settings': typeof SettingsRoute
   '/admin/$tab': typeof AdminTabRoute
+  '/admin/ha': typeof AdminHaRoute
+  '/admin/notifications': typeof AdminNotificationsRouteWithChildren
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -216,6 +246,8 @@ export interface FileRoutesByTo {
   '/roles': typeof RolesIndexRoute
   '/tokens': typeof TokensIndexRoute
   '/users': typeof UsersIndexRoute
+  '/admin/notifications/$id': typeof AdminNotificationsIdRoute
+  '/admin/notifications/new': typeof AdminNotificationsNewRoute
   '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
   '/repositories/$id': typeof RepositoriesIdIndexRoute
   '/users/$id': typeof UsersIdIndexRoute
@@ -228,6 +260,8 @@ export interface FileRoutesById {
   '/ha': typeof HaRoute
   '/settings': typeof SettingsRoute
   '/admin/$tab': typeof AdminTabRoute
+  '/admin/ha': typeof AdminHaRoute
+  '/admin/notifications': typeof AdminNotificationsRouteWithChildren
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -245,6 +279,8 @@ export interface FileRoutesById {
   '/roles/': typeof RolesIndexRoute
   '/tokens/': typeof TokensIndexRoute
   '/users/': typeof UsersIndexRoute
+  '/admin/notifications/$id': typeof AdminNotificationsIdRoute
+  '/admin/notifications/new': typeof AdminNotificationsNewRoute
   '/repositories/$id/$tab': typeof RepositoriesIdTabRoute
   '/repositories/$id/': typeof RepositoriesIdIndexRoute
   '/users/$id/': typeof UsersIdIndexRoute
@@ -258,6 +294,8 @@ export interface FileRouteTypes {
     | '/ha'
     | '/settings'
     | '/admin/$tab'
+    | '/admin/ha'
+    | '/admin/notifications'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -275,6 +313,8 @@ export interface FileRouteTypes {
     | '/roles/'
     | '/tokens/'
     | '/users/'
+    | '/admin/notifications/$id'
+    | '/admin/notifications/new'
     | '/repositories/$id/$tab'
     | '/repositories/$id/'
     | '/users/$id/'
@@ -286,6 +326,8 @@ export interface FileRouteTypes {
     | '/ha'
     | '/settings'
     | '/admin/$tab'
+    | '/admin/ha'
+    | '/admin/notifications'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -301,6 +343,8 @@ export interface FileRouteTypes {
     | '/roles'
     | '/tokens'
     | '/users'
+    | '/admin/notifications/$id'
+    | '/admin/notifications/new'
     | '/repositories/$id/$tab'
     | '/repositories/$id'
     | '/users/$id'
@@ -312,6 +356,8 @@ export interface FileRouteTypes {
     | '/ha'
     | '/settings'
     | '/admin/$tab'
+    | '/admin/ha'
+    | '/admin/notifications'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -329,6 +375,8 @@ export interface FileRouteTypes {
     | '/roles/'
     | '/tokens/'
     | '/users/'
+    | '/admin/notifications/$id'
+    | '/admin/notifications/new'
     | '/repositories/$id/$tab'
     | '/repositories/$id/'
     | '/users/$id/'
@@ -341,6 +389,8 @@ export interface RootRouteChildren {
   HaRoute: typeof HaRoute
   SettingsRoute: typeof SettingsRoute
   AdminTabRoute: typeof AdminTabRoute
+  AdminHaRoute: typeof AdminHaRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRouteWithChildren
   ApprovalsIdRoute: typeof ApprovalsIdRoute
   NotificationsIdRoute: typeof NotificationsIdRoute
   NotificationsNewRoute: typeof NotificationsNewRoute
@@ -509,6 +559,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApprovalsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/admin/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/ha': {
+      id: '/admin/ha'
+      path: '/admin/ha'
+      fullPath: '/admin/ha'
+      preLoaderRoute: typeof AdminHaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/$tab': {
       id: '/admin/$tab'
       path: '/admin/$tab'
@@ -537,6 +601,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepositoriesIdTabRouteImport
       parentRoute: typeof RepositoriesIdRoute
     }
+    '/admin/notifications/new': {
+      id: '/admin/notifications/new'
+      path: '/new'
+      fullPath: '/admin/notifications/new'
+      preLoaderRoute: typeof AdminNotificationsNewRouteImport
+      parentRoute: typeof AdminNotificationsRoute
+    }
+    '/admin/notifications/$id': {
+      id: '/admin/notifications/$id'
+      path: '/$id'
+      fullPath: '/admin/notifications/$id'
+      preLoaderRoute: typeof AdminNotificationsIdRouteImport
+      parentRoute: typeof AdminNotificationsRoute
+    }
     '/users/$id/tokens/new': {
       id: '/users/$id/tokens/new'
       path: '/tokens/new'
@@ -546,6 +624,19 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminNotificationsRouteChildren {
+  AdminNotificationsIdRoute: typeof AdminNotificationsIdRoute
+  AdminNotificationsNewRoute: typeof AdminNotificationsNewRoute
+}
+
+const AdminNotificationsRouteChildren: AdminNotificationsRouteChildren = {
+  AdminNotificationsIdRoute: AdminNotificationsIdRoute,
+  AdminNotificationsNewRoute: AdminNotificationsNewRoute,
+}
+
+const AdminNotificationsRouteWithChildren =
+  AdminNotificationsRoute._addFileChildren(AdminNotificationsRouteChildren)
 
 interface RepositoriesIdRouteChildren {
   RepositoriesIdTabRoute: typeof RepositoriesIdTabRoute
@@ -580,6 +671,8 @@ const rootRouteChildren: RootRouteChildren = {
   HaRoute: HaRoute,
   SettingsRoute: SettingsRoute,
   AdminTabRoute: AdminTabRoute,
+  AdminHaRoute: AdminHaRoute,
+  AdminNotificationsRoute: AdminNotificationsRouteWithChildren,
   ApprovalsIdRoute: ApprovalsIdRoute,
   NotificationsIdRoute: NotificationsIdRoute,
   NotificationsNewRoute: NotificationsNewRoute,

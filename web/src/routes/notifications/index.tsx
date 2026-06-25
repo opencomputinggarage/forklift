@@ -21,16 +21,14 @@ export const Route = createFileRoute("/notifications/")({
 });
 
 function NotificationsRoute() {
-  // Notifications now lives as a tab on the Admin page; keep this path as a
-  // redirect so existing deep links resolve.
-  return <Navigate to="/admin/$tab" params={{ tab: "notifications" }} replace />;
+  return <Navigate to="/admin/notifications" replace />;
 }
 
 // Receivers lists notification receivers — named alarm channels (webhooks) that
 // repositories can select to be alerted when a package is quarantined pending
 // approval. Add/Edit open a separate page; delete is confirmed inline. Sending a
 // test posts a sample payload to the stored webhook. Rendered as the
-// "Notifications" tab on the admin page (which gates admin-only access).
+// standalone Notifications admin surface (the route gates admin-only access).
 export function Receivers() {
   const navigate = useNavigate();
   const [receivers, setReceivers] = useState<Receiver[] | null>(null);
@@ -82,7 +80,7 @@ export function Receivers() {
             <h2 className="m-0 text-base font-semibold">
               Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
             </h2>
-            <Button render={<Link to="/notifications/new" />} nativeButton={false}>
+            <Button render={<Link to="/admin/notifications/new" />} nativeButton={false}>
               Add receiver
             </Button>
           </Inline>
@@ -126,7 +124,7 @@ export function Receivers() {
                             {testing === r.id ? "Sending…" : "Test"}
                           </Button>
                           <Button variant="outline" type="button"
-                            onClick={() => navigate({ to: "/notifications/$id", params: { id: String(r.id) } })}>
+                            onClick={() => navigate({ to: "/admin/notifications/$id", params: { id: String(r.id) } })}>
                             Edit
                           </Button>
                           <Button variant="destructive" type="button" onClick={() => setDeleting(r)}>

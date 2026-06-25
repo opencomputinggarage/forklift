@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { api } from "@/api";
-import { useAuth } from "@/authContext";
 import { Alert } from "@/components/app-ui/alert";
 import { LockNote } from "@/components/app-ui/lock-note";
 import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
@@ -15,8 +14,7 @@ export const Route = createFileRoute("/notifications/new")({
 });
 
 function ReceiverNewRoute() {
-  const { me } = useAuth();
-  return me.admin ? <ReceiverForm /> : <Navigate to="/repositories" replace />;
+  return <Navigate to="/admin/notifications/new" replace />;
 }
 
 // ReceiverForm is the shared create/edit form for a notification receiver,
@@ -50,7 +48,7 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
     try {
       if (editing) await api.updateReceiver(receiverId, form);
       else await api.createReceiver(form);
-      navigate({ to: "/admin/$tab", params: { tab: "notifications" } });
+      navigate({ to: "/admin/notifications" });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -134,7 +132,7 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
             <Button type="button" disabled={!form.name.trim()} onClick={save}>
               {editing ? "Save changes" : "Add receiver"}
             </Button>
-            <Button variant="outline" type="button" onClick={() => navigate({ to: "/admin/$tab", params: { tab: "notifications" } })}>
+            <Button variant="outline" type="button" onClick={() => navigate({ to: "/admin/notifications" })}>
               Cancel
             </Button>
           </Inline>

@@ -67,7 +67,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
     );
 
   return (
-    <aside className="sticky top-0 z-40 flex h-screen w-[244px] shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-card px-2.5 py-4 shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] lg:self-start max-lg:h-auto max-lg:w-full max-lg:overflow-visible max-lg:border-r-0 max-lg:border-b max-lg:px-3 max-lg:py-3 max-sm:px-2">
+    <aside className="sticky top-0 z-40 flex h-screen w-[var(--fx-sidebar-width)] shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-card px-2.5 py-4 shadow-[var(--fx-panel-highlight)] lg:self-start max-lg:h-auto max-lg:w-full max-lg:overflow-visible max-lg:border-r-0 max-lg:border-b max-lg:px-3 max-lg:py-3 max-sm:px-2">
       <div className="px-2 pb-5 max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:pb-3 max-sm:flex-wrap max-sm:items-start max-sm:px-1">
         <Link
           to="/repositories"

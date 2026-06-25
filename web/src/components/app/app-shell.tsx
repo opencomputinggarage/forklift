@@ -9,7 +9,6 @@ import {
   KeyRound,
   LogOut,
   Settings,
-  Shield,
   SlidersHorizontal,
   UserRound,
   UsersRound,
@@ -145,10 +144,6 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
         </NavGroup>
         {me.admin && (
           <NavGroup title={t("nav.group.admin")}>
-            <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/admin">
-              <Shield className="size-4 opacity-75 group-hover:opacity-100" aria-hidden="true" />
-              {t("nav.admin")}
-            </Link>
             <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/notifications">
               <Bell className="size-4 opacity-75 group-hover:opacity-100" aria-hidden="true" />
               {t("nav.notifications")}

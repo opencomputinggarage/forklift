@@ -165,7 +165,7 @@ export function RepositoryNew() {
                       role="radio"
                       aria-checked={type === t.value}
                       className={cn(
-                        "h-auto flex-col items-start justify-start rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
+                        "h-auto w-full flex-col items-start justify-start whitespace-normal rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
                         type === t.value && "border-primary bg-primary/10"
                       )}
                       onClick={() => setType(t.value)}

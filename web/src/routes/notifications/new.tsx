@@ -50,7 +50,7 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
     try {
       if (editing) await api.updateReceiver(receiverId, form);
       else await api.createReceiver(form);
-      navigate({ to: "/notifications" });
+      navigate({ to: "/admin/$tab", params: { tab: "notifications" } });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -134,7 +134,7 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
             <Button type="button" disabled={!form.name.trim()} onClick={save}>
               {editing ? "Save changes" : "Add receiver"}
             </Button>
-            <Button variant="outline" type="button" onClick={() => navigate({ to: "/notifications" })}>
+            <Button variant="outline" type="button" onClick={() => navigate({ to: "/admin/$tab", params: { tab: "notifications" } })}>
               Cancel
             </Button>
           </Inline>

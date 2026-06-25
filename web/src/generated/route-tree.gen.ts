@@ -18,6 +18,7 @@ import { Route as RolesIndexRouteImport } from './../routes/roles/index'
 import { Route as RepositoriesIndexRouteImport } from './../routes/repositories/index'
 import { Route as NotificationsIndexRouteImport } from './../routes/notifications/index'
 import { Route as ApprovalsIndexRouteImport } from './../routes/approvals/index'
+import { Route as AdminIndexRouteImport } from './../routes/admin/index'
 import { Route as UsersNewRouteImport } from './../routes/users/new'
 import { Route as UsersIdRouteImport } from './../routes/users/$id'
 import { Route as TokensNewRouteImport } from './../routes/tokens/new'
@@ -28,6 +29,7 @@ import { Route as RepositoriesIdRouteImport } from './../routes/repositories/$id
 import { Route as NotificationsNewRouteImport } from './../routes/notifications/new'
 import { Route as NotificationsIdRouteImport } from './../routes/notifications/$id'
 import { Route as ApprovalsIdRouteImport } from './../routes/approvals/$id'
+import { Route as AdminTabRouteImport } from './../routes/admin/$tab'
 import { Route as UsersIdIndexRouteImport } from './../routes/users/$id/index'
 import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositories/$id/index'
 import { Route as RepositoriesIdTabRouteImport } from './../routes/repositories/$id/$tab'
@@ -76,6 +78,11 @@ const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
 const ApprovalsIndexRoute = ApprovalsIndexRouteImport.update({
   id: '/approvals/',
   path: '/approvals/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsersNewRoute = UsersNewRouteImport.update({
@@ -128,6 +135,11 @@ const ApprovalsIdRoute = ApprovalsIdRouteImport.update({
   path: '/approvals/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminTabRoute = AdminTabRouteImport.update({
+  id: '/admin/$tab',
+  path: '/admin/$tab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersIdIndexRoute = UsersIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -153,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
+  '/admin/$tab': typeof AdminTabRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -163,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/tokens/new': typeof TokensNewRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/users/new': typeof UsersNewRoute
+  '/admin/': typeof AdminIndexRoute
   '/approvals/': typeof ApprovalsIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/repositories/': typeof RepositoriesIndexRoute
@@ -178,6 +192,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
+  '/admin/$tab': typeof AdminTabRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -186,6 +201,7 @@ export interface FileRoutesByTo {
   '/roles/new': typeof RolesNewRoute
   '/tokens/new': typeof TokensNewRoute
   '/users/new': typeof UsersNewRoute
+  '/admin': typeof AdminIndexRoute
   '/approvals': typeof ApprovalsIndexRoute
   '/notifications': typeof NotificationsIndexRoute
   '/repositories': typeof RepositoriesIndexRoute
@@ -202,6 +218,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
+  '/admin/$tab': typeof AdminTabRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/notifications/$id': typeof NotificationsIdRoute
   '/notifications/new': typeof NotificationsNewRoute
@@ -212,6 +229,7 @@ export interface FileRoutesById {
   '/tokens/new': typeof TokensNewRoute
   '/users/$id': typeof UsersIdRouteWithChildren
   '/users/new': typeof UsersNewRoute
+  '/admin/': typeof AdminIndexRoute
   '/approvals/': typeof ApprovalsIndexRoute
   '/notifications/': typeof NotificationsIndexRoute
   '/repositories/': typeof RepositoriesIndexRoute
@@ -229,6 +247,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/ha'
+    | '/admin/$tab'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -239,6 +258,7 @@ export interface FileRouteTypes {
     | '/tokens/new'
     | '/users/$id'
     | '/users/new'
+    | '/admin/'
     | '/approvals/'
     | '/notifications/'
     | '/repositories/'
@@ -254,6 +274,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/ha'
+    | '/admin/$tab'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -262,6 +283,7 @@ export interface FileRouteTypes {
     | '/roles/new'
     | '/tokens/new'
     | '/users/new'
+    | '/admin'
     | '/approvals'
     | '/notifications'
     | '/repositories'
@@ -277,6 +299,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/ha'
+    | '/admin/$tab'
     | '/approvals/$id'
     | '/notifications/$id'
     | '/notifications/new'
@@ -287,6 +310,7 @@ export interface FileRouteTypes {
     | '/tokens/new'
     | '/users/$id'
     | '/users/new'
+    | '/admin/'
     | '/approvals/'
     | '/notifications/'
     | '/repositories/'
@@ -303,6 +327,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   HaRoute: typeof HaRoute
+  AdminTabRoute: typeof AdminTabRoute
   ApprovalsIdRoute: typeof ApprovalsIdRoute
   NotificationsIdRoute: typeof NotificationsIdRoute
   NotificationsNewRoute: typeof NotificationsNewRoute
@@ -313,6 +338,7 @@ export interface RootRouteChildren {
   TokensNewRoute: typeof TokensNewRoute
   UsersIdRoute: typeof UsersIdRouteWithChildren
   UsersNewRoute: typeof UsersNewRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   ApprovalsIndexRoute: typeof ApprovalsIndexRoute
   NotificationsIndexRoute: typeof NotificationsIndexRoute
   RepositoriesIndexRoute: typeof RepositoriesIndexRoute
@@ -386,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApprovalsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users/new': {
       id: '/users/new'
       path: '/users/new'
@@ -456,6 +489,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApprovalsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/$tab': {
+      id: '/admin/$tab'
+      path: '/admin/$tab'
+      fullPath: '/admin/$tab'
+      preLoaderRoute: typeof AdminTabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users/$id/': {
       id: '/users/$id/'
       path: '/'
@@ -518,6 +558,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   HaRoute: HaRoute,
+  AdminTabRoute: AdminTabRoute,
   ApprovalsIdRoute: ApprovalsIdRoute,
   NotificationsIdRoute: NotificationsIdRoute,
   NotificationsNewRoute: NotificationsNewRoute,
@@ -528,6 +569,7 @@ const rootRouteChildren: RootRouteChildren = {
   TokensNewRoute: TokensNewRoute,
   UsersIdRoute: UsersIdRouteWithChildren,
   UsersNewRoute: UsersNewRoute,
+  AdminIndexRoute: AdminIndexRoute,
   ApprovalsIndexRoute: ApprovalsIndexRoute,
   NotificationsIndexRoute: NotificationsIndexRoute,
   RepositoriesIndexRoute: RepositoriesIndexRoute,

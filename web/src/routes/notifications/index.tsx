@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { api, type Receiver } from "@/api";
-import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { Inline, PageDescription, Panel, PanelBody } from "@/components/app-ui/page";
 import {
   Table,
   TableBody,
@@ -22,15 +21,17 @@ export const Route = createFileRoute("/notifications/")({
 });
 
 function NotificationsRoute() {
-  const { me } = useAuth();
-  return me.admin ? <Receivers /> : <Navigate to="/repositories" replace />;
+  // Notifications now lives as a tab on the Admin page; keep this path as a
+  // redirect so existing deep links resolve.
+  return <Navigate to="/admin/$tab" params={{ tab: "notifications" }} replace />;
 }
 
 // Receivers lists notification receivers — named alarm channels (webhooks) that
 // repositories can select to be alerted when a package is quarantined pending
 // approval. Add/Edit open a separate page; delete is confirmed inline. Sending a
-// test posts a sample payload to the stored webhook. Admin-only.
-function Receivers() {
+// test posts a sample payload to the stored webhook. Rendered as the
+// "Notifications" tab on the admin page (which gates admin-only access).
+export function Receivers() {
   const navigate = useNavigate();
   const [receivers, setReceivers] = useState<Receiver[] | null>(null);
   const [error, setError] = useState("");
@@ -70,14 +71,6 @@ function Receivers() {
 
   return (
     <>
-      <PageHeader
-        title="Notifications"
-        actions={
-          <Button render={<Link to="/notifications/new" />} nativeButton={false}>
-            Add receiver
-          </Button>
-        }
-      />
       <PageDescription>
         A receiver is a webhook (Slack/Mattermost-compatible) alerted when a package enters a
         repository's approval queue. Each repository chooses which receivers to notify in its Settings.
@@ -85,9 +78,14 @@ function Receivers() {
 
       <Panel>
         <PanelBody>
-          <h2 className="m-0 mb-4 text-base font-semibold">
-            Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
-          </h2>
+          <Inline className="mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
+            <h2 className="m-0 text-base font-semibold">
+              Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
+            </h2>
+            <Button render={<Link to="/notifications/new" />} nativeButton={false}>
+              Add receiver
+            </Button>
+          </Inline>
           {error && <Alert className="mb-4">{error}</Alert>}
           {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
           {!receivers ? (

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { api, type HAStatus as HAStatusType } from "@/api";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { Inline, PageDescription, Panel, PanelBody } from "@/components/app-ui/page";
 import {
   Table,
   TableBody,
@@ -16,7 +16,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/ha")({
-  component: HAStatusRoute,
+  // HA Status now lives as a tab on the Admin page; keep this path as a
+  // redirect so existing deep links resolve.
+  component: () => <Navigate to="/admin/$tab" params={{ tab: "ha" }} replace />,
 });
 
 // How often the HA status is re-fetched; the header shows a live countdown to
@@ -40,7 +42,10 @@ function formatUptime(startedAt: string): string {
   return parts.join(" ");
 }
 
-function HAStatusRoute() {
+// HAStatusPanel renders the live HA cluster topology and status, plus the
+// manual-failover (step-down) control. Embedded as the "HA Status" tab on the
+// admin page; the step-down danger zone only shows for the active leader.
+export function HAStatusPanel() {
   const [status, setStatus] = useState<HAStatusType | null>(null);
   const [error, setError] = useState("");
   const [confirmStepDown, setConfirmStepDown] = useState(false);
@@ -96,14 +101,6 @@ function HAStatusRoute() {
 
   return (
     <>
-      <PageHeader
-        title="High Availability"
-        actions={
-          <Button variant="outline" type="button" onClick={reload}>
-            Refresh
-          </Button>
-        }
-      />
       <PageDescription>
         Review storage topology, leader election state, and fencing token for the active cluster.
       </PageDescription>
@@ -112,16 +109,21 @@ function HAStatusRoute() {
         <PanelBody>
           <Inline className="mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
             <h2 className="m-0 text-base font-semibold">Cluster status</h2>
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-input px-[9px] py-0.5 text-[11px] text-muted-foreground tabular-nums"
-              title="Auto-refreshes the HA status"
-            >
+            <Inline className="gap-2 max-sm:w-full max-sm:justify-between">
               <span
-                className="size-1.5 flex-none rounded-full bg-[var(--fx-success)] [animation:refresh-pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-              auto-refresh {secsLeft}s
-            </span>
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-input px-[9px] py-0.5 text-[11px] text-muted-foreground tabular-nums"
+                title="Auto-refreshes the HA status"
+              >
+                <span
+                  className="size-1.5 flex-none rounded-full bg-[var(--fx-success)] [animation:refresh-pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+                auto-refresh {secsLeft}s
+              </span>
+              <Button variant="outline" type="button" onClick={reload}>
+                Refresh
+              </Button>
+            </Inline>
           </Inline>
 
           {error && <Alert className="mb-4">{error}</Alert>}

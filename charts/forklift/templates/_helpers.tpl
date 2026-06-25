@@ -55,6 +55,81 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{/*
+s3Enabled is the effective S3 toggle: the operator explicitly set the s3 backend,
+OR the bundled MinIO subchart is enabled (which is wired to the s3 backend
+automatically). Used by every template that branches on object-storage mode so
+"minio.enabled" alone is enough to switch the whole chart to S3.
+*/}}
+{{- define "forklift.s3Enabled" -}}
+{{- if or (eq .Values.storage.backend "s3") .Values.minio.enabled -}}true{{- else -}}false{{- end -}}
+{{- end -}}
+
+{{/*
+Fully qualified name of the bundled MinIO release, matching the minio subchart's
+own fullname logic (release-name + chart-name, unless the release name already
+contains it). Honors minio.fullnameOverride.
+*/}}
+{{- define "forklift.minioFullname" -}}
+{{- if .Values.minio.fullnameOverride -}}
+{{- .Values.minio.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else if contains "minio" .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-minio" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Effective S3 endpoint: an explicitly configured endpoint wins; otherwise, when
+MinIO is bundled, point at the in-cluster MinIO API service. Empty (AWS default).
+*/}}
+{{- define "forklift.s3Endpoint" -}}
+{{- if .Values.storage.s3.endpoint -}}
+{{- .Values.storage.s3.endpoint -}}
+{{- else if .Values.minio.enabled -}}
+{{- printf "http://%s:9000" (include "forklift.minioFullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Effective S3 bucket: an explicit storage.s3.bucket wins; otherwise the first
+bucket the MinIO subchart provisions. Fails when neither is available.
+*/}}
+{{- define "forklift.s3Bucket" -}}
+{{- if .Values.storage.s3.bucket -}}
+{{- .Values.storage.s3.bucket -}}
+{{- else if and .Values.minio.enabled .Values.minio.buckets -}}
+{{- (first .Values.minio.buckets).name -}}
+{{- else -}}
+{{- fail "storage.s3.bucket is required when storage.backend is s3 (or define minio.buckets when using the bundled MinIO)" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validate mutually exclusive storage/HA modes. The s3 backend (including the
+bundled MinIO) already shares blobs and snapshots metadata to S3, so PV-based
+peer replication is redundant and would compete for the metadata snapshot.
+*/}}
+{{- define "forklift.validateStorage" -}}
+{{- if and (eq (include "forklift.s3Enabled" .) "true") .Values.replication.enabled -}}
+{{- fail "object-storage mode (storage.backend=s3 or minio.enabled=true) is incompatible with replication.enabled=true; disable one (s3 mode shares blobs and snapshots metadata to S3, so peer replication is unnecessary)" -}}
+{{- end -}}
+{{- if not (has .Values.storage.backend (list "fs" "s3")) -}}
+{{- fail (printf "storage.backend must be \"fs\" or \"s3\", got %q" .Values.storage.backend) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+labelRouting is true when traffic is routed to the leader via the
+forklift.io/role label (every pod stays Ready) instead of gating readiness on
+leadership: replication mode, or the s3 backend in HA. The main Service selects
+the leader label and the leader gets RBAC to patch pod labels.
+*/}}
+{{- define "forklift.labelRouting" -}}
+{{- if or .Values.replication.enabled (and (eq (include "forklift.s3Enabled" .) "true") (eq (include "forklift.haEnabled" .) "true")) -}}true{{- else -}}false{{- end -}}
+{{- end -}}
+
 {{/* haEnabled resolves the HA toggle: explicit value, else replicaCount > 1. */}}
 {{- define "forklift.haEnabled" -}}
 {{- if kindIs "bool" .Values.ha.enabled }}
@@ -87,6 +162,51 @@ StatefulSet (PV-based replication mode).
       fieldPath: metadata.namespace
 - name: FORKLIFT_DATA_DIR
   value: /data
+{{- if eq (include "forklift.s3Enabled" .) "true" }}
+- name: FORKLIFT_STORAGE_BACKEND
+  value: "s3"
+- name: FORKLIFT_STORAGE_S3_BUCKET
+  value: {{ include "forklift.s3Bucket" . | quote }}
+{{- with .Values.storage.s3.prefix }}
+- name: FORKLIFT_STORAGE_S3_PREFIX
+  value: {{ . | quote }}
+{{- end }}
+{{- $region := .Values.storage.s3.region }}
+{{- if and (not $region) .Values.minio.enabled }}{{ $region = "us-east-1" }}{{- end }}
+{{- with $region }}
+- name: FORKLIFT_STORAGE_S3_REGION
+  value: {{ . | quote }}
+{{- end }}
+{{- with (include "forklift.s3Endpoint" .) }}
+- name: FORKLIFT_STORAGE_S3_ENDPOINT
+  value: {{ . | quote }}
+{{- end }}
+- name: FORKLIFT_STORAGE_S3_FORCE_PATH_STYLE
+  value: {{ or .Values.storage.s3.forcePathStyle .Values.minio.enabled | quote }}
+- name: FORKLIFT_STORAGE_META_SYNC_INTERVAL
+  value: {{ .Values.storage.s3.metaSyncInterval | quote }}
+{{- /*
+S3 credentials. An explicit existingSecret wins. Otherwise, when MinIO is
+bundled, read the root credentials forklift mirrors into its own Secret. With
+neither, no static keys are set and the app falls back to the AWS default
+credential chain (EKS IRSA / Pod Identity).
+*/}}
+{{- $credSecret := "" }}
+{{- if .Values.storage.s3.existingSecret }}{{ $credSecret = .Values.storage.s3.existingSecret }}
+{{- else if .Values.minio.enabled }}{{ $credSecret = include "forklift.fullname" . }}{{- end }}
+{{- with $credSecret }}
+- name: FORKLIFT_STORAGE_S3_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ . }}
+      key: access-key-id
+- name: FORKLIFT_STORAGE_S3_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ . }}
+      key: secret-access-key
+{{- end }}
+{{- end }}
 - name: FORKLIFT_LOG_LEVEL
   value: {{ .Values.log.level | quote }}
 - name: FORKLIFT_LOG_FORMAT
@@ -167,13 +287,28 @@ StatefulSet (PV-based replication mode).
   value: /etc/forklift/accounts
 {{- end }}
 {{- end }}
-- name: FORKLIFT_OSV_URL
-  value: {{ .Values.vuln.osvUrl | quote }}
 {{- with .Values.externalUrl }}
 - name: FORKLIFT_EXTERNAL_URL
   value: {{ . | quote }}
 {{- end }}
 {{- with .Values.extraEnv }}
+{{ toYaml . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Container args: vulnerability (OSV) and license (deps.dev) scanning are
+configured via CLI flags rather than env. An empty URL is still passed so it
+explicitly disables the corresponding scanner (overriding the binary default).
+*/}}
+{{- define "forklift.args" -}}
+- --osv-url={{ .Values.vuln.osvUrl }}
+- --vuln-rescan-interval={{ .Values.vuln.rescanInterval }}
+- --vuln-ttl={{ .Values.vuln.ttl }}
+- --deps-dev-url={{ .Values.license.depsDevUrl }}
+- --license-rescan-interval={{ .Values.license.rescanInterval }}
+- --license-ttl={{ .Values.license.ttl }}
+{{- with .Values.extraArgs }}
 {{ toYaml . }}
 {{- end }}
 {{- end }}

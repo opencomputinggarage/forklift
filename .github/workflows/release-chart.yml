@@ -79,6 +79,12 @@ jobs:
         with:
           version: v3.19.0
 
+      # Fetch subchart dependencies (e.g. the bundled minio) into charts/ so lint
+      # and package can resolve them. The dependency tgz is gitignored, so this
+      # must run on every release.
+      - name: Build chart dependencies
+        run: helm dependency update "${CHART_PATH}"
+
       - name: Lint chart
         run: helm lint "${CHART_PATH}"
 

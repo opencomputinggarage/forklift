@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './../routes/__root'
+import { Route as HaRouteImport } from './../routes/ha'
 import { Route as SplatRouteImport } from './../routes/$'
 import { Route as IndexRouteImport } from './../routes/index'
 import { Route as UsersIndexRouteImport } from './../routes/users/index'
@@ -29,6 +30,11 @@ import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositorie
 import { Route as RepositoriesIdTabRouteImport } from './../routes/repositories/$id/$tab'
 import { Route as UsersIdTokensNewRouteImport } from './../routes/users/$id/tokens/new'
 
+const HaRoute = HaRouteImport.update({
+  id: '/ha',
+  path: '/ha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',
@@ -128,6 +134,7 @@ const UsersIdTokensNewRoute = UsersIdTokensNewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/ha': typeof HaRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/repositories/$id': typeof RepositoriesIdRouteWithChildren
   '/repositories/new': typeof RepositoriesNewRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/ha': typeof HaRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/repositories/new': typeof RepositoriesNewRoute
   '/roles/$id': typeof RolesIdRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/ha': typeof HaRoute
   '/approvals/$id': typeof ApprovalsIdRoute
   '/repositories/$id': typeof RepositoriesIdRouteWithChildren
   '/repositories/new': typeof RepositoriesNewRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/ha'
     | '/approvals/$id'
     | '/repositories/$id'
     | '/repositories/new'
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/ha'
     | '/approvals/$id'
     | '/repositories/new'
     | '/roles/$id'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/ha'
     | '/approvals/$id'
     | '/repositories/$id'
     | '/repositories/new'
@@ -254,6 +266,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  HaRoute: typeof HaRoute
   ApprovalsIdRoute: typeof ApprovalsIdRoute
   RepositoriesIdRoute: typeof RepositoriesIdRouteWithChildren
   RepositoriesNewRoute: typeof RepositoriesNewRoute
@@ -271,6 +284,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ha': {
+      id: '/ha'
+      path: '/ha'
+      fullPath: '/ha'
+      preLoaderRoute: typeof HaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$': {
       id: '/$'
       path: '/$'
@@ -437,6 +457,7 @@ const UsersIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  HaRoute: HaRoute,
   ApprovalsIdRoute: ApprovalsIdRoute,
   RepositoriesIdRoute: RepositoriesIdRouteWithChildren,
   RepositoriesNewRoute: RepositoriesNewRoute,

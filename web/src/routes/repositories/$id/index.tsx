@@ -5,6 +5,7 @@ import { useAuth } from "../../../authContext";
 import { UpstreamStatus } from "@/components/feedback/upstream-status";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
+import { Badge } from "@/components/app-ui/badge";
 import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Select } from "@/components/app-ui/select";
 import { ActionBadge } from "@/components/app-ui/action-badge";
@@ -157,6 +158,7 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   // Older repos may predate the approval config section.
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
   const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
+  const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
 
   return (
     <>
@@ -355,6 +357,57 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             <span>Block versions not yet scanned (block action only)</span>
           </label>
           <p className="mb-0 mt-4 text-sm text-muted-foreground">Coordinate match against OSV (direct dependency only); transitive deps and artifact integrity are out of scope. Newly disclosed advisories surface on the next re-scan.</p>
+          </PanelBody>
+        </Panel>
+      )}
+
+      {repo.type === "proxy" && (
+        <Panel>
+          <PanelBody>
+          <h2 className="m-0 mb-4 text-base font-semibold">License policy <span className="text-xs font-normal text-muted-foreground">· deps.dev</span></h2>
+          <label className="mb-4 flex items-center gap-2 text-sm">
+            <Checkbox checked={license.enabled}
+              onCheckedChange={(checked) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, enabled: !!checked } } })} />
+            <span>Gate packages by their declared license</span>
+          </label>
+          <FieldGroup className="grid gap-4 md:grid-cols-2">
+            <Field><FieldLabel>Action</FieldLabel>
+              <Select value={license.action || "audit"}
+                onChange={(v) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, action: v } } })}
+                options={[
+                  { value: "block", label: "block (refuse to serve)" },
+                  { value: "warn", label: "warn (serve, log)" },
+                  { value: "audit", label: "audit (serve, log)" },
+                ]} /></Field>
+            <Field><FieldLabel>Deny licenses (SPDX id, one per line)</FieldLabel>
+              <Textarea rows={3}
+                value={(license.deny ?? []).join("\n")}
+                placeholder={"GPL-3.0\nAGPL-3.0"}
+                onChange={(e) => setRepo({
+                  ...repo,
+                  config: {
+                    ...repo.config,
+                    license: { ...license, deny: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) },
+                  },
+                })} /></Field>
+            <Field><FieldLabel>Allow licenses (SPDX id, one per line; empty = allow all but denied)</FieldLabel>
+              <Textarea rows={3}
+                value={(license.allow ?? []).join("\n")}
+                placeholder={"MIT\nApache-2.0\nBSD-3-Clause"}
+                onChange={(e) => setRepo({
+                  ...repo,
+                  config: {
+                    ...repo.config,
+                    license: { ...license, allow: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) },
+                  },
+                })} /></Field>
+          </FieldGroup>
+          <label className="mt-3 flex items-center gap-2 text-sm">
+            <Checkbox checked={!!license.block_unresolved}
+              onCheckedChange={(checked) => setRepo({ ...repo, config: { ...repo.config, license: { ...license, block_unresolved: !!checked } } })} />
+            <span>Block versions not yet resolved (block action only)</span>
+          </label>
+          <p className="mb-0 mt-4 text-sm text-muted-foreground">Licenses are resolved per version from deps.dev. A denied license, or any license outside a non-empty allow list, triggers the selected action. Matching is case-insensitive.</p>
           </PanelBody>
         </Panel>
       )}
@@ -574,7 +627,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       <TableWrap>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Path</TableHead><TableHead>Version</TableHead><TableHead>Vuln</TableHead><TableHead>Size</TableHead><TableHead>Type</TableHead><TableHead>Last accessed</TableHead>{canDelete && <TableHead></TableHead>}</TableRow>
+          <TableRow><TableHead>Path</TableHead><TableHead>Version</TableHead><TableHead>Vuln</TableHead><TableHead>License</TableHead><TableHead>Size</TableHead><TableHead>Type</TableHead><TableHead>Last accessed</TableHead>{canDelete && <TableHead></TableHead>}</TableRow>
         </TableHeader>
         <TableBody>
           {data?.artifacts.map((a) => (
@@ -582,6 +635,15 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               <TableCell className="break-all font-mono text-xs">{a.path}</TableCell>
               <TableCell>{a.version || "—"}</TableCell>
               <TableCell><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
+              <TableCell>
+                {a.licenses && a.licenses.length > 0 ? (
+                  <Inline className="flex-wrap gap-1.5">
+                    {a.licenses.map((licenseId) => <Badge key={licenseId} variant="outline">{licenseId}</Badge>)}
+                  </Inline>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
               <TableCell className="text-muted-foreground">{humanSize(a.size)}</TableCell>
               <TableCell className="text-muted-foreground">{a.content_type}</TableCell>
               <TableCell className="text-muted-foreground">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</TableCell>
@@ -593,7 +655,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
             </TableRow>
           ))}
           {data && data.artifacts.length === 0 && (
-            <TableRow><TableCell colSpan={canDelete ? 7 : 6} className="text-muted-foreground">No cached artifacts yet. Pull through the endpoint above to populate the cache.</TableCell></TableRow>
+            <TableRow><TableCell colSpan={canDelete ? 8 : 7} className="text-muted-foreground">No cached artifacts yet. Pull through the endpoint above to populate the cache.</TableCell></TableRow>
           )}
         </TableBody>
       </Table>

@@ -219,6 +219,9 @@ func (m *Manager) pypiFile(w http.ResponseWriter, r *http.Request, res resolved)
 	if m.vulnGate(w, r, res, pypiPkg, pypiVer) {
 		return
 	}
+	if m.licenseGate(w, r, res, pypiPkg, pypiVer) {
+		return
+	}
 	spec := fetchSpec{
 		repo:             res.repo,
 		cfg:              res.cfg,
@@ -281,6 +284,7 @@ func (m *Manager) pypiUpload(w http.ResponseWriter, r *http.Request, res resolve
 		return
 	}
 	m.scanStored(res.repo, p)
+	m.resolveStored(res.repo, p)
 	w.WriteHeader(http.StatusCreated)
 }
 

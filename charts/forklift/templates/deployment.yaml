@@ -1,3 +1,4 @@
+{{- include "forklift.validateStorage" . }}
 {{- if not .Values.replication.enabled }}
 apiVersion: apps/v1
 kind: Deployment
@@ -8,11 +9,25 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
-  # The shared RWX volume holds a single SQLite DB; avoid two pods writing during
-  # a rollout by recreating rather than surging. Leader election still guards
-  # writes, but Recreate keeps the invariant simple.
+  {{- if .Values.strategy }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- else if eq (include "forklift.s3Enabled" .) "true" }}
+  # s3 mode: each pod has its own SQLite working file (emptyDir) and a single
+  # writer is guaranteed by leader election plus S3 metadata fencing, so a
+  # surging rollout is safe — RollingUpdate avoids the Recreate downtime.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  {{- else }}
+  # Shared RWX volume (or single instance on an RWO PVC) holds one SQLite DB;
+  # surging would let two pods write the same file (or contend for the volume),
+  # so recreate rather than surge to keep a single writer.
   strategy:
     type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "forklift.selectorLabels" . | nindent 6 }}
@@ -49,6 +64,8 @@ spec:
               containerPort: 8080
             - name: metrics
               containerPort: 8081
+          args:
+            {{- include "forklift.args" . | nindent 12 }}
           env:
             {{- include "forklift.env" . | nindent 12 }}
           {{- with .Values.resizePolicy }}
@@ -67,10 +84,13 @@ spec:
             {{- include "forklift.rbacVolumeMounts" . | nindent 12 }}
       volumes:
         - name: data
-          {{- if .Values.persistence.enabled }}
+          {{- if and .Values.persistence.enabled (ne (include "forklift.s3Enabled" .) "true") }}
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.existingClaim | default (include "forklift.fullname" .) }}
           {{- else }}
+          # s3 backend: only the live SQLite working file lives here; blobs and
+          # the durable metadata snapshot are in S3, so an ephemeral volume is
+          # sufficient and no EBS/RWX PersistentVolume is required.
           emptyDir: {}
           {{- end }}
         {{- include "forklift.rbacVolumes" . | nindent 8 }}

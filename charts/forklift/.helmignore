@@ -5,5 +5,4 @@
 *.bak
 *.orig
 .idea/
-*.tgz
 README.md.gotmpl

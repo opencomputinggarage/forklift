@@ -27,6 +27,9 @@ func (m *Manager) handleMaven(w http.ResponseWriter, r *http.Request) {
 	if m.vulnGate(w, r, res, mavenPackage(res.path), mavenVersion(res.path)) {
 		return
 	}
+	if m.licenseGate(w, r, res, mavenPackage(res.path), mavenVersion(res.path)) {
+		return
+	}
 
 	switch r.Method {
 	case http.MethodGet, http.MethodHead:
@@ -52,6 +55,7 @@ func (m *Manager) handleMaven(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		m.scanStored(res.repo, res.path)
+		m.resolveStored(res.repo, res.path)
 		w.WriteHeader(http.StatusCreated)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

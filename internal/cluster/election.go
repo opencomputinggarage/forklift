@@ -58,6 +58,27 @@ func (e *Elector) LeaderIdentity(ctx context.Context) (string, error) {
 	return *lease.Spec.HolderIdentity, nil
 }
 
+// FencingToken returns the Lease's transition counter, a value that increases
+// by one every time leadership changes hands. The leader uses it as a fencing
+// token: writes to shared storage carry this token, and a stale ("zombie")
+// former leader — paused past its lease and superseded — carries a lower token,
+// so the storage layer can reject its writes and prevent split-brain overwrites.
+// Returns 0 when the Lease is absent or has no recorded transitions.
+func (e *Elector) FencingToken(ctx context.Context) (int64, error) {
+	lease, err := e.client.CoordinationV1().Leases(e.cfg.LeaseNamespace).
+		Get(ctx, e.cfg.LeaseName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("get lease: %w", err)
+	}
+	if lease.Spec.LeaseTransitions == nil {
+		return 0, nil
+	}
+	return int64(*lease.Spec.LeaseTransitions), nil
+}
+
 // Run contends for leadership until ctx is cancelled. onStarted is invoked with
 // a context that is cancelled when leadership is lost; onStopped is invoked when
 // this instance stops leading. The election loop re-contends after losing

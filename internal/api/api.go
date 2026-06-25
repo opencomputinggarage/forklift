@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -24,6 +25,9 @@ type Handler struct {
 	log    *slog.Logger
 	client *http.Client
 	rec    *audit.Recorder
+	// haStatus assembles live HA/leadership status; injected from main once
+	// leader election and the storage backend are known. Nil in tests.
+	haStatus func(context.Context) HAStatus
 }
 
 // New creates an API handler. authz may be nil in tests that exercise only
@@ -133,6 +137,8 @@ func (h *Handler) Routes() chi.Router {
 		if h.authz != nil {
 			r.Use(h.authz.RequireAdmin)
 		}
+		// HA/leadership status for the management console (admin-only read).
+		r.Get("/ha", h.getHAStatus)
 		r.Post("/repositories", h.createRepository)
 		r.Post("/repositories/check-upstream", h.checkUpstream)
 		r.Put("/repositories/{id}", h.updateRepository)

@@ -519,6 +519,12 @@ type artifactDTO struct {
 	// Provenance of the scan: the advisory source (e.g. "OSV") and when it ran.
 	VulnSource    string     `json:"vuln_source,omitempty"`
 	VulnScannedAt *time.Time `json:"vuln_scanned_at,omitempty"`
+	// Resolved SPDX license(s) for this version, when resolved. Empty when not
+	// yet resolved or when the source reports no license. LicenseSource names the
+	// data source (e.g. "deps.dev") and LicenseResolvedAt when it ran.
+	Licenses          []string   `json:"licenses,omitempty"`
+	LicenseSource     string     `json:"license_source,omitempty"`
+	LicenseResolvedAt *time.Time `json:"license_resolved_at,omitempty"`
 }
 
 // listArtifacts returns the artifacts stored (hosted or cached) in a repository,
@@ -561,6 +567,17 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 					if !scan.ScannedAt.IsZero() {
 						scannedAt := scan.ScannedAt
 						dto.VulnScannedAt = &scannedAt
+					}
+				}
+			}
+			// Attach the stored license resolution for this coordinate, if any.
+			if system, pkg := repopkg.LicenseCoordinate(repo.Format, a.Path); pkg != "" {
+				if ls, lerr := h.store.GetLicenseScan(r.Context(), system, pkg, a.Version); lerr == nil {
+					dto.Licenses = ls.Licenses
+					dto.LicenseSource = ls.Source
+					if !ls.ResolvedAt.IsZero() {
+						resolvedAt := ls.ResolvedAt
+						dto.LicenseResolvedAt = &resolvedAt
 					}
 				}
 			}

@@ -1,10 +1,16 @@
 # forklift
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.0](https://img.shields.io/badge/AppVersion-0.2.0-informational?style=flat-square)
+![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.1](https://img.shields.io/badge/AppVersion-0.2.1-informational?style=flat-square)
 
 Lightweight Kubernetes-native artifact repository (Maven, npm, Cargo, Go, PyPI) with proxy caching and supply-chain controls (age policy, package approval, vulnerability scanning)
 
 **Homepage:** <https://github.com/younsl/o>
+
+## Requirements
+
+| Repository | Name | Version |
+|------------|------|---------|
+| https://charts.min.io/ | minio | 5.4.0 |
 
 ## Installation
 
@@ -39,7 +45,7 @@ helm install forklift oci://ghcr.io/younsl/charts/forklift -f values.yaml
 Install a specific version:
 
 ```console
-helm install forklift oci://ghcr.io/younsl/charts/forklift --version 0.2.0
+helm install forklift oci://ghcr.io/younsl/charts/forklift --version 0.2.1
 ```
 
 ### Install from local chart
@@ -47,7 +53,7 @@ helm install forklift oci://ghcr.io/younsl/charts/forklift --version 0.2.0
 Download forklift chart and install from local directory:
 
 ```console
-helm pull oci://ghcr.io/younsl/charts/forklift --untar --version 0.2.0
+helm pull oci://ghcr.io/younsl/charts/forklift --untar --version 0.2.1
 helm install forklift ./forklift
 ```
 
@@ -75,6 +81,7 @@ The following table lists the configurable parameters and their default values.
 |-----|------|---------|-------------|
 | replicaCount | int | `2` | Number of replicas. With 2+ replicas, enable ha to elect a single active writer. |
 | revisionHistoryLimit | int | `10` | Number of old ReplicaSets to retain for rollback. |
+| strategy | object | `{}` | Deployment update strategy. Empty selects a safe default per mode: RollingUpdate (maxUnavailable 0, maxSurge 1) in the s3 backend — per-pod storage + leader election + S3 fencing make a surging rollout safe and zero-downtime — and Recreate for the fs backend (single shared SQLite / RWO volume). Set explicitly to override, e.g. {type: Recreate}. |
 | image.registry | string | `"ghcr.io"` | Container image registry host. Set empty to fold the host into `repository` instead. |
 | image.repository | string | `"younsl/forklift"` | Container image repository (path under the registry). |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
@@ -95,6 +102,24 @@ The following table lists the configurable parameters and their default values.
 | persistence.accessModes | list | `["ReadWriteMany"]` | PVC access modes. MUST be ReadWriteMany for replicaCount > 1. |
 | persistence.size | string | `"20Gi"` | PVC storage size. |
 | persistence.annotations | object | `{}` | Annotations to add to the PVC. |
+| storage.backend | string | `"fs"` | Storage backend: "fs" or "s3". Enabling the bundled MinIO (minio.enabled=true, the default) forces the s3 backend regardless of this. |
+| storage.s3.bucket | string | `""` | S3 bucket name. Required when backend is "s3" and the bundled MinIO is disabled; with MinIO enabled it defaults to the first minio.buckets entry. |
+| storage.s3.prefix | string | `""` | Key prefix within the bucket (e.g. an environment name). |
+| storage.s3.region | string | `""` | AWS region. Empty uses the AWS default chain / pod environment. |
+| storage.s3.endpoint | string | `""` | Custom S3 endpoint for S3-compatible stores (e.g. external MinIO). Empty uses AWS; with the bundled MinIO enabled it auto-targets the in-cluster service. |
+| storage.s3.forcePathStyle | bool | `false` | Use path-style addressing (required by MinIO and most S3-compatibles). Forced on when the bundled MinIO is enabled. |
+| storage.s3.metaSyncInterval | string | `"30s"` | Leader snapshot upload / standby download cadence; the bounded data-loss window on failover. |
+| storage.s3.existingSecret | string | `""` | Name of an existing Secret with keys `access-key-id` and `secret-access-key` for static credentials. Leave empty to use the AWS default credential chain (EKS IRSA or EKS Pod Identity) — the recommended setup; grant the role s3:GetObject,PutObject,DeleteObject,ListBucket on the bucket and its prefix, and annotate the serviceAccount accordingly. |
+| minio.enabled | bool | `true` | Deploy the bundled MinIO and wire forklift's s3 backend to it. |
+| minio.image.repository | string | `"quay.io/minio/minio"` | MinIO server image repository. |
+| minio.image.tag | string | `"RELEASE.2025-09-07T16-13-09Z"` | MinIO server image tag. Pinned to a recent release for full S3 conditional-write support (If-Match / If-None-Match), used by the metadata snapshot fencing in HA. |
+| minio.mode | string | `"standalone"` | Deployment mode: "standalone" (single node) or "distributed". |
+| minio.rootUser | string | `"forklift"` | MinIO root access key. Mirrored into forklift's Secret as the S3 access-key-id. CHANGE for any non-dev use. |
+| minio.rootPassword | string | `"forklift-minio-change-me"` | MinIO root secret key (min 8 chars). Mirrored as the S3 secret-access-key. CHANGE for any non-dev use. |
+| minio.buckets | list | `[{"name":"forklift","policy":"none","purge":false}]` | Buckets to provision on install. The first entry is the bucket forklift uses unless storage.s3.bucket overrides it. |
+| minio.persistence.enabled | bool | `true` | Persist MinIO data on a PVC. Disable only for throwaway demos. |
+| minio.persistence.size | string | `"10Gi"` | Size of the MinIO data volume. |
+| minio.resources.requests.memory | string | `"512Mi"` | MinIO memory request. The subchart default (16Gi) is sized for large clusters; this lowers it for a single-node bundled deployment. |
 | auth.anonymousRead | bool | `false` | Allow unauthenticated read (pull) access. |
 | auth.sessionTTL | string | `"12h"` | Session cookie lifetime. |
 | auth.sessionSecret | string | `""` | Secret used to sign session cookies; MUST be shared across replicas. If empty a value is generated into the chart Secret on first install and preserved. |
@@ -113,7 +138,12 @@ The following table lists the configurable parameters and their default values.
 | auth.rbac.accounts | list | `[]` | Local (password) accounts to provision declaratively. Each gets a password generated into the chart Secret (key: local-user-<name>-password) and preserved across upgrades, or set `password` explicitly. Grant roles to them with `g, user:<name>, <role>` lines above. Existing accounts (incl. the bootstrap admin) are never overwritten. |
 | audit.enabled | bool | `true` | Enable the audit log. |
 | audit.retention | string | `"2160h"` | Retention period; the leader prunes older entries. "0" keeps them forever. |
-| vuln.osvUrl | string | `"https://api.osv.dev"` | OSV API base URL used to scan requested versions. |
+| vuln.osvUrl | string | `"https://api.osv.dev"` | OSV API base URL used to scan requested versions. Empty disables scanning. |
+| vuln.rescanInterval | string | `"6h"` | How often stale scan results are re-queried. |
+| vuln.ttl | string | `"24h"` | Age at which a scan result is considered stale. |
+| license.depsDevUrl | string | `"https://api.deps.dev"` | deps.dev API base URL used to resolve package licenses. Empty disables resolution. |
+| license.rescanInterval | string | `"24h"` | How often stale license results are re-queried. |
+| license.ttl | string | `"168h"` | Age at which a license result is considered stale. |
 | externalUrl | string | `""` | Public base URL clients reach forklift at (e.g. https://forklift.example.com). When set, generated index/metadata URLs use it instead of the inbound request host, which hardens against Host-header injection. Empty uses the request host. |
 | seedDefaultRepos | bool | `true` | Seed default repositories on first run, like a fresh Nexus install: a proxy of each public registry (Maven Central, npm, crates.io, Go proxy) plus one local hosted repository per format. Idempotent. Set false to start with no repos. |
 | log.level | string | `"info"` | Log level (debug, info, warn, error). |
@@ -157,6 +187,7 @@ The following table lists the configurable parameters and their default values.
 | affinity | object | `{}` | Affinity rules for pod scheduling. |
 | topologySpreadConstraints | list | `[]` | Topology spread constraints for pod scheduling. |
 | extraEnv | list | `[]` | Raw environment variables appended to the container. |
+| extraArgs | list | `[]` | Raw CLI flags appended to the container args (after the scan flags). |
 | extraObjects | list | `[]` | Arbitrary additional manifests to render (each value is templated). |
 
 ## Source Code

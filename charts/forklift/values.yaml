@@ -5,6 +5,13 @@ replicaCount: 2
 # -- (int) Number of old ReplicaSets to retain for rollback.
 revisionHistoryLimit: 10
 
+# -- (object) Deployment update strategy. Empty selects a safe default per mode:
+# RollingUpdate (maxUnavailable 0, maxSurge 1) in the s3 backend — per-pod
+# storage + leader election + S3 fencing make a surging rollout safe and
+# zero-downtime — and Recreate for the fs backend (single shared SQLite / RWO
+# volume). Set explicitly to override, e.g. {type: Recreate}.
+strategy: {}
+
 image:
   # -- (string) Container image registry host. Set empty to fold the host into
   # `repository` instead.
@@ -74,6 +81,84 @@ persistence:
   annotations: {}
   # -- (string) Use an existing PVC instead of creating one.
   # existingClaim: ""
+
+# Blob + metadata storage backend. "fs" (default) keeps blobs and the SQLite
+# database on the PersistentVolume above. "s3" stores blobs directly in an S3
+# bucket and snapshots the metadata database to S3, so an HA deployment needs no
+# EBS/RWX volume: pods run as a Deployment with an emptyDir for the live SQLite
+# working file, and the leader (elected via Lease when replicaCount > 1) uploads
+# the metadata snapshot while standbys restore it on promotion. The s3 backend
+# is mutually exclusive with replication.enabled.
+storage:
+  # -- (string) Storage backend: "fs" or "s3". Enabling the bundled MinIO
+  # (minio.enabled=true, the default) forces the s3 backend regardless of this.
+  backend: fs
+  s3:
+    # -- (string) S3 bucket name. Required when backend is "s3" and the bundled
+    # MinIO is disabled; with MinIO enabled it defaults to the first minio.buckets entry.
+    bucket: ""
+    # -- (string) Key prefix within the bucket (e.g. an environment name).
+    prefix: ""
+    # -- (string) AWS region. Empty uses the AWS default chain / pod environment.
+    region: ""
+    # -- (string) Custom S3 endpoint for S3-compatible stores (e.g. external MinIO).
+    # Empty uses AWS; with the bundled MinIO enabled it auto-targets the in-cluster service.
+    endpoint: ""
+    # -- (bool) Use path-style addressing (required by MinIO and most S3-compatibles).
+    # Forced on when the bundled MinIO is enabled.
+    forcePathStyle: false
+    # -- (string) Leader snapshot upload / standby download cadence; the bounded
+    # data-loss window on failover.
+    metaSyncInterval: 30s
+    # -- (string) Name of an existing Secret with keys `access-key-id` and
+    # `secret-access-key` for static credentials. Leave empty to use the AWS
+    # default credential chain (EKS IRSA or EKS Pod Identity) — the recommended
+    # setup; grant the role s3:GetObject,PutObject,DeleteObject,ListBucket on the
+    # bucket and its prefix, and annotate the serviceAccount accordingly.
+    existingSecret: ""
+
+# Bundled MinIO object storage (minio/minio subchart). Enabled by default so the
+# chart provides S3-backed HA storage with no external bucket: forklift's s3
+# backend is auto-wired to the in-cluster MinIO (endpoint, bucket, path-style,
+# credentials). The single-node standalone default suits dev/demo; for production
+# disable it (minio.enabled=false) and point storage.s3.* at AWS S3 (with EKS
+# IRSA / Pod Identity) or a hardened external MinIO. These keys are passed
+# straight to the subchart — see https://github.com/minio/minio/tree/master/helm/minio
+# for the full set.
+minio:
+  # -- (bool) Deploy the bundled MinIO and wire forklift's s3 backend to it.
+  enabled: true
+  image:
+    # -- (string) MinIO server image repository.
+    repository: quay.io/minio/minio
+    # -- (string) MinIO server image tag. Pinned to a recent release for full S3
+    # conditional-write support (If-Match / If-None-Match), used by the metadata
+    # snapshot fencing in HA.
+    tag: RELEASE.2025-09-07T16-13-09Z
+  # -- (string) Deployment mode: "standalone" (single node) or "distributed".
+  mode: standalone
+  # -- (string) MinIO root access key. Mirrored into forklift's Secret as the
+  # S3 access-key-id. CHANGE for any non-dev use.
+  rootUser: forklift
+  # -- (string) MinIO root secret key (min 8 chars). Mirrored as the S3
+  # secret-access-key. CHANGE for any non-dev use.
+  rootPassword: forklift-minio-change-me
+  # -- (list) Buckets to provision on install. The first entry is the bucket
+  # forklift uses unless storage.s3.bucket overrides it.
+  buckets:
+    - name: forklift
+      policy: none
+      purge: false
+  persistence:
+    # -- (bool) Persist MinIO data on a PVC. Disable only for throwaway demos.
+    enabled: true
+    # -- (string) Size of the MinIO data volume.
+    size: 10Gi
+  resources:
+    requests:
+      # -- (string) MinIO memory request. The subchart default (16Gi) is sized for
+      # large clusters; this lowers it for a single-node bundled deployment.
+      memory: 512Mi
 
 # Authentication and authorization.
 auth:
@@ -168,13 +253,30 @@ audit:
   # -- (string) Retention period; the leader prunes older entries. "0" keeps them forever.
   retention: 2160h # 90 days
 
-# Vulnerability scanning data source (OSV). Enforcement is per-repository
+# Vulnerability scanning data source (OSV). Passed to the container as CLI flags
+# (--osv-url, --vuln-rescan-interval, --vuln-ttl). Enforcement is per-repository
 # (Settings > Vulnerability policy) and only happens for repositories that opt
 # in, so there is no global on/off here; this just points the scanner at an OSV
 # endpoint. For air-gapped clusters, set this to a self-hosted/mirrored OSV.
 vuln:
-  # -- (string) OSV API base URL used to scan requested versions.
+  # -- (string) OSV API base URL used to scan requested versions. Empty disables scanning.
   osvUrl: https://api.osv.dev
+  # -- (string) How often stale scan results are re-queried.
+  rescanInterval: 6h
+  # -- (string) Age at which a scan result is considered stale.
+  ttl: 24h
+
+# License scanning data source (deps.dev). Passed to the container as CLI flags
+# (--deps-dev-url, --license-rescan-interval, --license-ttl). Like vulnerability
+# scanning, enforcement is per-repository; this only points the resolver at a
+# deps.dev endpoint. Set depsDevUrl empty to disable license resolution.
+license:
+  # -- (string) deps.dev API base URL used to resolve package licenses. Empty disables resolution.
+  depsDevUrl: https://api.deps.dev
+  # -- (string) How often stale license results are re-queried.
+  rescanInterval: 24h
+  # -- (string) Age at which a license result is considered stale.
+  ttl: 168h
 
 # -- (string) Public base URL clients reach forklift at (e.g. https://forklift.example.com).
 # When set, generated index/metadata URLs use it instead of the inbound request
@@ -341,6 +443,9 @@ topologySpreadConstraints: []
 
 # -- (list) Raw environment variables appended to the container.
 extraEnv: []
+
+# -- (list) Raw CLI flags appended to the container args (after the scan flags).
+extraArgs: []
 
 # -- (list) Arbitrary additional manifests to render (each value is templated).
 extraObjects: []

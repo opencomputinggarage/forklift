@@ -13,9 +13,14 @@ import (
 
 // Config holds all runtime configuration.
 type Config struct {
-	// DataDir is the root directory backed by a (RWX) PersistentVolume. It holds
-	// the SQLite metadata database and the content-addressed blob store.
+	// DataDir is the root directory holding the SQLite metadata database and,
+	// for the filesystem backend, the content-addressed blob store. It is backed
+	// by a PersistentVolume (RWX or per-pod RWO) or, in the s3 backend, an
+	// ephemeral volume (emptyDir) that only holds the live SQLite working file.
 	DataDir string
+
+	// Storage selects the blob + metadata backend (filesystem or S3).
+	Storage StorageConfig
 
 	// HTTPAddr is the listen address for the API + UI + package protocols.
 	HTTPAddr string
@@ -54,10 +59,43 @@ type Config struct {
 	// disabled when OSVURL is empty; per-repository policy gates enforcement.
 	Vuln VulnConfig
 
+	// License configures background license resolution (deps.dev). Resolution is
+	// disabled when DepsDevURL is empty; per-repository policy gates enforcement.
+	License LicenseConfig
+
 	// SeedDefaultRepos, on first run, creates default repositories: a proxy of
 	// each public registry (Maven Central, npm, crates.io, Go proxy) plus a local
 	// hosted repository per format, like a fresh Nexus install. Idempotent.
 	SeedDefaultRepos bool
+}
+
+// StorageConfig selects where blobs and the metadata database are persisted.
+// A single backend switch flips both subsystems so they cannot be misconfigured
+// independently.
+type StorageConfig struct {
+	// Backend is "fs" (local/PersistentVolume) or "s3" (shared S3 bucket). In
+	// s3 mode blobs live directly in the bucket and the metadata database is
+	// snapshotted to S3 (see internal/objstore), so no EBS/RWX volume is needed.
+	Backend string
+	// MetaSyncInterval is the s3-mode cadence at which the leader uploads a
+	// metadata snapshot and standbys download it. Writes within one interval can
+	// be lost on failover (asynchronous, like PV replication).
+	MetaSyncInterval time.Duration
+	// S3 holds S3 connection settings, used only when Backend is "s3".
+	S3 S3Config
+}
+
+// S3Config configures the S3 backend. Empty Region/credentials fall back to the
+// AWS default credential chain, which resolves EKS IRSA and EKS Pod Identity
+// automatically. Endpoint/ForcePathStyle support S3-compatible stores (MinIO).
+type S3Config struct {
+	Bucket          string
+	Prefix          string
+	Region          string
+	Endpoint        string
+	ForcePathStyle  bool
+	AccessKeyID     string
+	SecretAccessKey string
 }
 
 // VulnConfig configures OSV-based vulnerability scanning.
@@ -68,6 +106,17 @@ type VulnConfig struct {
 	// RescanInterval is how often stale scan results are re-queried.
 	RescanInterval time.Duration
 	// TTL marks a scan result stale (eligible for re-scan) once older than this.
+	TTL time.Duration
+}
+
+// LicenseConfig configures deps.dev-based license resolution.
+type LicenseConfig struct {
+	// DepsDevURL is the deps.dev API base (e.g. https://api.deps.dev). Empty
+	// disables license resolution entirely.
+	DepsDevURL string
+	// RescanInterval is how often stale results are re-queried.
+	RescanInterval time.Duration
+	// TTL marks a result stale (eligible for re-resolution) once older than this.
 	TTL time.Duration
 }
 
@@ -160,7 +209,20 @@ type HAConfig struct {
 // Load builds a Config from the environment, applying defaults.
 func Load() (*Config, error) {
 	c := &Config{
-		DataDir:         env("FORKLIFT_DATA_DIR", "/data"),
+		DataDir: env("FORKLIFT_DATA_DIR", "/data"),
+		Storage: StorageConfig{
+			Backend:          env("FORKLIFT_STORAGE_BACKEND", "fs"),
+			MetaSyncInterval: envDuration("FORKLIFT_STORAGE_META_SYNC_INTERVAL", 30*time.Second),
+			S3: S3Config{
+				Bucket:          env("FORKLIFT_STORAGE_S3_BUCKET", ""),
+				Prefix:          env("FORKLIFT_STORAGE_S3_PREFIX", ""),
+				Region:          env("FORKLIFT_STORAGE_S3_REGION", ""),
+				Endpoint:        env("FORKLIFT_STORAGE_S3_ENDPOINT", ""),
+				ForcePathStyle:  envBool("FORKLIFT_STORAGE_S3_FORCE_PATH_STYLE", false),
+				AccessKeyID:     env("FORKLIFT_STORAGE_S3_ACCESS_KEY_ID", ""),
+				SecretAccessKey: env("FORKLIFT_STORAGE_S3_SECRET_ACCESS_KEY", ""),
+			},
+		},
 		HTTPAddr:        env("FORKLIFT_HTTP_ADDR", ":8080"),
 		MetricsAddr:     env("FORKLIFT_METRICS_ADDR", ":8081"),
 		ExternalURL:     env("FORKLIFT_EXTERNAL_URL", ""),
@@ -216,6 +278,11 @@ func Load() (*Config, error) {
 			RescanInterval: envDuration("FORKLIFT_VULN_RESCAN_INTERVAL", 6*time.Hour),
 			TTL:            envDuration("FORKLIFT_VULN_TTL", 24*time.Hour),
 		},
+		License: LicenseConfig{
+			DepsDevURL:     env("FORKLIFT_DEPSDEV_URL", "https://api.deps.dev"),
+			RescanInterval: envDuration("FORKLIFT_LICENSE_RESCAN_INTERVAL", 24*time.Hour),
+			TTL:            envDuration("FORKLIFT_LICENSE_TTL", 7*24*time.Hour),
+		},
 		SeedDefaultRepos: envBool("FORKLIFT_SEED_DEFAULT_REPOS", true),
 	}
 	return c, c.validate()
@@ -234,6 +301,27 @@ func (c *Config) validate() error {
 	case "json", "text":
 	default:
 		return fmt.Errorf("invalid log format %q", c.LogFormat)
+	}
+	switch c.Storage.Backend {
+	case "fs":
+	case "s3":
+		if c.Storage.S3.Bucket == "" {
+			return fmt.Errorf("s3 storage backend requires FORKLIFT_STORAGE_S3_BUCKET")
+		}
+		if (c.Storage.S3.AccessKeyID == "") != (c.Storage.S3.SecretAccessKey == "") {
+			return fmt.Errorf("s3 static credentials require both access key id and secret access key")
+		}
+		if c.Storage.MetaSyncInterval <= 0 {
+			return fmt.Errorf("storage meta sync interval must be positive")
+		}
+		// The s3 backend already shares blobs and snapshots metadata to S3, so
+		// PV-based peer replication is redundant and would fight it for the
+		// metadata snapshot. Reject the combination.
+		if c.Replication.Enabled {
+			return fmt.Errorf("s3 storage backend is incompatible with replication; disable one")
+		}
+	default:
+		return fmt.Errorf("invalid storage backend %q (want fs or s3)", c.Storage.Backend)
 	}
 	if c.HA.Enabled && c.HA.Identity == "" {
 		return fmt.Errorf("HA enabled but identity is empty")

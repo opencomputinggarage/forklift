@@ -56,7 +56,7 @@ func LeaseLeaderURL(holder leaseHolder, selfIdentity, peerService string, port i
 // Options configures a Replicator.
 type Options struct {
 	Store      *meta.Store
-	Blobs      *storage.FSStore
+	Blobs      storage.WalkableStore
 	DataDir    string
 	Token      string
 	Interval   time.Duration
@@ -73,7 +73,7 @@ type Options struct {
 // acquired.
 type Replicator struct {
 	store     *meta.Store
-	blobs     *storage.FSStore
+	blobs     storage.WalkableStore
 	dataDir   string
 	token     string
 	interval  time.Duration

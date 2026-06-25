@@ -99,6 +99,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
         )}
         {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/users">Users</Link>}
         {(me.admin || me.auditor) && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/roles">Roles</Link>}
+        {me.admin && <Link className={navLinkClass()} activeProps={{ className: navLinkClass(true) }} to="/ha">HA Status</Link>}
       </nav>
       <div className="flex-1" />
       <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3 max-lg:mt-2 max-lg:flex-row max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:overflow-x-auto max-lg:pt-2">

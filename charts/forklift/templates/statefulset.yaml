@@ -1,3 +1,4 @@
+{{- include "forklift.validateStorage" . }}
 {{- if .Values.replication.enabled }}
 # PV-based replication mode: every pod owns a ReadWriteOnce PVC. The Lease
 # leader serves traffic (selected by the forklift.io/role=leader pod label,
@@ -56,6 +57,8 @@ spec:
               containerPort: 8080
             - name: metrics
               containerPort: 8081
+          args:
+            {{- include "forklift.args" . | nindent 12 }}
           env:
             {{- include "forklift.env" . | nindent 12 }}
           {{- with .Values.resizePolicy }}

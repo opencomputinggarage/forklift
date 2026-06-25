@@ -34,7 +34,7 @@ const defaultPageSize = 1000
 // shared bearer token and must not be exposed outside the cluster.
 type Source struct {
 	store   *meta.Store
-	blobs   *storage.FSStore
+	blobs   storage.BlobStore
 	token   string
 	dataDir string
 	log     *slog.Logger
@@ -44,7 +44,7 @@ type Source struct {
 }
 
 // NewSource builds the leader-side handler set.
-func NewSource(store *meta.Store, blobs *storage.FSStore, token, dataDir string, log *slog.Logger) *Source {
+func NewSource(store *meta.Store, blobs storage.BlobStore, token, dataDir string, log *slog.Logger) *Source {
 	return &Source{store: store, blobs: blobs, token: token, dataDir: dataDir, log: log}
 }
 

@@ -13,10 +13,11 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
-  {{- if .Values.replication.enabled }}
-  # The leader patches its own pod with forklift.io/role=leader so the main
-  # Service routes traffic to it, and lists/demotes peers still labeled
-  # leader (a partitioned former leader cannot unlabel itself).
+  {{- if eq (include "forklift.labelRouting" .) "true" }}
+  # Leader-routed HA (replication or s3+HA): the leader patches its own pod with
+  # forklift.io/role=leader so the main Service routes traffic to it, and
+  # lists/demotes peers still labeled leader (a partitioned former leader cannot
+  # unlabel itself).
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "patch"]

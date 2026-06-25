@@ -3,11 +3,19 @@ name: forklift
 description: Lightweight Kubernetes-native artifact repository (Maven, npm, Cargo, Go, PyPI) with proxy caching and supply-chain controls (age policy, package approval, vulnerability scanning)
 type: application
 deprecated: false
-version: 0.2.0
-appVersion: "0.2.0"
+version: 0.2.1
+appVersion: "0.2.1"
 home: https://github.com/younsl/o
 sources:
   - https://github.com/younsl/o/tree/main/box/kubernetes/forklift
+dependencies:
+  # Bundled object storage for the s3 backend. Enabled by default so the chart
+  # runs HA out of the box with no external bucket; disable (minio.enabled=false)
+  # and point storage.s3.* at AWS S3 / another S3-compatible store for production.
+  - name: minio
+    version: "5.4.0"
+    repository: https://charts.min.io/
+    condition: minio.enabled
 maintainers:
   - name: younsl
     email: cysl@kakao.com

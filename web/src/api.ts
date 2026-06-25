@@ -31,6 +31,13 @@ export interface RepoConfig {
     ignore?: string[];
     block_unscanned?: boolean;
   };
+  license?: {
+    enabled: boolean;
+    action?: string;
+    deny?: string[];
+    allow?: string[];
+    block_unresolved?: boolean;
+  };
   group: {
     members?: string[];
   };
@@ -99,6 +106,18 @@ export interface Version {
   oidc_enabled: boolean;
 }
 
+export interface HAStatus {
+  enabled: boolean;
+  mode: string;
+  backend: string;
+  identity: string;
+  leader: string;
+  is_leader: boolean;
+  role: string;
+  lease_name?: string;
+  fencing_token?: number;
+}
+
 export interface Token {
   id: number;
   name: string;
@@ -122,6 +141,9 @@ export interface Artifact {
   vuln_counts?: Record<string, number>;
   vuln_source?: string;
   vuln_scanned_at?: string | null;
+  licenses?: string[];
+  license_source?: string;
+  license_resolved_at?: string | null;
 }
 
 export interface ArtifactList {
@@ -296,6 +318,7 @@ export const api = {
     req<{ username: string }>("POST", "/login", { username, password }),
   logout: () => req<void>("POST", "/logout"),
   version: () => req<Version>("GET", "/version"),
+  getHA: () => req<HAStatus>("GET", "/ha"),
 
   listRepositories: () => req<Repository[]>("GET", "/repositories"),
   listRepositoryNames: () => req<RepositoryName[]>("GET", "/repository-names"),

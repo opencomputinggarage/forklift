@@ -6,6 +6,7 @@ package repoconfig
 import (
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"path"
 	"strconv"
 	"strings"
@@ -21,6 +22,54 @@ type Config struct {
 	Vuln      VulnPolicyConfig    `json:"vuln"`
 	License   LicensePolicyConfig `json:"license"`
 	Group     GroupConfig         `json:"group"`
+	IPACL     IPACLConfig         `json:"ip_acl"`
+	Notify    NotifyConfig        `json:"notify"`
+}
+
+// NotifyConfig selects which notification receivers (named alarm channels
+// managed in the admin console) are alerted for this repository's events —
+// currently a package entering the approval queue. Receivers lists receiver
+// names; an empty list means no notification. Unknown/disabled names are
+// skipped at dispatch time.
+type NotifyConfig struct {
+	Receivers []string `json:"receivers,omitempty"`
+}
+
+// IPACLConfig restricts which source IPs may reach a repository. When Enabled, a
+// request whose client IP is not covered by Allow — a list of IPv4/IPv6
+// addresses or CIDR blocks — is refused with 403. Enabled with an empty Allow
+// denies every request. The client IP is the first X-Forwarded-For hop set by
+// the ingress, falling back to the TCP peer address (see audit.ClientIP).
+type IPACLConfig struct {
+	Enabled bool     `json:"enabled"`
+	Allow   []string `json:"allow,omitempty"`
+}
+
+// Allowed reports whether ip (a bare address string) matches any Allow entry.
+// A client IP that does not parse is denied; a malformed stored entry is
+// skipped. Callers should only invoke this when the ACL is Enabled.
+func (a IPACLConfig) Allowed(ip string) bool {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return false
+	}
+	addr = addr.Unmap()
+	for _, entry := range a.Allow {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if strings.Contains(entry, "/") {
+			if pfx, err := netip.ParsePrefix(entry); err == nil && pfx.Contains(addr) {
+				return true
+			}
+			continue
+		}
+		if got, err := netip.ParseAddr(entry); err == nil && got.Unmap() == addr {
+			return true
+		}
+	}
+	return false
 }
 
 // Vulnerability policy actions and severity labels.
@@ -241,6 +290,21 @@ func (c Config) Validate() error {
 	case "", VulnActionBlock, VulnActionWarn, VulnActionAudit:
 	default:
 		return fmt.Errorf("unsupported license action %q", c.License.Action)
+	}
+	for _, entry := range c.IPACL.Allow {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+		if strings.Contains(entry, "/") {
+			if _, err := netip.ParsePrefix(entry); err != nil {
+				return fmt.Errorf("invalid ip_acl allow entry %q: %w", entry, err)
+			}
+			continue
+		}
+		if _, err := netip.ParseAddr(entry); err != nil {
+			return fmt.Errorf("invalid ip_acl allow entry %q: %w", entry, err)
+		}
 	}
 	return nil
 }

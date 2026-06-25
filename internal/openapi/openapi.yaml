@@ -16,6 +16,8 @@ tags:
   - name: roles
   - name: approvals
   - name: group-mappings
+  - name: ha
+  - name: notification
 paths:
   /api/v1/login:
     post:
@@ -501,6 +503,143 @@ paths:
       security: [{ basicAuth: [] }, { bearerAuth: [] }]
       responses:
         "201": { description: Created }
+
+  /api/v1/ha:
+    get:
+      tags: [ha]
+      summary: High-availability/leadership status (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: HA status snapshot
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HAStatus" }
+  /api/v1/ha/step-down:
+    post:
+      tags: [ha]
+      summary: Ask the leader to step down for a manual failover (admin)
+      description: >
+        Triggers a controlled failover: the current leader releases its Lease so
+        a standby is elected. Returns 409 when this instance is not the leader or
+        HA is disabled (single instance).
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200": { description: Stepping down }
+        "409": { description: Not the leader / single instance }
+
+  /api/v1/notification/receivers:
+    get:
+      tags: [notification]
+      summary: List notification receivers (admin/auditor)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Receivers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Receiver" }
+    post:
+      tags: [notification]
+      summary: Create a notification receiver (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReceiverInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Receiver" }
+        "400": { description: Invalid name or webhook URL }
+        "409": { description: Receiver name already exists }
+  /api/v1/notification/receivers/{id}:
+    put:
+      tags: [notification]
+      summary: Update a notification receiver (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReceiverInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Receiver" }
+        "400": { description: Invalid name or webhook URL }
+        "404": { description: Not found }
+        "409": { description: Receiver name already exists }
+    delete:
+      tags: [notification]
+      summary: Delete a notification receiver (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found }
+  /api/v1/notification/receivers/{id}/test:
+    post:
+      tags: [notification]
+      summary: Send a test alarm to a receiver's webhook (admin)
+      description: Delivers a test notification to the receiver's stored webhook URL and reports whether it succeeded.
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Test delivered }
+        "400": { description: Receiver has no webhook URL }
+        "404": { description: Not found }
+        "502": { description: Test delivery failed }
+  /api/v1/notification/test:
+    post:
+      tags: [notification]
+      summary: Send a test alarm to an arbitrary webhook URL (admin)
+      description: Delivers a test notification to the URL in the request body, for verifying a webhook before the receiver is saved.
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [webhook_url]
+              properties:
+                webhook_url: { type: string }
+                name: { type: string }
+      responses:
+        "200": { description: Test delivered }
+        "400": { description: Invalid webhook URL }
+        "502": { description: Test delivery failed }
+  /api/v1/repositories/{id}/notification/sample:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [notification]
+      summary: Preview a repository's sample approval alarm (admin)
+      description: Returns the sample alarm payload this repository would send and the receivers it targets, without delivering anything.
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200": { description: Sample payload and target receivers }
+        "404": { description: Not found }
+    post:
+      tags: [notification]
+      summary: Send a sample approval alarm to a repository's selected receivers (admin)
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200": { description: Per-receiver delivery results }
+        "400": { description: No enabled receivers selected }
+        "404": { description: Not found }
 components:
   securitySchemes:
     basicAuth:
@@ -582,6 +721,32 @@ components:
               type: array
               items: { type: string }
               examples: [["maven-hosted", "maven-central"]]
+        ip_acl:
+          type: object
+          description: >
+            Source-IP access control. When enabled, only requests whose client
+            IP matches an allow entry (IPv4/IPv6 address or CIDR) are served;
+            others get 403. The client IP is the first X-Forwarded-For hop set
+            by the ingress, falling back to the TCP peer. An empty allow list
+            blocks everything. For a group it guards entry; member repositories
+            are not re-checked on fan-out.
+          properties:
+            enabled: { type: boolean }
+            allow:
+              type: array
+              items: { type: string }
+              examples: [["10.0.0.0/16", "203.0.113.5", "2001:db8::/32"]]
+        notify:
+          type: object
+          description: >
+            Selects notification receivers (named alarm channels managed in the
+            admin console) alerted when a package in this repository enters the
+            approval queue. Lists receiver names; empty means no notification.
+          properties:
+            receivers:
+              type: array
+              items: { type: string }
+              examples: [["slack-security"]]
     PackageApproval:
       type: object
       properties:
@@ -644,3 +809,35 @@ components:
                 type: array
                 minItems: 1
                 items: { type: string, enum: [read, write, delete] }
+    HAStatus:
+      type: object
+      properties:
+        enabled: { type: boolean, description: Leader election active (HA mode). }
+        mode: { type: string, description: "Topology: single, shared-volume, replication or object-storage." }
+        backend: { type: string, enum: [fs, s3] }
+        storage_endpoint: { type: string, description: Object-storage bucket/endpoint (s3) or data directory (fs). }
+        identity: { type: string, description: This pod's leader-election identity. }
+        leader: { type: string, description: Current Lease holder's identity. }
+        is_leader: { type: boolean }
+        role: { type: string, enum: [leader, standby] }
+        lease_name: { type: string }
+        fencing_token: { type: integer, description: Lease transition count guarding s3 metadata writes. }
+    Receiver:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        webhook_configured: { type: boolean, description: Whether a webhook URL is set. The URL itself is write-only and never returned. }
+        enabled: { type: boolean }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ReceiverInput:
+      type: object
+      required: [name, webhook_url]
+      properties:
+        name: { type: string, description: "Unique channel name (letters, digits, '-', '_')." }
+        description: { type: string }
+        webhook_url: { type: string, description: Absolute http(s) URL (Slack/Mattermost incoming webhook). }
+        enabled: { type: boolean, default: true }

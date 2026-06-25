@@ -16,6 +16,7 @@ import { Route as UsersIndexRouteImport } from './../routes/users/index'
 import { Route as TokensIndexRouteImport } from './../routes/tokens/index'
 import { Route as RolesIndexRouteImport } from './../routes/roles/index'
 import { Route as RepositoriesIndexRouteImport } from './../routes/repositories/index'
+import { Route as NotificationsIndexRouteImport } from './../routes/notifications/index'
 import { Route as ApprovalsIndexRouteImport } from './../routes/approvals/index'
 import { Route as UsersNewRouteImport } from './../routes/users/new'
 import { Route as UsersIdRouteImport } from './../routes/users/$id'
@@ -24,6 +25,8 @@ import { Route as RolesNewRouteImport } from './../routes/roles/new'
 import { Route as RolesIdRouteImport } from './../routes/roles/$id'
 import { Route as RepositoriesNewRouteImport } from './../routes/repositories/new'
 import { Route as RepositoriesIdRouteImport } from './../routes/repositories/$id'
+import { Route as NotificationsNewRouteImport } from './../routes/notifications/new'
+import { Route as NotificationsIdRouteImport } from './../routes/notifications/$id'
 import { Route as ApprovalsIdRouteImport } from './../routes/approvals/$id'
 import { Route as UsersIdIndexRouteImport } from './../routes/users/$id/index'
 import { Route as RepositoriesIdIndexRouteImport } from './../routes/repositories/$id/index'
@@ -63,6 +66,11 @@ const RolesIndexRoute = RolesIndexRouteImport.update({
 const RepositoriesIndexRoute = RepositoriesIndexRouteImport.update({
   id: '/repositories/',
   path: '/repositories/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsIndexRoute = NotificationsIndexRouteImport.update({
+  id: '/notifications/',
+  path: '/notifications/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApprovalsIndexRoute = ApprovalsIndexRouteImport.update({
@@ -105,6 +113,16 @@ const RepositoriesIdRoute = RepositoriesIdRouteImport.update({
   path: '/repositories/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsNewRoute = NotificationsNewRouteImport.update({
+  id: '/notifications/new',
+  path: '/notifications/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsIdRoute = NotificationsIdRouteImport.update({
+  id: '/notifications/$id',
+  path: '/notifications/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApprovalsIdRoute = ApprovalsIdRouteImport.update({
   id: '/approvals/$id',
   path: '/approvals/$id',
@@ -136,6 +154,8 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
   '/approvals/$id': typeof ApprovalsIdRoute
+  '/notifications/$id': typeof NotificationsIdRoute
+  '/notifications/new': typeof NotificationsNewRoute
   '/repositories/$id': typeof RepositoriesIdRouteWithChildren
   '/repositories/new': typeof RepositoriesNewRoute
   '/roles/$id': typeof RolesIdRoute
@@ -144,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/users/$id': typeof UsersIdRouteWithChildren
   '/users/new': typeof UsersNewRoute
   '/approvals/': typeof ApprovalsIndexRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/repositories/': typeof RepositoriesIndexRoute
   '/roles/': typeof RolesIndexRoute
   '/tokens/': typeof TokensIndexRoute
@@ -158,12 +179,15 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
   '/approvals/$id': typeof ApprovalsIdRoute
+  '/notifications/$id': typeof NotificationsIdRoute
+  '/notifications/new': typeof NotificationsNewRoute
   '/repositories/new': typeof RepositoriesNewRoute
   '/roles/$id': typeof RolesIdRoute
   '/roles/new': typeof RolesNewRoute
   '/tokens/new': typeof TokensNewRoute
   '/users/new': typeof UsersNewRoute
   '/approvals': typeof ApprovalsIndexRoute
+  '/notifications': typeof NotificationsIndexRoute
   '/repositories': typeof RepositoriesIndexRoute
   '/roles': typeof RolesIndexRoute
   '/tokens': typeof TokensIndexRoute
@@ -179,6 +203,8 @@ export interface FileRoutesById {
   '/$': typeof SplatRoute
   '/ha': typeof HaRoute
   '/approvals/$id': typeof ApprovalsIdRoute
+  '/notifications/$id': typeof NotificationsIdRoute
+  '/notifications/new': typeof NotificationsNewRoute
   '/repositories/$id': typeof RepositoriesIdRouteWithChildren
   '/repositories/new': typeof RepositoriesNewRoute
   '/roles/$id': typeof RolesIdRoute
@@ -187,6 +213,7 @@ export interface FileRoutesById {
   '/users/$id': typeof UsersIdRouteWithChildren
   '/users/new': typeof UsersNewRoute
   '/approvals/': typeof ApprovalsIndexRoute
+  '/notifications/': typeof NotificationsIndexRoute
   '/repositories/': typeof RepositoriesIndexRoute
   '/roles/': typeof RolesIndexRoute
   '/tokens/': typeof TokensIndexRoute
@@ -203,6 +230,8 @@ export interface FileRouteTypes {
     | '/$'
     | '/ha'
     | '/approvals/$id'
+    | '/notifications/$id'
+    | '/notifications/new'
     | '/repositories/$id'
     | '/repositories/new'
     | '/roles/$id'
@@ -211,6 +240,7 @@ export interface FileRouteTypes {
     | '/users/$id'
     | '/users/new'
     | '/approvals/'
+    | '/notifications/'
     | '/repositories/'
     | '/roles/'
     | '/tokens/'
@@ -225,12 +255,15 @@ export interface FileRouteTypes {
     | '/$'
     | '/ha'
     | '/approvals/$id'
+    | '/notifications/$id'
+    | '/notifications/new'
     | '/repositories/new'
     | '/roles/$id'
     | '/roles/new'
     | '/tokens/new'
     | '/users/new'
     | '/approvals'
+    | '/notifications'
     | '/repositories'
     | '/roles'
     | '/tokens'
@@ -245,6 +278,8 @@ export interface FileRouteTypes {
     | '/$'
     | '/ha'
     | '/approvals/$id'
+    | '/notifications/$id'
+    | '/notifications/new'
     | '/repositories/$id'
     | '/repositories/new'
     | '/roles/$id'
@@ -253,6 +288,7 @@ export interface FileRouteTypes {
     | '/users/$id'
     | '/users/new'
     | '/approvals/'
+    | '/notifications/'
     | '/repositories/'
     | '/roles/'
     | '/tokens/'
@@ -268,6 +304,8 @@ export interface RootRouteChildren {
   SplatRoute: typeof SplatRoute
   HaRoute: typeof HaRoute
   ApprovalsIdRoute: typeof ApprovalsIdRoute
+  NotificationsIdRoute: typeof NotificationsIdRoute
+  NotificationsNewRoute: typeof NotificationsNewRoute
   RepositoriesIdRoute: typeof RepositoriesIdRouteWithChildren
   RepositoriesNewRoute: typeof RepositoriesNewRoute
   RolesIdRoute: typeof RolesIdRoute
@@ -276,6 +314,7 @@ export interface RootRouteChildren {
   UsersIdRoute: typeof UsersIdRouteWithChildren
   UsersNewRoute: typeof UsersNewRoute
   ApprovalsIndexRoute: typeof ApprovalsIndexRoute
+  NotificationsIndexRoute: typeof NotificationsIndexRoute
   RepositoriesIndexRoute: typeof RepositoriesIndexRoute
   RolesIndexRoute: typeof RolesIndexRoute
   TokensIndexRoute: typeof TokensIndexRoute
@@ -333,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepositoriesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications/': {
+      id: '/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof NotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/approvals/': {
       id: '/approvals/'
       path: '/approvals'
@@ -387,6 +433,20 @@ declare module '@tanstack/react-router' {
       path: '/repositories/$id'
       fullPath: '/repositories/$id'
       preLoaderRoute: typeof RepositoriesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications/new': {
+      id: '/notifications/new'
+      path: '/notifications/new'
+      fullPath: '/notifications/new'
+      preLoaderRoute: typeof NotificationsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications/$id': {
+      id: '/notifications/$id'
+      path: '/notifications/$id'
+      fullPath: '/notifications/$id'
+      preLoaderRoute: typeof NotificationsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/approvals/$id': {
@@ -459,6 +519,8 @@ const rootRouteChildren: RootRouteChildren = {
   SplatRoute: SplatRoute,
   HaRoute: HaRoute,
   ApprovalsIdRoute: ApprovalsIdRoute,
+  NotificationsIdRoute: NotificationsIdRoute,
+  NotificationsNewRoute: NotificationsNewRoute,
   RepositoriesIdRoute: RepositoriesIdRouteWithChildren,
   RepositoriesNewRoute: RepositoriesNewRoute,
   RolesIdRoute: RolesIdRoute,
@@ -467,6 +529,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersIdRoute: UsersIdRouteWithChildren,
   UsersNewRoute: UsersNewRoute,
   ApprovalsIndexRoute: ApprovalsIndexRoute,
+  NotificationsIndexRoute: NotificationsIndexRoute,
   RepositoriesIndexRoute: RepositoriesIndexRoute,
   RolesIndexRoute: RolesIndexRoute,
   TokensIndexRoute: TokensIndexRoute,

@@ -15,6 +15,7 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/notify"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/version"
 )
 
@@ -28,7 +29,18 @@ type Handler struct {
 	// haStatus assembles live HA/leadership status; injected from main once
 	// leader election and the storage backend are known. Nil in tests.
 	haStatus func(context.Context) HAStatus
+	// haStepDown asks this instance to voluntarily release leadership for a
+	// manual failover, reporting whether it was the leader (and thus stepped
+	// down). Nil in single-instance mode and tests.
+	haStepDown func() bool
+	// notifier delivers outbound alarms; backs the receiver test, repository
+	// sample-send and preview endpoints. Injected from main; nil in tests.
+	notifier *notify.Notifier
 }
+
+// SetNotifier injects the outbound-alarm notifier used by the receiver test and
+// repository sample/preview endpoints.
+func (h *Handler) SetNotifier(n *notify.Notifier) { h.notifier = n }
 
 // New creates an API handler. authz may be nil in tests that exercise only
 // public endpoints and rec may be nil to disable audit logging, but production
@@ -128,6 +140,9 @@ func (h *Handler) Routes() chi.Router {
 		r.Get("/users/{id}/tokens", h.listUserTokens)
 		r.Get("/roles", h.listRoles)
 		r.Get("/group-mappings", h.listGroupMappings)
+		// Notification receivers are listed for admins/auditors so the repository
+		// settings UI can offer them for selection.
+		r.Get("/notification/receivers", h.listReceivers)
 	})
 
 	// Administrative mutations: administrators only. Same paths as the reads
@@ -139,6 +154,8 @@ func (h *Handler) Routes() chi.Router {
 		}
 		// HA/leadership status for the management console (admin-only read).
 		r.Get("/ha", h.getHAStatus)
+		// Manual failover: ask the leader to step down so a standby takes over.
+		r.Post("/ha/step-down", h.stepDownHA)
 		r.Post("/repositories", h.createRepository)
 		r.Post("/repositories/check-upstream", h.checkUpstream)
 		r.Put("/repositories/{id}", h.updateRepository)
@@ -158,6 +175,13 @@ func (h *Handler) Routes() chi.Router {
 		r.Delete("/roles/{id}/permissions/{permID}", h.deletePermission)
 		r.Post("/group-mappings", h.createGroupMapping)
 		r.Delete("/group-mappings/{id}", h.deleteGroupMapping)
+		r.Post("/notification/receivers", h.createReceiver)
+		r.Put("/notification/receivers/{id}", h.updateReceiver)
+		r.Delete("/notification/receivers/{id}", h.deleteReceiver)
+		r.Post("/notification/receivers/{id}/test", h.testReceiver)
+		r.Post("/notification/test", h.testWebhookAdhoc)
+		r.Get("/repositories/{id}/notification/sample", h.previewRepoSample)
+		r.Post("/repositories/{id}/notification/sample", h.sendRepoSample)
 	})
 
 	return r
@@ -209,6 +233,8 @@ func mapError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, meta.ErrNotFound):
 		writeError(w, http.StatusNotFound, "not found")
+	case errors.Is(err, meta.ErrConflict):
+		writeError(w, http.StatusConflict, "already exists")
 	default:
 		writeError(w, http.StatusInternalServerError, err.Error())
 	}

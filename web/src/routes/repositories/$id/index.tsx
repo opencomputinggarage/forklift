@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
-import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, RepoPermission, RepoToken, repoEndpoint, Repository } from "../../../api";
+import { X } from "lucide-react";
+import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, Receiver, RepoConfig, RepoPermission, RepoToken, repoEndpoint, Repository } from "../../../api";
 import { useAuth } from "../../../authContext";
 import { UpstreamStatus } from "@/components/feedback/upstream-status";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
@@ -116,6 +117,219 @@ export function RepositoryDetail({ me }: { me: Me }) {
   );
 }
 
+// --- Source-IP ACL helpers: resolve an allow-list entry (a single IP or a CIDR
+// block) to its first/last address and how many addresses it spans, so the UI
+// can show the range and count a CIDR expands to. IPv4 and pure-hextet IPv6 are
+// supported; embedded-IPv4 IPv6 (::ffff:1.2.3.4) is treated as unrecognised. ---
+
+function ipv4ToInt(ip: string): number | null {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return null;
+  let n = 0;
+  for (const p of parts) {
+    if (!/^\d{1,3}$/.test(p)) return null;
+    const v = Number(p);
+    if (v > 255) return null;
+    n = n * 256 + v;
+  }
+  return n >>> 0;
+}
+function intToIpv4(n: number): string {
+  return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+}
+function ipv6ToBig(ip: string): bigint | null {
+  if (ip.includes(".")) return null;
+  const halves = ip.split("::");
+  if (halves.length > 2) return null;
+  let groups: string[];
+  if (halves.length === 2) {
+    const head = halves[0] ? halves[0].split(":") : [];
+    const tail = halves[1] ? halves[1].split(":") : [];
+    const fill = 8 - head.length - tail.length;
+    if (fill < 1) return null;
+    groups = [...head, ...Array(fill).fill("0"), ...tail];
+  } else {
+    groups = ip.split(":");
+  }
+  if (groups.length !== 8) return null;
+  let n = 0n;
+  for (const g of groups) {
+    if (!/^[0-9a-fA-F]{1,4}$/.test(g)) return null;
+    n = (n << 16n) + BigInt(parseInt(g, 16));
+  }
+  return n;
+}
+function bigToIpv6(n: bigint): string {
+  const g: string[] = [];
+  for (let i = 7; i >= 0; i--) g.push(((n >> BigInt(i * 16)) & 0xffffn).toString(16));
+  // Compress the longest run (>= 2) of zero groups to "::".
+  let bestStart = -1, bestLen = 0, curStart = -1, curLen = 0;
+  for (let i = 0; i < 8; i++) {
+    if (g[i] === "0") {
+      if (curStart < 0) { curStart = i; curLen = 0; }
+      if (++curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+    } else { curStart = -1; curLen = 0; }
+  }
+  if (bestLen < 2) return g.join(":");
+  return `${g.slice(0, bestStart).join(":")}::${g.slice(bestStart + bestLen).join(":")}`;
+}
+
+type AclInfo =
+  | { kind: "invalid" }
+  | { kind: "single" }
+  | { kind: "range"; first: string; last: string; count: bigint; exp: number };
+
+// aclEntryInfo classifies one allow-list line.
+function aclEntryInfo(entry: string): AclInfo {
+  const slash = entry.indexOf("/");
+  if (slash < 0) {
+    return ipv4ToInt(entry) !== null || ipv6ToBig(entry) !== null ? { kind: "single" } : { kind: "invalid" };
+  }
+  const addr = entry.slice(0, slash);
+  const prefStr = entry.slice(slash + 1);
+  if (!/^\d{1,3}$/.test(prefStr)) return { kind: "invalid" };
+  const prefix = Number(prefStr);
+
+  const v4 = ipv4ToInt(addr);
+  if (v4 !== null) {
+    if (prefix > 32) return { kind: "invalid" };
+    const exp = 32 - prefix;
+    const mask = prefix === 0 ? 0 : (0xffffffff << exp) >>> 0;
+    const first = (v4 & mask) >>> 0;
+    const count = 1n << BigInt(exp);
+    const last = (first + Number(count) - 1) >>> 0;
+    return { kind: "range", first: intToIpv4(first), last: intToIpv4(last), count, exp };
+  }
+  const v6 = ipv6ToBig(addr);
+  if (v6 !== null) {
+    if (prefix > 128) return { kind: "invalid" };
+    const exp = 128 - prefix;
+    const count = 1n << BigInt(exp);
+    const first = prefix === 0 ? 0n : (v6 >> BigInt(exp)) << BigInt(exp);
+    return { kind: "range", first: bigToIpv6(first), last: bigToIpv6(first + count - 1n), count, exp };
+  }
+  return { kind: "invalid" };
+}
+
+const ACL_MAX_SAFE = 9_007_199_254_740_991n;
+// fmtCount renders an address count, falling back to power-of-two form when it
+// exceeds the safe-integer range (large IPv6 blocks).
+function fmtCount(count: bigint, exp: number): string {
+  const noun = count === 1n ? "address" : "addresses";
+  return count <= ACL_MAX_SAFE ? `${Number(count).toLocaleString()} ${noun}` : `2^${exp} addresses`;
+}
+
+// LinesInput is a textarea for "one value per line" lists. It keeps the raw text
+// in local state so a blank line — e.g. the one created by pressing Enter — is
+// not swallowed mid-edit, and reports the trimmed, non-empty lines to onChange.
+function LinesInput({ value, onChange, rows = 3, placeholder }: {
+  value: string[];
+  onChange: (lines: string[]) => void;
+  rows?: number;
+  placeholder?: string;
+}) {
+  const joined = value.join("\n");
+  const [text, setText] = useState(joined);
+  // Re-sync only when the external value diverges from what the current text
+  // parses to (e.g. the repository changed), never on plain keystrokes.
+  useEffect(() => {
+    if (text.split("\n").map((s) => s.trim()).filter(Boolean).join("\n") !== joined) setText(joined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joined]);
+  return (
+    <Textarea rows={rows} placeholder={placeholder} value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(e.target.value.split("\n").map((s) => s.trim()).filter(Boolean));
+      }} />
+  );
+}
+
+// PolicyFlow draws every gate left to right in the order a proxy request is
+// evaluated, so an admin sees the whole pipeline at a glance. The order mirrors
+// the serving path: the source-IP allow list runs first, then package approval
+// and the vulnerability and license gates, then the age policy. All gates are
+// always shown; a disabled one is dimmed in place. An enabled node's colour
+// encodes whether it can refuse the request (block/enforce) or merely logs
+// (warn/audit). Every gate is configured by a panel on this same tab.
+function PolicyFlow({ config }: { config: RepoConfig }) {
+  const ipacl = config.ip_acl;
+  const approval = config.approval;
+  const vuln = config.vuln;
+  const license = config.license;
+  const age = config.age_policy;
+
+  type Sev = "block" | "warn" | "audit";
+  const sev = (action?: string): Sev =>
+    action === "block" ? "block" : action === "warn" ? "warn" : "audit";
+
+  type Node = { name: string; enabled: boolean; severity: Sev; action: string };
+  const nodes: Node[] = [
+    {
+      name: "Source IP ACL",
+      enabled: !!ipacl?.enabled,
+      severity: "block",
+      action: `allow-list · ${(ipacl?.allow ?? []).length}`,
+    },
+    {
+      name: "Package approval",
+      enabled: !!approval?.enabled,
+      severity: (approval?.mode || "enforce") === "enforce" ? "block" : "audit",
+      action: (approval?.mode || "enforce") === "enforce" ? "enforce" : "audit",
+    },
+    {
+      name: "Vulnerability",
+      enabled: !!vuln?.enabled,
+      severity: sev(vuln?.action),
+      action: `${vuln?.action || "audit"} · ≥${vuln?.threshold || "high"}`,
+    },
+    {
+      name: "License",
+      enabled: !!license?.enabled,
+      severity: sev(license?.action),
+      action: license?.action || "audit",
+    },
+    {
+      name: "Age",
+      enabled: !!age?.enabled,
+      severity: age?.action === "warn" ? "warn" : "block",
+      action: `${age?.action || "block"}${age?.min_age && age.min_age !== "0s" ? ` · <${age.min_age}` : ""}`,
+    },
+  ];
+
+  const arrow = <span className="pf-arrow" aria-hidden="true"><span className="pf-track" /><span className="pf-head" /></span>;
+
+  return (
+    <Panel>
+      <PanelBody>
+        <h2 className="m-0 mb-1 text-base font-semibold">
+          Policy evaluation order <span className="text-xs font-normal text-muted-foreground">· left to right</span>
+        </h2>
+        <p className="mt-0 mb-4 text-sm text-muted-foreground">
+          A proxy request flows through each gate in this order — the source-IP ACL first, then the
+          supply-chain policies. Dimmed gates are disabled. A <span className="text-destructive">block</span>/enforce
+          gate can refuse the request; <span className="text-primary">warn</span> and audit gates only log and let it continue.
+        </p>
+        <div className="policy-flow">
+          <span className="pf-terminal">Request</span>
+          {nodes.map((n, i) => (
+            <Fragment key={n.name}>
+              {arrow}
+              <div className={`pf-node ${n.enabled ? `pf-${n.severity}` : "pf-off"}`}>
+                <span className="pf-step">{i + 1}</span>
+                <span className="pf-name">{n.name}</span>
+                <span className="pf-action">{n.enabled ? n.action : "off"}</span>
+              </div>
+            </Fragment>
+          ))}
+          {arrow}
+          <span className="pf-terminal">Served</span>
+        </div>
+      </PanelBody>
+    </Panel>
+  );
+}
+
 function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: Repository) => void; canWrite: boolean }) {
   const navigate = useNavigate();
   const [error, setError] = useState("");
@@ -123,6 +337,31 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [purged, setPurged] = useState<number | null>(null);
+
+  // Receivers offered as approval-notification targets (managed under
+  // Notifications). Loaded for proxy repos, where the approval gate runs.
+  const [receivers, setReceivers] = useState<Receiver[]>([]);
+  useEffect(() => {
+    if (repo.type === "proxy") api.listReceivers().then(setReceivers).catch(() => setReceivers([]));
+  }, [repo.type]);
+  // Sample-alarm preview / send state for the approval notification panel.
+  const [sampleBusy, setSampleBusy] = useState<"" | "preview" | "send">("");
+  const [sampleErr, setSampleErr] = useState("");
+  const [preview, setPreview] = useState<{ payload: Record<string, string>; receivers: { name: string; exists: boolean; enabled: boolean }[] } | null>(null);
+  const [sampleResults, setSampleResults] = useState<{ name: string; ok: boolean; error?: string }[] | null>(null);
+
+  const doPreview = async () => {
+    setSampleErr(""); setSampleResults(null); setSampleBusy("preview");
+    try { setPreview(await api.previewRepoSample(repo.id)); }
+    catch (e) { setSampleErr((e as Error).message); }
+    finally { setSampleBusy(""); }
+  };
+  const doSendSample = async () => {
+    setSampleErr(""); setPreview(null); setSampleBusy("send");
+    try { setSampleResults((await api.sendRepoSample(repo.id)).results); }
+    catch (e) { setSampleErr((e as Error).message); }
+    finally { setSampleBusy(""); }
+  };
 
   const purge = async () => {
     setError("");
@@ -159,6 +398,21 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
   const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
   const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
+  // Source-IP ACL applies to every repository type (including group entry).
+  const ipacl = repo.config.ip_acl ?? { enabled: false, allow: [] };
+  // Approval-notification receivers selected for this repository.
+  const selectedReceivers = repo.config.notify?.receivers ?? [];
+  const setSelectedReceivers = (next: string[]) =>
+    setRepo({ ...repo, config: { ...repo.config, notify: { ...repo.config.notify, receivers: next } } });
+
+  // Resolve each allow entry to a range/count for the breakdown shown below the
+  // textarea, and a running total (capped at the safe-integer range).
+  const aclRows = (ipacl.allow ?? []).map((entry) => ({ entry, info: aclEntryInfo(entry) }));
+  let aclTotal = 0n;
+  for (const { info } of aclRows) {
+    if (info.kind === "single") aclTotal += 1n;
+    else if (info.kind === "range") aclTotal += info.count;
+  }
 
   return (
     <>
@@ -201,6 +455,50 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
         ) : (
           <StateBadge state={repo.disabled ? "offline" : "online"}>{repo.disabled ? "Offline" : "Online"}</StateBadge>
         )}
+        </PanelBody>
+      </Panel>
+
+      <h2 className="mt-6 mb-3 border-b border-border pb-[7px] text-xs font-semibold text-muted-foreground uppercase tracking-normal">Access control</h2>
+
+      <Panel>
+        <PanelBody>
+        <h2 className="m-0 mb-4 text-base font-semibold">Source IP ACL <span className="text-xs font-normal text-muted-foreground">· allow list</span></h2>
+        <Toggle
+          checked={ipacl.enabled}
+          label="Restrict access by client source IP"
+          onChange={(v) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, enabled: v } } })}
+        />
+        <Field className="mt-4">
+          <FieldLabel>Allowed IPs / CIDRs (one per line)</FieldLabel>
+          <LinesInput rows={4} placeholder={"10.0.0.0/16\n203.0.113.5\n2001:db8::/32"}
+            value={ipacl.allow ?? []}
+            onChange={(allow) => setRepo({ ...repo, config: { ...repo.config, ip_acl: { ...ipacl, allow } } })} />
+        </Field>
+        {aclRows.length > 0 && (
+          <div className="acl-summary">
+            {aclRows.map(({ entry, info }, i) => (
+              <div key={`${entry}-${i}`} className="acl-row">
+                <code>{entry}</code>
+                {info.kind === "invalid" && <span className="text-destructive">invalid IP/CIDR</span>}
+                {info.kind === "single" && <span className="text-muted-foreground">single host · 1 address</span>}
+                {info.kind === "range" && (
+                  <span className="text-muted-foreground">{info.first} – {info.last} · {fmtCount(info.count, info.exp)}</span>
+                )}
+              </div>
+            ))}
+            <div className="acl-total">
+              Total allowed: {aclTotal <= ACL_MAX_SAFE
+                ? `${Number(aclTotal).toLocaleString()} ${aclTotal === 1n ? "address" : "addresses"}`
+                : "very large (includes a wide IPv6 range)"}
+            </div>
+          </div>
+        )}
+        <p className="mb-0 mt-4 text-sm leading-relaxed text-muted-foreground">
+          When enabled, only requests from a matching source IP are served; others get 403. The client IP is
+          the first X-Forwarded-For hop set by your ingress, falling back to the TCP peer address. An empty
+          list blocks everything. For a group, this guards entry to the group; member repositories are not
+          re-checked on group fan-out.
+        </p>
         </PanelBody>
       </Panel>
 
@@ -250,6 +548,9 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
       {repo.type === "proxy" && (
         <h2 className="mt-6 mb-3 border-b border-border pb-[7px] text-xs font-semibold text-muted-foreground uppercase tracking-normal">Security <span className="font-normal normal-case">· supply-chain policies</span></h2>
       )}
+
+      {/* The evaluation-order flow only makes sense for the proxy serving path. */}
+      {repo.type === "proxy" && <PolicyFlow config={repo.config} />}
 
       {repo.type === "proxy" && (
         <Panel>
@@ -305,7 +606,67 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
                   },
                 })} /></Field>
           </FieldGroup>
-          <p className="mb-0 mt-4 text-sm text-muted-foreground">Approval admits whole packages; version freshness is still gated by the age policy.</p>
+          <p className="mt-4 text-sm text-muted-foreground">Approval admits whole packages; version freshness is still gated by the age policy.</p>
+
+          <div className="mt-5 border-t border-border pt-4">
+            <h3 className="m-0 mb-2 text-sm font-semibold">
+              Notifications <span className="text-xs font-normal text-muted-foreground">· alarm a receiver when a package is quarantined</span>
+            </h3>
+            {selectedReceivers.length > 0 && (
+              <Inline className="mb-2 flex-wrap gap-1.5">
+                {selectedReceivers.map((name) => (
+                  <Badge key={name} className="gap-1">
+                    {name}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="-mr-1 size-4 rounded-full text-muted-foreground hover:bg-background/40 hover:text-foreground"
+                      title={`Remove ${name}`}
+                      onClick={() => setSelectedReceivers(selectedReceivers.filter((n) => n !== name))}
+                    >
+                      <X className="size-3" aria-hidden="true" />
+                      <span className="sr-only">Remove {name}</span>
+                    </Button>
+                  </Badge>
+                ))}
+              </Inline>
+            )}
+            <Select value=""
+              placeholder={receivers.length === 0 ? "No receivers — add under Notifications" : "Add notification…"}
+              onChange={(v) => v && setSelectedReceivers([...selectedReceivers, v])}
+              options={receivers
+                .filter((rcv) => !selectedReceivers.includes(rcv.name))
+                .map((rcv) => ({ value: rcv.name, label: rcv.enabled ? rcv.name : `${rcv.name} (disabled)` }))} />
+            <p className="mt-2 text-sm text-muted-foreground">Selected receivers get a webhook alarm when a package here enters the approval queue. Manage receivers on the Notifications page.</p>
+            <Inline className="gap-2">
+              <Button variant="outline" type="button" disabled={!!sampleBusy} onClick={doPreview}>
+                {sampleBusy === "preview" ? "Loading…" : "Preview"}
+              </Button>
+              <Button variant="outline" type="button" disabled={!!sampleBusy || selectedReceivers.length === 0} onClick={doSendSample}>
+                {sampleBusy === "send" ? "Sending…" : "Send sample alarm"}
+              </Button>
+            </Inline>
+            {sampleErr && <Alert className="mt-2">{sampleErr}</Alert>}
+            {preview && (
+              <div className="mt-2.5 rounded-[var(--radius)] border border-border bg-input p-3">
+                <div className="mb-1.5 text-xs text-muted-foreground">
+                  Would send to: {preview.receivers.filter((x) => x.enabled).map((x) => x.name).join(", ") || "no enabled receiver selected"}
+                </div>
+                <div className="mb-2 text-sm">{preview.payload.text}</div>
+                <pre className="m-0 overflow-x-auto text-xs">{JSON.stringify(preview.payload, null, 2)}</pre>
+              </div>
+            )}
+            {sampleResults && (
+              <div className="mt-2.5 space-y-0.5">
+                {sampleResults.map((res, i) => (
+                  <div key={i} className={cn("text-xs", res.ok ? "text-muted-foreground" : "text-destructive")}>
+                    {res.ok ? `✓ sent to ${res.name}` : `✗ ${res.name}: ${res.error}`}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           </PanelBody>
         </Panel>
       )}
@@ -431,7 +792,7 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
 
       {error && <Alert className="mb-4">{error}</Alert>}
       {saved && <div className="mb-4 text-sm text-muted-foreground">Saved.</div>}
-      {canWrite && repo.type !== "group" && <Button onClick={save}>Save changes</Button>}
+      {canWrite && <Button onClick={save}>Save changes</Button>}
 
       {canWrite && (
       <>

@@ -63,6 +63,10 @@ type Config struct {
 	// disabled when DepsDevURL is empty; per-repository policy gates enforcement.
 	License LicenseConfig
 
+	// Notify configures outbound alarms (e.g. a Slack/Mattermost webhook fired
+	// when a package is quarantined pending approval).
+	Notify NotifyConfig
+
 	// SeedDefaultRepos, on first run, creates default repositories: a proxy of
 	// each public registry (Maven Central, npm, crates.io, Go proxy) plus a local
 	// hosted repository per format, like a fresh Nexus install. Idempotent.
@@ -118,6 +122,13 @@ type LicenseConfig struct {
 	RescanInterval time.Duration
 	// TTL marks a result stale (eligible for re-resolution) once older than this.
 	TTL time.Duration
+}
+
+// NotifyConfig configures outbound alarms. The alarm channels (receivers) are
+// managed at runtime in the admin console; this only holds delivery tuning.
+type NotifyConfig struct {
+	// WebhookTimeout bounds each webhook delivery attempt.
+	WebhookTimeout time.Duration
 }
 
 // AuthConfig configures local users, sessions, OIDC and anonymous access.
@@ -282,6 +293,9 @@ func Load() (*Config, error) {
 			DepsDevURL:     env("FORKLIFT_DEPSDEV_URL", "https://api.deps.dev"),
 			RescanInterval: envDuration("FORKLIFT_LICENSE_RESCAN_INTERVAL", 24*time.Hour),
 			TTL:            envDuration("FORKLIFT_LICENSE_TTL", 7*24*time.Hour),
+		},
+		Notify: NotifyConfig{
+			WebhookTimeout: envDuration("FORKLIFT_NOTIFY_WEBHOOK_TIMEOUT", 5*time.Second),
 		},
 		SeedDefaultRepos: envBool("FORKLIFT_SEED_DEFAULT_REPOS", true),
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/license"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/metrics"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/notify"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/objstore"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/openapi"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/replication"
@@ -203,6 +204,36 @@ func run(cfg *config.Config) error {
 		log.Info("license resolution enabled", "deps_dev_url", cfg.License.DepsDevURL)
 	}
 
+	// Outbound approval alarms: when a package is quarantined pending approval,
+	// notify the receivers the repository selected (resolved against the enabled
+	// receivers managed in the admin console). Runs off the serving path.
+	notifier := notify.New(cfg.Notify.WebhookTimeout, log)
+	manager.SetApprovalNotifier(func(repoName, pkg, version, requestedBy string, receivers []string) {
+		if len(receivers) == 0 {
+			return
+		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			all, err := store.ListEnabledReceivers(ctx)
+			if err != nil {
+				log.Warn("notify: list receivers failed", "err", err)
+				return
+			}
+			selected := make(map[string]bool, len(receivers))
+			for _, n := range receivers {
+				selected[n] = true
+			}
+			var targets []notify.Target
+			for _, rec := range all {
+				if selected[rec.Name] {
+					targets = append(targets, notify.Target{Name: rec.Name, URL: rec.WebhookURL})
+				}
+			}
+			notifier.NotifyApprovalRequest(targets, repoName, pkg, version, requestedBy)
+		}()
+	})
+
 	// Pending approvals, computed on scrape (one indexed COUNT). Needs no leader
 	// gating and stays accurate on standbys after a snapshot swap.
 	reg.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
@@ -220,6 +251,8 @@ func run(cfg *config.Config) error {
 
 	srv := server.New(cfg, log, store, reg)
 	apiHandler := api.New(store, authSvc, log, recorder)
+	// Back the receiver test and repository sample/preview endpoints.
+	apiHandler.SetNotifier(notifier)
 
 	// Public OIDC login endpoints (no auth middleware required).
 	if oidcProvider != nil {
@@ -262,7 +295,9 @@ func run(cfg *config.Config) error {
 	}
 
 	// Admin-only HA status for the management console: backend/mode, this pod's
-	// identity and role, the current Lease holder, and the s3 fencing token.
+	// identity and role, the current Lease holder, the s3 fencing token, and the
+	// process start time (for uptime display).
+	startedAt := time.Now()
 	apiHandler.SetHAStatus(func(sctx context.Context) api.HAStatus {
 		st := api.HAStatus{
 			Enabled:   cfg.HA.Enabled,
@@ -271,6 +306,23 @@ func run(cfg *config.Config) error {
 			Identity:  cfg.HA.Identity,
 			LeaseName: cfg.HA.LeaseName,
 			IsLeader:  leaderState.Load(),
+			StartedAt: startedAt.Format(time.RFC3339),
+			Version:   version.Version,
+		}
+		// Where artifacts live: the object-storage bucket/endpoint (s3) or the
+		// block-storage data directory (fs).
+		if cfg.Storage.Backend == "s3" {
+			bucket := cfg.Storage.S3.Bucket
+			if cfg.Storage.S3.Prefix != "" {
+				bucket += "/" + strings.TrimLeft(cfg.Storage.S3.Prefix, "/")
+			}
+			if ep := strings.TrimRight(cfg.Storage.S3.Endpoint, "/"); ep != "" {
+				st.StorageEndpoint = ep + "/" + bucket
+			} else {
+				st.StorageEndpoint = "s3://" + bucket
+			}
+		} else {
+			st.StorageEndpoint = cfg.DataDir
 		}
 		if elector == nil {
 			// Single instance is always the leader and serves itself.
@@ -294,6 +346,13 @@ func run(cfg *config.Config) error {
 		}
 		return st
 	})
+
+	// Manual failover for the management console: ask this instance to release
+	// leadership so a standby takes over. Only wired in HA mode; single-instance
+	// has no peer to fail over to.
+	if elector != nil {
+		apiHandler.SetHAStepDown(elector.StepDown)
+	}
 
 	// PV-based replication: the leader serves token-gated snapshot/blob
 	// endpoints; the standby pulls them onto its own volume and promotes that

@@ -239,3 +239,109 @@ a:hover { color: var(--accent); text-decoration: underline; }
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Component CSS ported from the pre-refactor UI. These bespoke visualisations
+   (HA topology SVG, policy-evaluation flow) and small chips are kept as scoped
+   classes rather than Tailwind utilities. They resolve against the legacy
+   :root design tokens above, which the @theme block maps to Tailwind colours.
+   --------------------------------------------------------------------------- */
+.refresh-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 9px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--input-bg);
+  font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.refresh-badge .dot {
+  width: 6px; height: 6px; border-radius: 50%; flex: none;
+  background: #22c55e; animation: refresh-pulse 1.4s ease-in-out infinite;
+}
+@keyframes refresh-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .refresh-badge .dot { animation: none; } }
+
+/* Policy evaluation flow: the enabled supply-chain policies drawn left to right
+   in the order a proxy request is gated. Scrolls horizontally on narrow widths
+   instead of wrapping, so the flow always reads as one line. Node border colour
+   encodes whether the gate can stop a request: block/enforce (danger), warn
+   (accent), audit (muted). */
+.policy-flow { display: flex; align-items: stretch; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.policy-flow .pf-terminal {
+  align-self: center; color: var(--muted); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
+}
+/* Connector: a dashed track whose dashes march left to right (the request
+   flowing) plus a static arrowhead. */
+.policy-flow .pf-arrow { align-self: center; flex: none; display: inline-flex; align-items: center; width: 30px; }
+.policy-flow .pf-arrow .pf-track {
+  flex: 1; height: 2px; border-radius: 2px;
+  background-image: linear-gradient(90deg, var(--muted) 0 55%, transparent 55% 100%);
+  background-size: 8px 2px; background-repeat: repeat-x;
+  animation: pf-flow 0.6s linear infinite;
+}
+.policy-flow .pf-arrow .pf-head {
+  flex: none; width: 0; height: 0;
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--muted);
+}
+@keyframes pf-flow { from { background-position: 0 0; } to { background-position: 8px 0; } }
+.policy-flow .pf-node {
+  display: flex; flex-direction: column; gap: 2px; flex: none;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--input-bg); padding: 8px 12px;
+}
+.policy-flow .pf-name { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.policy-flow .pf-action { font-size: 11px; color: var(--muted); white-space: nowrap; }
+/* Step number: a prominent circular badge marking evaluation order. */
+.policy-flow .pf-step {
+  align-self: flex-start; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 5px; margin-bottom: 2px;
+  border-radius: 99px; background: var(--panel); border: 1px solid var(--border);
+  font-size: 14px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums;
+}
+.policy-flow .pf-node.pf-block { border-color: var(--danger); }
+.policy-flow .pf-node.pf-block .pf-action { color: var(--danger); }
+.policy-flow .pf-node.pf-warn { border-color: var(--accent); }
+.policy-flow .pf-node.pf-warn .pf-action { color: var(--accent); }
+/* Disabled gate: drawn in place but dimmed with a dashed border. */
+.policy-flow .pf-node.pf-off { opacity: 0.45; border-style: dashed; }
+.policy-flow .pf-node.pf-off .pf-action { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .policy-flow .pf-arrow .pf-track { animation: none; }
+}
+
+/* Source-IP ACL breakdown: each allow entry resolved to its address range and
+   how many addresses the CIDR covers, plus a running total. */
+.acl-summary { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.acl-summary .acl-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 12px; }
+.acl-summary .acl-row code { font-family: ui-monospace, monospace; color: var(--text); }
+.acl-summary .acl-total { margin-top: 4px; font-size: 12px; color: var(--muted); }
+
+/* HA active/standby architecture diagram (Admin > HA Status). An SVG that
+   reflects the live topology: the Service routes only to the active leader;
+   the standby stays Ready and is linked to the leader by the election Lease.
+   Active elements are green; standby/secondary paths are dashed and dimmed. */
+.ha-arch { width: 100%; overflow-x: auto; margin-top: 12px; }
+.ha-svg { display: block; width: 100%; min-width: 720px; height: auto; }
+.ha-svg .box { fill: var(--input-bg); stroke: var(--border); stroke-width: 1.5; }
+.ha-svg .box.active { stroke: #22c55e; }
+.ha-svg .box.standby { stroke-dasharray: 6 4; }
+.ha-svg .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.ha-svg .edge.active { stroke: #22c55e; }
+.ha-svg .edge.dim { stroke-dasharray: 6 4; opacity: 0.5; }
+.ha-svg .ha-head { fill: var(--muted); }
+.ha-svg .ha-head.ok { fill: #22c55e; }
+.ha-svg .crown { fill: #22c55e; }
+/* Live request-path edges: dashes march toward the arrowhead so the flow reads
+   as moving in real time. */
+.ha-svg .edge.flow { stroke-dasharray: 7 5; animation: ha-edge-flow 0.7s linear infinite; }
+@keyframes ha-edge-flow { to { stroke-dashoffset: -12; } }
+@media (prefers-reduced-motion: reduce) {
+  .ha-svg .edge.flow { animation: none; stroke-dasharray: none; }
+}
+.ha-svg .lbl { fill: var(--text); font-size: 13px; }
+.ha-svg .lbl.mono { font-family: ui-monospace, monospace; font-size: 12px; }
+.ha-svg .sub { fill: var(--muted); font-size: 11px; }
+.ha-svg .sub.mono { font-family: ui-monospace, monospace; }
+.ha-svg .tag { font-size: 11px; letter-spacing: 0.06em; }
+.ha-svg .tag.ok { fill: #22c55e; }
+.ha-svg .tag.muted { fill: var(--muted); }

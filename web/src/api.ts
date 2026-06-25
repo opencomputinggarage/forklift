@@ -41,6 +41,24 @@ export interface RepoConfig {
   group: {
     members?: string[];
   };
+  ip_acl?: {
+    enabled: boolean;
+    allow?: string[];
+  };
+  notify?: {
+    receivers?: string[];
+  };
+}
+
+export interface Receiver {
+  id: number;
+  name: string;
+  description: string;
+  webhook_configured: boolean;
+  enabled: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // RepoPermission is a role permission that grants access to a repository (its
@@ -110,12 +128,15 @@ export interface HAStatus {
   enabled: boolean;
   mode: string;
   backend: string;
+  storage_endpoint?: string;
   identity: string;
   leader: string;
   is_leader: boolean;
   role: string;
   lease_name?: string;
   fencing_token?: number;
+  started_at?: string;
+  version?: string;
 }
 
 export interface Token {
@@ -319,6 +340,23 @@ export const api = {
   logout: () => req<void>("POST", "/logout"),
   version: () => req<Version>("GET", "/version"),
   getHA: () => req<HAStatus>("GET", "/ha"),
+  stepDownHA: () => req<{ status: string }>("POST", "/ha/step-down"),
+
+  listReceivers: () => req<Receiver[]>("GET", "/notification/receivers"),
+  createReceiver: (body: { name: string; description: string; webhook_url: string; enabled: boolean }) =>
+    req<Receiver>("POST", "/notification/receivers", body),
+  updateReceiver: (id: number, body: { name: string; description: string; webhook_url: string; enabled: boolean }) =>
+    req<Receiver>("PUT", `/notification/receivers/${id}`, body),
+  deleteReceiver: (id: number) => req<void>("DELETE", `/notification/receivers/${id}`),
+  testReceiver: (id: number) => req<{ status: string }>("POST", `/notification/receivers/${id}/test`),
+  testWebhookURL: (webhook_url: string, name: string) =>
+    req<{ status: string }>("POST", "/notification/test", { webhook_url, name }),
+  previewRepoSample: (id: number) =>
+    req<{ payload: Record<string, string>; receivers: { name: string; exists: boolean; enabled: boolean }[] }>(
+      "GET", `/repositories/${id}/notification/sample`),
+  sendRepoSample: (id: number) =>
+    req<{ results: { name: string; ok: boolean; error?: string }[] }>(
+      "POST", `/repositories/${id}/notification/sample`),
 
   listRepositories: () => req<Repository[]>("GET", "/repositories"),
   listRepositoryNames: () => req<RepositoryName[]>("GET", "/repository-names"),

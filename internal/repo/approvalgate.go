@@ -89,17 +89,24 @@ func (m *Manager) approvalGate(w http.ResponseWriter, r *http.Request, res resol
 		created, uerr := m.store.UpsertPendingApproval(r.Context(), res.repo.Name, pkg, username, version)
 		if uerr != nil {
 			m.engine.log.Error("pending approval upsert failed", "repo", res.repo.Name, "package", pkg, "err", uerr)
-		} else if created && m.rec != nil {
-			m.rec.Record(audit.Event{
-				Repo:      res.repo.Name,
-				Action:    meta.EventApprovalRequest,
-				Path:      pkg,
-				Username:  username,
-				Method:    r.Method,
-				Status:    http.StatusForbidden,
-				ClientIP:  audit.ClientIP(r),
-				UserAgent: r.UserAgent(),
-			})
+		} else if created {
+			if m.rec != nil {
+				m.rec.Record(audit.Event{
+					Repo:      res.repo.Name,
+					Action:    meta.EventApprovalRequest,
+					Path:      pkg,
+					Username:  username,
+					Method:    r.Method,
+					Status:    http.StatusForbidden,
+					ClientIP:  audit.ClientIP(r),
+					UserAgent: r.UserAgent(),
+				})
+			}
+			// Fire the outbound alarm only for a genuinely new request, matching
+			// the audit event and avoiding duplicate alerts on retries.
+			if m.onApproval != nil {
+				m.onApproval(res.repo.Name, pkg, version, username, res.cfg.Notify.Receivers)
+			}
 		}
 	}
 

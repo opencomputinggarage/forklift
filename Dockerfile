@@ -2,7 +2,11 @@
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 WORKDIR /web
 COPY web/package.json web/pnpm-lock.yaml ./
-RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && pnpm install --frozen-lockfile
+# --ignore-scripts: pnpm 11 fails a fresh non-interactive install when a
+# dependency (esbuild) has an unapproved build script. esbuild ships its binary
+# via a platform-specific optional dependency, so skipping install scripts is
+# safe and the later `pnpm run build` (vite) still works.
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate && pnpm install --frozen-lockfile --ignore-scripts
 COPY web/ ./
 RUN pnpm run build
 

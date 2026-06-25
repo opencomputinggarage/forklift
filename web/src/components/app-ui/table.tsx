@@ -14,7 +14,7 @@ function TableWrap({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="table-wrap"
-      className={cn("w-full min-w-0 overflow-x-auto rounded-lg [-webkit-overflow-scrolling:touch]", className)}
+      className={cn("w-full min-w-0 max-w-full overflow-x-auto rounded-lg overscroll-x-contain [-webkit-overflow-scrolling:touch]", className)}
       {...props}
     />
   )
@@ -24,7 +24,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <ShadcnTable
       data-slot="table"
-      className={cn("min-w-max border-collapse", className)}
+      className={cn("min-w-[720px] border-collapse max-sm:text-sm", className)}
       {...props}
     />
   )

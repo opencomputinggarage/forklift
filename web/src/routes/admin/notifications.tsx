@@ -7,6 +7,6 @@ export const Route = createFileRoute("/admin/notifications")({
 
 function AdminNotificationsLayout() {
   const { me } = useAuth();
-  if (!me.admin) return <Navigate to="/repositories" replace />;
+  if (!me.admin) return <Navigate to="/workspace/repositories" replace />;
   return <Outlet />;
 }

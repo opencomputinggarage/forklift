@@ -4,7 +4,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { queryClient } from "@/query/query-client";
 import { routeTree } from "@/generated/route-tree.gen";
+import { applyUserPreferences, bindUserPreferenceListeners } from "@/lib/user-preferences";
 import "./styles.css";
+
+applyUserPreferences();
+bindUserPreferenceListeners();
 
 const router = createRouter({ routeTree });
 

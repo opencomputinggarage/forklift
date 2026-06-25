@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tansta
 import { Eye, EyeOff, LockKeyhole, X } from "lucide-react";
 import { api, Me, Role, Token, User } from "../../../api";
 import { useAuth } from "../../../authContext";
-import { ConfirmModal } from "../../../components/confirm-modal";
+import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Select } from "@/components/app-ui/select";
 import { Alert } from "@/components/app-ui/alert";
 import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
@@ -20,7 +20,7 @@ import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
 import { SourceBadge } from "@/components/app-ui/source-badge";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import { UserBadge } from "@/components/app-ui/user-badge";
-import { Toggle } from "../../../components/toggle";
+import { Toggle } from "@/components/inputs/toggle";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";

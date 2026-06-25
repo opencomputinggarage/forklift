@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "../../api";
 import { useAuth } from "../../authContext";
-import { ConfirmModal } from "../../components/confirm-modal";
+import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Select } from "@/components/app-ui/select";

@@ -1,7 +1,7 @@
 import { ComponentProps, FormEvent, useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
-import { api } from "../api";
-import { Logo } from "./logo";
+import { api } from "@/api";
+import { Logo } from "@/components/app/logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export function Login({ onLogin }: { onLogin: () => void }) {
+export function Login({ onLogin }: { onLogin: () => void | Promise<void> }) {
   return (
     <div className="relative isolate grid min-h-svh w-full place-items-center overflow-hidden bg-background px-4 py-8 sm:px-6">
       <div className="login-bg-base pointer-events-none absolute inset-0 z-0" />
@@ -45,7 +45,7 @@ function LoginForm({
   onLogin,
   className,
   ...props
-}: ComponentProps<"div"> & { onLogin: () => void }) {
+}: ComponentProps<"div"> & { onLogin: () => void | Promise<void> }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -66,7 +66,7 @@ function LoginForm({
     setBusy(true);
     try {
       await api.login(username, password);
-      onLogin();
+      await onLogin();
     } catch (err) {
       setError((err as Error).message);
     } finally {

@@ -3,8 +3,8 @@ import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tansta
 import { LockKeyhole, X } from "lucide-react";
 import { api, Me, Role, User } from "../../api";
 import { useAuth } from "../../authContext";
-import { ConfirmModal } from "../../components/confirm-modal";
-import { Combobox } from "../../components/combobox";
+import { Combobox } from "@/components/inputs/combobox";
+import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { CountBadge, StateBadge } from "@/components/app-ui/status-badge";

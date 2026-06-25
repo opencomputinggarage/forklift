@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, UpstreamHealth } from "../api";
+import { api, UpstreamHealth } from "@/api";
 import { Button } from "@/components/ui/button";
 
 // UpstreamStatus probes a proxy repository's upstream and renders a health

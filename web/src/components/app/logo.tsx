@@ -1,4 +1,4 @@
-import logoUrl from "../assets/forklift-logo.svg";
+import logoUrl from "@/assets/forklift-logo.svg";
 import { cn } from "@/lib/utils";
 
 // Logo renders the official forklift artwork. The source of truth is

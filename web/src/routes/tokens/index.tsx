@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { api, Token } from "../../api";
-import { ConfirmModal } from "../../components/confirm-modal";
+import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";

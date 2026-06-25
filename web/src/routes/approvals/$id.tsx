@@ -3,7 +3,7 @@ import { createFileRoute, Link, Navigate, useParams } from "@tanstack/react-rout
 import { Approval, api } from "../../api";
 import { useAuth } from "../../authContext";
 import { ReviewModal, SeverityBar } from "./index";
-import { Tooltip } from "../../components/tooltip";
+import { Tooltip } from "@/components/overlays/tooltip";
 import { Alert } from "@/components/app-ui/alert";
 import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";

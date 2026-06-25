@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, RepoPermission, RepoToken, repoEndpoint, Repository } from "../../../api";
 import { useAuth } from "../../../authContext";
-import { UpstreamStatus } from "../../../components/upstream-status";
-import { ConfirmModal } from "../../../components/confirm-modal";
+import { UpstreamStatus } from "@/components/feedback/upstream-status";
+import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
 import { Select } from "@/components/app-ui/select";
@@ -20,7 +20,7 @@ import {
   TableRow,
   TableWrap,
 } from "@/components/app-ui/table";
-import { Toggle } from "../../../components/toggle";
+import { Toggle } from "@/components/inputs/toggle";
 import { MemberList } from "../new";
 import { ApprovalList, SeverityBar, VersionDenies } from "../../approvals";
 import { Button } from "@/components/ui/button";

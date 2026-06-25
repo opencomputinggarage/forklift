@@ -1,18 +1,18 @@
 name: Clean Workflow Runs
 
-run-name: "🧹 Clean workflow runs (keep latest ${{ inputs.keep || 5 }} per workflow)"
+run-name: "🧹 Clean workflow runs (keep latest ${{ inputs.keep || 5 }} repo-wide)"
 
 # Prunes GitHub Actions run history, keeping only the most recent N completed
-# runs of each workflow (default 5) and deleting the rest. Runs weekly and on
-# demand. Only completed runs are eligible, so queued/in-progress runs are never
-# touched.
+# runs across ALL workflows combined (default 5) and deleting the rest. Runs
+# weekly and on demand. Only completed runs are eligible, so queued/in-progress
+# runs are never touched.
 on:
   schedule:
     - cron: "0 3 * * 0" # Sundays 03:00 UTC
   workflow_dispatch:
     inputs:
       keep:
-        description: "Number of recent runs to keep per workflow"
+        description: "Number of recent runs to keep repo-wide (all workflows combined)"
         type: number
         default: 5
 
@@ -33,36 +33,30 @@ jobs:
       REPO: ${{ github.repository }}
       KEEP: ${{ inputs.keep || 5 }}
     steps:
-      - name: Delete old runs, keeping the latest ${{ inputs.keep || 5 }} per workflow
+      - name: Delete old runs, keeping the latest ${{ inputs.keep || 5 }} repo-wide
         run: |
           set -euo pipefail
           keep="${KEEP}"
-          echo "Keeping the latest ${keep} completed run(s) per workflow in ${REPO}."
+          echo "Keeping the latest ${keep} completed run(s) across all workflows in ${REPO}."
 
-          workflow_ids=$(gh api --paginate "repos/${REPO}/actions/workflows" --jq '.workflows[].id')
+          # Collect every completed run repo-wide as "<created_at> <id>" lines.
+          # Per-page --jq is page-local, so we re-sort newest-first afterwards,
+          # then skip the newest ${keep} and delete the remainder.
+          runs=$(gh api --paginate \
+            "repos/${REPO}/actions/runs?status=completed&per_page=100" \
+            --jq '.workflow_runs[] | "\(.created_at) \(.id)"')
+
+          to_delete=$(printf '%s\n' "${runs}" | sed '/^$/d' | sort -r | tail -n +"$((keep + 1))" | awk '{print $2}')
+          n=$(printf '%s\n' "${to_delete}" | sed '/^$/d' | wc -l | tr -d ' ')
+          echo "Deleting ${n} old run(s)."
 
           total=0
-          for wf in ${workflow_ids}; do
-            name=$(gh api "repos/${REPO}/actions/workflows/${wf}" --jq '.name')
-
-            # Collect completed runs as "<created_at> <id>" lines across all pages.
-            # Per-page --jq is page-local, so we re-sort newest-first afterwards,
-            # then skip the newest ${keep} and delete the remainder.
-            runs=$(gh api --paginate \
-              "repos/${REPO}/actions/workflows/${wf}/runs?status=completed&per_page=100" \
-              --jq '.workflow_runs[] | "\(.created_at) \(.id)"')
-
-            to_delete=$(printf '%s\n' "${runs}" | sed '/^$/d' | sort -r | tail -n +"$((keep + 1))" | awk '{print $2}')
-            n=$(printf '%s\n' "${to_delete}" | sed '/^$/d' | wc -l | tr -d ' ')
-            echo "• ${name} (${wf}): deleting ${n} old run(s)"
-
-            for id in ${to_delete}; do
-              if gh api -X DELETE "repos/${REPO}/actions/runs/${id}" >/dev/null 2>&1; then
-                total=$((total + 1))
-              else
-                echo "    warn: could not delete run ${id}"
-              fi
-            done
+          for id in ${to_delete}; do
+            if gh api -X DELETE "repos/${REPO}/actions/runs/${id}" >/dev/null 2>&1; then
+              total=$((total + 1))
+            else
+              echo "  warn: could not delete run ${id}"
+            fi
           done
 
           echo "Done. Deleted ${total} run(s) in total."

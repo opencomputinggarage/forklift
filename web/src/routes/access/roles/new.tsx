@@ -4,7 +4,8 @@ import { api } from "@/api";
 import { useAuth } from "@/authContext";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -101,8 +102,8 @@ export function RoleNew() {
         Define a reusable access profile and optional repository permissions.
       </PageDescription>
 
-      <Panel className="max-w-[44rem]">
-        <PanelBody>
+      <Card size="sm" className="mb-4 max-w-[44rem]">
+        <CardContent>
           <form onSubmit={submit} className="space-y-5">
             <FieldGroup className="gap-4">
               <Field>
@@ -145,7 +146,7 @@ export function RoleNew() {
               </div>
 
               <div className="min-h-10 rounded-lg border border-border bg-muted/20 p-2">
-                <Inline className="flex-wrap gap-1.5">
+                <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
                   {permissions.map((p, i) => (
                     <Badge key={`${p.repo_pattern}-${i}`} className="font-mono">
                       {p.repo_pattern}: {p.actions.join(",")}
@@ -164,7 +165,7 @@ export function RoleNew() {
                   {permissions.length === 0 && (
                     <span className="px-1 text-sm text-muted-foreground">No permissions added.</span>
                   )}
-                </Inline>
+                </div>
               </div>
 
               <div className="rounded-lg border border-border/80 bg-background/40 p-3">
@@ -252,17 +253,17 @@ export function RoleNew() {
 
             {error && <Alert>{error}</Alert>}
 
-            <Inline className="border-t border-border pt-4">
+            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
               <Button type="submit" disabled={!name.trim()}>
                 Create role
               </Button>
               <Button variant="outline" type="button" onClick={() => navigate({ to: "/access/roles" })}>
                 Cancel
               </Button>
-            </Inline>
+            </div>
           </form>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
     </>
   );
 }

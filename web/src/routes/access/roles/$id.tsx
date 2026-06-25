@@ -6,7 +6,8 @@ import { useAuth } from "@/authContext";
 import { Combobox } from "@/components/inputs/combobox";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { CountBadge, StateBadge } from "@/components/app-ui/status-badge";
 import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
 import { SourceBadge } from "@/components/app-ui/source-badge";
@@ -82,8 +83,8 @@ export function RoleModify({ me }: { me: Me }) {
       />
       {role.description && <PageDescription>{role.description}</PageDescription>}
       {role.managed && (
-        <Panel className="border-primary/70">
-          <PanelBody>
+        <Card size="sm" className="mb-4 border-primary/70">
+          <CardContent>
           <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
             <LockKeyhole className="size-4 text-primary" aria-hidden="true" />
             Managed role
@@ -91,8 +92,8 @@ export function RoleModify({ me }: { me: Me }) {
           <p className="m-0 text-sm leading-relaxed text-muted-foreground">
             This role was configured by a Forklift administrator in the declarative RBAC policy so it cannot be edited here. To change its permissions or delete it ask an administrator to update the policy file and restart forklift.
           </p>
-          </PanelBody>
-        </Panel>
+          </CardContent>
+        </Card>
       )}
       {error && <Alert className="mb-4">{error}</Alert>}
 
@@ -107,8 +108,8 @@ export function RoleModify({ me }: { me: Me }) {
 // itself is managed on each user's detail page, so this is read-only with links.
 function AssignedUsersPanel({ members }: { members: User[] }) {
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">
         Assigned users <CountBadge className="ml-1.5">{members.length}</CountBadge>
       </h2>
@@ -129,7 +130,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                   <TableCell><SourceBadge source={u.source} /></TableCell>
                   <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
                   <TableCell>
-                    <Inline className="flex-wrap gap-1.5">
+                    <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
                       {u.roles.map((r) => (
                         <RoleBadge
                           key={r.id}
@@ -139,7 +140,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
                         </RoleBadge>
                       ))}
                       {u.roles.length === 0 && <span className="text-muted-foreground">none</span>}
-                    </Inline>
+                    </div>
                   </TableCell>
                   <TableCell>
                     {u.disabled
@@ -155,8 +156,8 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
           </Table>
           </TableWrap>
         )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -185,10 +186,10 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
   };
 
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">Permissions</h2>
-      <Inline className="flex-wrap gap-1.5">
+      <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
         {role.permissions.map((p) => (
           <PermissionBadge key={p.id} className="gap-1">
             <span>{p.repo_pattern}: {p.actions.join(",")}</span>
@@ -208,9 +209,9 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
           </PermissionBadge>
         ))}
         {role.permissions.length === 0 && <span className="text-sm text-muted-foreground">No permissions granted.</span>}
-      </Inline>
+      </div>
       {canWrite && (
-        <Inline className="mt-4 flex-wrap items-stretch gap-2 max-sm:flex-col">
+        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 flex-wrap items-stretch gap-2 max-sm:flex-col">
           <Combobox className="w-full sm:w-[200px]" value={pattern} onChange={setPattern}
             options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
           {ACTIONS.map((a) => (
@@ -221,10 +222,10 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
           ))}
           <Button variant="outline" type="button"
             disabled={!pattern.trim() || actions.length === 0} onClick={add}>Add</Button>
-        </Inline>
+        </div>
       )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -241,8 +242,8 @@ function DangerPanel({ role, onDeleted, onError }: {
     }
   };
   return (
-    <Panel className="border-destructive/70">
-      <PanelBody>
+    <Card size="sm" className="mb-4 border-destructive/70">
+      <CardContent>
       <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">Users and group mappings holding this role lose its permissions immediately. This cannot be undone.</p>
       <Button variant="destructive" type="button" onClick={() => setConfirm(true)}>Delete role</Button>
@@ -255,7 +256,7 @@ function DangerPanel({ role, onDeleted, onError }: {
         onConfirm={() => { setConfirm(false); del(); }}
         onCancel={() => setConfirm(false)}
       />
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }

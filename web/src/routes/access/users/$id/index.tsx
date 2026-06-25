@@ -6,7 +6,8 @@ import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Select } from "@/components/app-ui/select";
 import { Alert } from "@/components/app-ui/alert";
-import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -85,11 +86,11 @@ export function UserModify({ me }: { me: Me }) {
     <>
       <PageHeader
         title={
-          <Inline className="flex-wrap gap-2">
+          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-2">
             <span className="min-w-0 truncate">{user.username}</span>
             <SourceBadge source={user.source} />
             {self && <UserBadge username="you">you</UserBadge>}
-          </Inline>
+          </div>
         }
         actions={
           <Button render={<Link to="/access/users" />} nativeButton={false} variant="outline">
@@ -115,8 +116,8 @@ export function UserModify({ me }: { me: Me }) {
 // editable here — only displayed.
 function AccountPanel({ user }: { user: User }) {
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
         <h2 className="m-0 mb-4 text-base font-semibold">Account</h2>
         <FieldGroup className="grid gap-4 sm:grid-cols-2">
           <ReadOnlyField label="Username" value={user.username} />
@@ -124,8 +125,8 @@ function AccountPanel({ user }: { user: User }) {
           <ReadOnlyField label="Created" value={user.created_at ? new Date(user.created_at).toLocaleString() : "—"} />
           <ReadOnlyField label="Last login" value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "never"} />
         </FieldGroup>
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -143,10 +144,10 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
   const assignable = roles.filter((r) => !user.roles.some((ur) => ur.id === r.id));
 
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">Roles</h2>
-      <Inline className="flex-wrap gap-1.5">
+      <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-1.5">
         {user.roles.map((r) => (
           <RoleBadge key={r.id} className="gap-1">
             <span>{r.name}</span>
@@ -166,19 +167,19 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
           </RoleBadge>
         ))}
         {user.roles.length === 0 && <span className="text-sm text-muted-foreground">No roles assigned.</span>}
-      </Inline>
+      </div>
       {canWrite && assignable.length > 0 && (
-        <Inline className="mt-4 items-stretch max-sm:flex-col">
+        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 items-stretch max-sm:flex-col">
           <Select value={selected} onChange={setSelected} placeholder="add role…"
             options={assignable.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
           <Button variant="outline" type="button" disabled={!selected}
             onClick={() => { run(api.assignRole(user.id, Number(selected))); setSelected(""); }}>
             Add
           </Button>
-        </Inline>
+        </div>
       )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -192,8 +193,8 @@ function TokensPanel({ user, tokens, canWrite, run }: {
   const [revokeId, setRevokeId] = useState<number | null>(null);
 
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <div className="mb-4 flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
         <h2 className="m-0 text-base font-semibold">
           Access tokens <span className="text-xs font-normal text-muted-foreground">· scoped credentials for package clients</span>
@@ -242,8 +243,8 @@ function TokensPanel({ user, tokens, canWrite, run }: {
         onConfirm={() => { if (revokeId !== null) run(api.deleteUserToken(user.id, revokeId)); setRevokeId(null); }}
         onCancel={() => setRevokeId(null)}
       />
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -265,8 +266,8 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
   };
 
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">Password</h2>
       <Field>
         <FieldLabel>New password</FieldLabel>
@@ -285,12 +286,12 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
         </Button>
         </div>
       </Field>
-      <Inline className="mt-4 max-sm:flex-col max-sm:items-stretch">
+      <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 max-sm:flex-col max-sm:items-stretch">
         <Button type="button" disabled={!password} onClick={reset}>Reset password</Button>
         {saved && <span className="text-sm text-muted-foreground">Password updated.</span>}
-      </Inline>
-      </PanelBody>
-    </Panel>
+      </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -299,8 +300,8 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
 // it can never be locked out of the only guaranteed admin account.
 function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) => void }) {
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-3 text-base font-semibold">Account lockout</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
         When enabled, the account is locked after 5 consecutive failed password attempts and must be
@@ -313,16 +314,16 @@ function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) =>
         onChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
       />
       {user.locked && (
-        <Inline className="mt-4 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-4 max-sm:flex-col max-sm:items-stretch">
           <StateBadge state="locked">Locked</StateBadge>
           <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>
             Unlock account
           </Button>
-        </Inline>
+        </div>
       )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -343,8 +344,8 @@ function LockNote({ title, children }: { title: string; children: ReactNode }) {
 function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: Promise<unknown>) => void }) {
   const lockedFromEditing = self || user.protected;
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-3 text-base font-semibold">Status</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
         An <strong>active</strong> account can sign in to Forklift and use its credentials to pull and publish
@@ -379,8 +380,8 @@ function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: 
           </span>
         </p>
       )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -397,8 +398,8 @@ function DangerPanel({ user, self, onDeleted, onError }: {
     }
   };
   return (
-    <Panel className="border-destructive/70">
-      <PanelBody>
+    <Card size="sm" className="mb-4 border-destructive/70">
+      <CardContent>
       <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
         Deleting a user revokes all of their tokens and role assignments. This cannot be undone.
@@ -414,7 +415,7 @@ function DangerPanel({ user, self, onDeleted, onError }: {
         onConfirm={() => { setConfirm(false); del(); }}
         onCancel={() => setConfirm(false)}
       />
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }

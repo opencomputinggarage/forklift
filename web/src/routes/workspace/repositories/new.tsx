@@ -5,7 +5,8 @@ import { useAuth } from "@/authContext";
 import { Select } from "@/components/app-ui/select";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -118,8 +119,8 @@ export function RepositoryNew() {
         Register a hosted, proxy, or group repository for package delivery.
       </PageDescription>
 
-      <Panel className="max-w-[44rem]">
-        <PanelBody>
+      <Card size="sm" className="mb-4 max-w-[44rem]">
+        <CardContent>
           <form onSubmit={submit} className="space-y-5">
             <FieldGroup className="gap-4">
               <Field>
@@ -245,14 +246,14 @@ export function RepositoryNew() {
                     repoIndex={Object.fromEntries(repos.map((r) => [r.name, r.id]))}
                     repoTypes={Object.fromEntries(repos.map((r) => [r.name, r.type]))}
                   />
-                  <Inline className="mt-3">
+                  <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-3">
                     <Select
                       value=""
                       placeholder="add member..."
                       onChange={(v) => v && setMembers([...members, v])}
                       options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))}
                     />
-                  </Inline>
+                  </div>
                   {candidates.length === 0 && members.length === 0 && (
                     <p className="mt-3 text-sm text-muted-foreground">
                       No {format} repositories exist yet. Create the members first.
@@ -263,13 +264,13 @@ export function RepositoryNew() {
             )}
 
             {error && <Alert>{error}</Alert>}
-            <Inline className="border-t border-border pt-4">
+            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
               <Button type="submit" disabled={!valid}>Create repository</Button>
               <Button variant="outline" type="button" onClick={() => navigate({ to: "/workspace/repositories" })}>Cancel</Button>
-            </Inline>
+            </div>
           </form>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
     </>
   );
 }

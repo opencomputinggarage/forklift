@@ -5,7 +5,8 @@ import { useAuth } from "@/authContext";
 import { ReviewModal, SeverityBar } from "./index";
 import { Tooltip } from "@/components/overlays/tooltip";
 import { Alert } from "@/components/app-ui/alert";
-import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { UserBadge } from "@/components/app-ui/user-badge";
@@ -54,10 +55,10 @@ export function ApprovalDetail() {
     <>
       <PageHeader
         title={
-          <Inline className="flex-wrap gap-2">
+          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-2">
             <span className="font-mono">{row.package}</span>
             <ApprovalStatusBadge status={row.status} />
-          </Inline>
+          </div>
         }
         actions={
           <>
@@ -70,8 +71,8 @@ export function ApprovalDetail() {
       />
       {error && <Alert className="mb-4">{error}</Alert>}
 
-      <Panel>
-        <PanelBody>
+      <Card size="sm" className="mb-4">
+        <CardContent>
         <h2 className="m-0 mb-4 text-base font-semibold">Request</h2>
         <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
           <dt>Repository</dt><dd>{row.repo_name}</dd>
@@ -88,8 +89,8 @@ export function ApprovalDetail() {
           {row.decided_at && <><dt>Decided at</dt><dd className="text-muted-foreground">{new Date(row.decided_at).toLocaleString()}</dd></>}
           {row.note && <><dt>Note</dt><dd>{row.note}</dd></>}
         </dl>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
 
       <OvsAnalysis row={row} />
 
@@ -116,8 +117,8 @@ function OvsAnalysis({ row }: { row: Approval }) {
   const pkgScope = row.vuln_scope === "package";
   const clean = row.vuln_severity === "none";
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">Vulnerability analysis</h2>
       {row.vuln_severity === undefined ? (
         <p className="m-0 text-sm leading-relaxed text-muted-foreground">
@@ -158,8 +159,8 @@ function OvsAnalysis({ row }: { row: Approval }) {
           )}
         </>
       )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -259,19 +260,19 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
 // in are not enumerable and so are not shown.
 function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
   return (
-    <Panel>
-      <PanelBody>
+    <Card size="sm" className="mb-4">
+      <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">
         Reviewers <span className="text-xs font-normal text-muted-foreground">· users who can approve this repository</span>
       </h2>
       {!reviewers || reviewers.length === 0 ? (
         <p className="mb-0 text-sm text-muted-foreground">No users currently have approve permission for this repository.</p>
       ) : (
-        <Inline className="flex-wrap gap-2">
+        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap flex-wrap gap-2">
           {reviewers.map((u) => <UserBadge key={u} username={u} />)}
-        </Inline>
+        </div>
       )}
-      </PanelBody>
-    </Panel>
+      </CardContent>
+    </Card>
   );
 }

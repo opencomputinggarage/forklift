@@ -4,7 +4,8 @@ import { api } from "@/api";
 import { useAuth } from "@/authContext";
 import { Alert } from "@/components/app-ui/alert";
 import { LockNote } from "@/components/app-ui/lock-note";
-import { Inline, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Toggle } from "@/components/inputs/toggle";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -84,8 +85,8 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
     <>
       <PageHeader title={editing ? "Edit receiver" : "Add receiver"} />
 
-      <Panel className="max-w-[44rem]">
-        <PanelBody>
+      <Card size="sm" className="mb-4 max-w-[44rem]">
+        <CardContent>
           <FieldGroup className="gap-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Field>
@@ -111,13 +112,13 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
               <FieldDescription>Slack/Mattermost-compatible incoming webhook.</FieldDescription>
             </Field>
 
-            <Inline className="gap-3">
+            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-3">
               <Button variant="outline" type="button" disabled={testing} onClick={sendTest}>
                 {testing ? "Sending…" : "Send test"}
               </Button>
               {testMsg && <span className="text-sm text-muted-foreground">{testMsg}</span>}
               {testErr && <span className="text-sm text-destructive">{testErr}</span>}
-            </Inline>
+            </div>
 
             <Toggle checked={form.enabled} label={form.enabled ? "Enabled" : "Disabled"}
               onChange={(v) => setForm({ ...form, enabled: v })} />
@@ -130,16 +131,16 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
             Keep a copy somewhere safe before you save.
           </LockNote>
 
-          <Inline className="mt-5">
+          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-5">
             <Button type="button" disabled={!form.name.trim()} onClick={save}>
               {editing ? "Save changes" : "Add receiver"}
             </Button>
             <Button variant="outline" type="button" onClick={() => navigate({ to: "/admin/notifications" })}>
               Cancel
             </Button>
-          </Inline>
-        </PanelBody>
-      </Panel>
+          </div>
+        </CardContent>
+      </Card>
     </>
   );
 }

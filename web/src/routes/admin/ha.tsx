@@ -5,7 +5,8 @@ import { useAuth } from "@/authContext";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -116,11 +117,11 @@ export function HAStatusPanel() {
         Review storage topology, leader election state, and fencing token for the active cluster.
       </PageDescription>
 
-      <Panel>
-        <PanelBody>
-          <Inline className="mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
+      <Card size="sm" className="mb-4">
+        <CardContent>
+          <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mb-4 justify-between gap-3 max-sm:flex-col max-sm:items-start">
             <h2 className="m-0 text-base font-semibold">Cluster status</h2>
-            <Inline className="gap-2 max-sm:w-full max-sm:justify-between">
+            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-2 max-sm:w-full max-sm:justify-between">
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-input px-[9px] py-0.5 text-[11px] text-muted-foreground tabular-nums"
                 title="Auto-refreshes the HA status"
@@ -134,8 +135,8 @@ export function HAStatusPanel() {
               <Button variant="outline" type="button" onClick={reload}>
                 Refresh
               </Button>
-            </Inline>
-          </Inline>
+            </div>
+          </div>
 
           {error && <Alert className="mb-4">{error}</Alert>}
           {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
@@ -154,12 +155,12 @@ export function HAStatusPanel() {
                     <TableRow>
                       <TableCell className="text-muted-foreground">Role</TableCell>
                       <TableCell>
-                        <Inline className="gap-2">
+                        <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-2">
                           <Badge variant={status.is_leader ? "success" : "outline"}>
                             {status.role || "-"}
                           </Badge>
                           {status.is_leader && <span className="text-sm text-muted-foreground">serving traffic</span>}
-                        </Inline>
+                        </div>
                       </TableCell>
                     </TableRow>
                     <TableRow><TableCell className="text-muted-foreground">Current leader</TableCell><TableCell className="font-mono text-xs">{status.leader || "-"}</TableCell></TableRow>
@@ -184,14 +185,14 @@ export function HAStatusPanel() {
             In HA only the leader serves traffic; standby pods stay ready and take over automatically on failover.
             The fencing token guards object-storage metadata against a superseded leader.
           </p>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
 
       {canStepDown && (
-        <Panel className="border-destructive/70">
-          <PanelBody>
+        <Card size="sm" className="mb-4 border-destructive/70">
+          <CardContent>
             <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
-            <Inline className="justify-between gap-4 max-sm:flex-col max-sm:items-start">
+            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap justify-between gap-4 max-sm:flex-col max-sm:items-start">
               <p className="m-0 text-sm leading-relaxed text-muted-foreground">
                 Manual failover gracefully steps this leader down so a standby is elected and takes over.
                 The leader releases its lease and traffic moves to the new leader. This pod stays Ready and can
@@ -202,9 +203,9 @@ export function HAStatusPanel() {
                 onClick={() => setConfirmStepDown(true)}>
                 {stepping ? "Stepping down…" : "Step down (manual failover)"}
               </Button>
-            </Inline>
-          </PanelBody>
-        </Panel>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <ConfirmModal

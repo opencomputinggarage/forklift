@@ -4,7 +4,8 @@ import { api, Role } from "@/api";
 import { useAuth } from "@/authContext";
 import { Select } from "@/components/app-ui/select";
 import { Alert } from "@/components/app-ui/alert";
-import { Inline, PageDescription, PageHeader, Panel, PanelBody } from "@/components/app-ui/page";
+import { PageDescription, PageHeader } from "@/components/app-ui/page";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -68,8 +69,8 @@ export function UserNew() {
         Create a local account and optionally assign an initial role.
       </PageDescription>
 
-      <Panel className="max-w-[44rem]">
-        <PanelBody>
+      <Card size="sm" className="mb-4 max-w-[44rem]">
+        <CardContent>
           <form onSubmit={submit} className="space-y-5">
             <FieldGroup className="gap-4">
               <Field>
@@ -132,7 +133,7 @@ export function UserNew() {
                   <FieldLabel htmlFor="password">
                     Password<span className="text-destructive">*</span>
                   </FieldLabel>
-                  <Inline className="items-stretch max-sm:flex-col">
+                  <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap items-stretch max-sm:flex-col">
                     <Input
                       id="password"
                       type={show ? "text" : "password"}
@@ -148,7 +149,7 @@ export function UserNew() {
                     >
                       {show ? "Hide" : "Show"}
                     </Button>
-                  </Inline>
+                  </div>
                 </Field>
 
                 <Field>
@@ -170,13 +171,13 @@ export function UserNew() {
 
             {error && <Alert>{error}</Alert>}
 
-            <Inline className="border-t border-border pt-4">
+            <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
               <Button type="submit" disabled={!canSubmit}>Create user</Button>
               <Button variant="outline" type="button" onClick={() => navigate({ to: "/access/users" })}>Cancel</Button>
-            </Inline>
+            </div>
           </form>
-        </PanelBody>
-      </Panel>
+        </CardContent>
+      </Card>
     </>
   );
 }

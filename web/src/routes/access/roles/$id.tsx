@@ -8,9 +8,8 @@ import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
-import { CountBadge, StateBadge } from "@/components/app-ui/status-badge";
-import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
-import { SourceBadge } from "@/components/app-ui/source-badge";
+import { Badge } from "@/components/app-ui/badge";
+import { StateBadge } from "@/components/app-ui/status-badge";
 import {
   Table,
   TableBody,
@@ -111,7 +110,7 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
     <Card size="sm" className="mb-4">
       <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">
-        Assigned users <CountBadge className="ml-1.5">{members.length}</CountBadge>
+        Assigned users <Badge className="ml-1.5 tabular-nums">{members.length}</Badge>
       </h2>
       {members.length === 0
         ? <p className="m-0 text-sm text-muted-foreground">No users have this role. Assign it from a user's detail page.</p>
@@ -127,17 +126,17 @@ function AssignedUsersPanel({ members }: { members: User[] }) {
               {members.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="whitespace-nowrap"><Link to="/access/users/$id" params={{ id: String(u.id) }}>{u.username}</Link></TableCell>
-                  <TableCell><SourceBadge source={u.source} /></TableCell>
+                  <TableCell><Badge>{u.source}</Badge></TableCell>
                   <TableCell className="text-muted-foreground">{u.email || "-"}</TableCell>
                   <TableCell>
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       {u.roles.map((r) => (
-                        <RoleBadge
+                        <Badge
                           key={r.id}
                           render={<Link to="/access/roles/$id" params={{ id: String(r.id) }} />}
                         >
                           {r.name}
-                        </RoleBadge>
+                        </Badge>
                       ))}
                       {u.roles.length === 0 && <span className="text-muted-foreground">none</span>}
                     </div>
@@ -191,7 +190,7 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
       <h2 className="m-0 mb-4 text-base font-semibold">Permissions</h2>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {role.permissions.map((p) => (
-          <PermissionBadge key={p.id} className="gap-1">
+          <Badge key={p.id} className="gap-1 font-mono">
             <span>{p.repo_pattern}: {p.actions.join(",")}</span>
             {canWrite && (
               <Button
@@ -206,7 +205,7 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
                 <span className="sr-only">Remove permission</span>
               </Button>
             )}
-          </PermissionBadge>
+          </Badge>
         ))}
         {role.permissions.length === 0 && <span className="text-sm text-muted-foreground">No permissions granted.</span>}
       </div>

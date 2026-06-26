@@ -17,10 +17,8 @@ import {
   TableRow,
   TableWrap,
 } from "@/components/app-ui/table";
-import { PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
-import { SourceBadge } from "@/components/app-ui/source-badge";
+import { Badge } from "@/components/app-ui/badge";
 import { StateBadge } from "@/components/app-ui/status-badge";
-import { UserBadge } from "@/components/app-ui/user-badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -88,8 +86,8 @@ export function UserModify({ me }: { me: Me }) {
         title={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="min-w-0 truncate">{user.username}</span>
-            <SourceBadge source={user.source} />
-            {self && <UserBadge username="you">you</UserBadge>}
+            <Badge>{user.source}</Badge>
+            {self && <Badge>you</Badge>}
           </div>
         }
         actions={
@@ -149,7 +147,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
       <h2 className="m-0 mb-4 text-base font-semibold">Roles</h2>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {user.roles.map((r) => (
-          <RoleBadge key={r.id} className="gap-1">
+          <Badge key={r.id} className="gap-1">
             <span>{r.name}</span>
             {canWrite && (
               <Button
@@ -164,7 +162,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
                 <span className="sr-only">Remove role</span>
               </Button>
             )}
-          </RoleBadge>
+          </Badge>
         ))}
         {user.roles.length === 0 && <span className="text-sm text-muted-foreground">No roles assigned.</span>}
       </div>
@@ -218,9 +216,9 @@ function TokensPanel({ user, tokens, canWrite, run }: {
               <TableCell className="text-muted-foreground">{t.description}</TableCell>
               <TableCell>
                 {parseScopes(t.scopes_json).map((s, i) => (
-                  <PermissionBadge key={i} className="mr-1">
+                  <Badge key={i} className="mr-1 font-mono">
                     {s.repo_pattern}: {s.actions.join(",")}
-                  </PermissionBadge>
+                  </Badge>
                 ))}
               </TableCell>
               <TableCell className="text-muted-foreground">{t.created_at?.slice(0, 10)}</TableCell>

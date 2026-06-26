@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import { SeverityBadge } from "@/components/app-ui/severity-badge";
-import { UserBadge } from "@/components/app-ui/user-badge";
+import { Badge } from "@/components/app-ui/badge";
 import {
   Table,
   TableBody,
@@ -275,7 +275,7 @@ function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
         <p className="mb-0 text-sm text-muted-foreground">No users currently have approve permission for this repository.</p>
       ) : (
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {reviewers.map((u) => <UserBadge key={u} username={u} />)}
+          {reviewers.map((u) => <Badge key={u}>{u}</Badge>)}
         </div>
       )}
       </CardContent>

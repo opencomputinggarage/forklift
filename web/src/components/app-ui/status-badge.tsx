@@ -1,7 +1,6 @@
 import * as React from "react"
 
 import { Badge } from "@/components/app-ui/badge"
-import { cn } from "@/lib/utils"
 
 type BadgeProps = Omit<React.ComponentProps<typeof Badge>, "variant">
 
@@ -46,8 +45,4 @@ function StateBadge({
   )
 }
 
-function CountBadge({ className, ...props }: BadgeProps) {
-  return <Badge variant="default" className={cn("tabular-nums", className)} {...props} />
-}
-
-export { ApprovalStatusBadge, CountBadge, StateBadge }
+export { ApprovalStatusBadge, StateBadge }

@@ -3,7 +3,14 @@ import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tansta
 import { LockKeyhole, X } from "lucide-react";
 import { api, Me, Role, User } from "@/api";
 import { useAuth } from "@/authContext";
-import { Combobox } from "@/components/inputs/combobox";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
 import { Alert } from "@/components/app-ui/alert";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
@@ -211,8 +218,34 @@ function PermissionsPanel({ role, run, canWrite }: { role: Role; run: (p: Promis
       </div>
       {canWrite && (
         <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap flex-wrap items-stretch gap-2 max-sm:flex-col">
-          <Combobox className="w-full sm:w-[200px]" value={pattern} onChange={setPattern}
-            options={repoOptions} hints={repoTypes} placeholder="repo pattern (* or maven-*)" />
+          <Combobox
+            items={repoOptions}
+            inputValue={pattern}
+            value={repoOptions.includes(pattern) ? pattern : null}
+            onInputValueChange={setPattern}
+            onValueChange={(next) => {
+              if (typeof next === "string") setPattern(next);
+            }}
+          >
+            <ComboboxInput placeholder="repo pattern (* or maven-*)" className="w-full sm:w-[200px]" />
+            <ComboboxContent>
+              <ComboboxEmpty>No repositories found.</ComboboxEmpty>
+              <ComboboxList>
+                {repoOptions.map((option) => (
+                  <ComboboxItem key={option} value={option}>
+                    <span className="min-w-0 truncate">
+                      {option}
+                      {repoTypes[option] && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {repoTypes[option]}
+                        </span>
+                      )}
+                    </span>
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
           {ACTIONS.map((a) => (
             <label key={a} className="flex items-center gap-2 text-xs">
               <Checkbox checked={actions.includes(a)} onCheckedChange={() => toggle(a)} />

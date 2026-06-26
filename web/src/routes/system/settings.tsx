@@ -65,8 +65,8 @@ export function SettingsRoute() {
 
       <Alert className="mb-4 border-border/80 bg-muted/40">
         <Info className="size-4" aria-hidden="true" />
-        <AlertTitle>{t("settings.cardTitle")}</AlertTitle>
-        <AlertDescription>{t("settings.cardDescription")}</AlertDescription>
+        <AlertTitle>{t("settings.card-title")}</AlertTitle>
+        <AlertDescription>{t("settings.card-description")}</AlertDescription>
       </Alert>
 
       <Card className="border-border/90 bg-card/95 shadow-none">
@@ -74,7 +74,7 @@ export function SettingsRoute() {
           <SettingRow
             id="appearance"
             title={t("settings.appearance")}
-            description={t("settings.appearanceDescription")}
+            description={t("settings.appearance-description")}
           >
             <Select
               items={themeOptions}
@@ -99,7 +99,7 @@ export function SettingsRoute() {
           <SettingRow
             id="language"
             title={t("settings.language")}
-            description={t("settings.languageDescription")}
+            description={t("settings.language-description")}
           >
             <Select
               items={languageOptions}

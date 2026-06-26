@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/admin/notifications/new")({
   component: AdminReceiverNewRoute,
@@ -26,6 +27,7 @@ function AdminReceiverNewRoute() {
 // stored URL; a non-empty value replaces it. Reused by the /admin/notifications/$id
 // edit route by passing receiverId.
 export function ReceiverForm({ receiverId }: { receiverId?: number }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const editing = receiverId !== undefined;
   const [form, setForm] = useState({ name: "", description: "", webhook_url: "", enabled: true });
@@ -64,14 +66,14 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
     setTestErr("");
     const url = form.webhook_url.trim();
     if (!url && !editing) {
-      setTestErr("Enter a webhook URL first.");
+      setTestErr(t("notification.webhook-required"));
       return;
     }
     setTesting(true);
     try {
       if (url) await api.testWebhookURL(url, form.name);
       else await api.testReceiver(receiverId!);
-      setTestMsg("Test notification sent.");
+      setTestMsg(t("notification.test-sent"));
     } catch (e) {
       setTestErr((e as Error).message);
     } finally {
@@ -79,42 +81,42 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
     }
   };
 
-  if (!loaded) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!loaded) return <div className="text-sm text-muted-foreground">{t("common.loading")}</div>;
 
   return (
     <>
-      <PageHeader title={editing ? "Edit receiver" : "Add receiver"} />
+      <PageHeader title={editing ? t("notification.edit") : t("notification.add")} />
 
       <Card size="sm" className="mb-4 max-w-[44rem]">
         <CardContent>
           <FieldGroup className="gap-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="rcv-name">Name</FieldLabel>
+                <FieldLabel htmlFor="rcv-name">{t("common.name")}</FieldLabel>
                 <Input id="rcv-name" value={form.name} placeholder="slack-security" autoFocus
                   onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </Field>
               <Field>
-                <FieldLabel htmlFor="rcv-desc">Description</FieldLabel>
-                <Input id="rcv-desc" value={form.description} placeholder="Security team Slack channel"
+                <FieldLabel htmlFor="rcv-desc">{t("common.description")}</FieldLabel>
+                <Input id="rcv-desc" value={form.description} placeholder={t("notification.description-placeholder")}
                   onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
             </div>
 
             <Field>
               <FieldLabel htmlFor="rcv-url">
-                Webhook URL
-                {editing && <span className="ml-1 text-xs font-normal text-muted-foreground">· leave blank to keep current</span>}
+                {t("common.webhook-url")}
+                {editing && <span className="ml-1 text-xs font-normal text-muted-foreground">{t("notification.webhook-subtitle")}</span>}
               </FieldLabel>
               <Input id="rcv-url" value={form.webhook_url}
                 placeholder={editing ? "•••••• (unchanged)" : "https://hooks.slack.com/services/…"}
                 onChange={(e) => setForm({ ...form, webhook_url: e.target.value })} />
-              <FieldDescription>Slack/Mattermost-compatible incoming webhook.</FieldDescription>
+              <FieldDescription>{t("notification.webhook-hint")}</FieldDescription>
             </Field>
 
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-3">
               <Button variant="outline" type="button" disabled={testing} onClick={sendTest}>
-                {testing ? "Sending…" : "Send test"}
+                {testing ? t("common.sending") : t("common.send-test")}
               </Button>
               {testMsg && <span className="text-sm text-muted-foreground">{testMsg}</span>}
               {testErr && <span className="text-sm text-destructive">{testErr}</span>}
@@ -124,9 +126,9 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
               <Switch
                 checked={form.enabled}
                 onCheckedChange={(v) => setForm({ ...form, enabled: v })}
-                aria-label={form.enabled ? "Enabled" : "Disabled"}
+                aria-label={form.enabled ? t("common.enabled") : t("common.disabled")}
               />
-              <span>{form.enabled ? "Enabled" : "Disabled"}</span>
+              <span>{form.enabled ? t("common.enabled") : t("common.disabled")}</span>
             </label>
           </FieldGroup>
 
@@ -136,21 +138,20 @@ export function ReceiverForm({ receiverId }: { receiverId?: number }) {
             <CardContent>
               <h2 className="mb-2 flex items-center gap-2 text-base font-semibold">
                 <LockKeyhole className="size-4 text-primary" aria-hidden="true" />
-                Webhook URL is write-only
+                {t("notification.webhook-write-only")}
               </h2>
               <p className="m-0 text-sm leading-relaxed text-muted-foreground">
-                The webhook URL cannot be viewed again after you save it. You can only replace it with a new one.
-                Keep a copy somewhere safe before you save.
+                {t("notification.webhook-warning")}
               </p>
             </CardContent>
           </Card>
 
           <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mt-5">
             <Button type="button" disabled={!form.name.trim()} onClick={save}>
-              {editing ? "Save changes" : "Add receiver"}
+              {editing ? t("common.save-changes") : t("notification.add")}
             </Button>
             <Button variant="outline" type="button" onClick={() => navigate({ to: "/admin/notifications" })}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </CardContent>

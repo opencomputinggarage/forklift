@@ -20,6 +20,7 @@ import {
   TableWrap,
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/workspace/approvals/$id")({
   component: ApprovalDetailRoute,
@@ -34,6 +35,7 @@ function ApprovalDetailRoute() {
 // metadata and the OSV vulnerability analysis (OVS) so a reviewer can judge the
 // package before deciding. The decision itself is made in the shared ReviewModal.
 export function ApprovalDetail() {
+  const { t } = useTranslation();
   const { id } = useParams({ strict: false }) as { id?: string };
   const navigate = useNavigate();
   const approvalId = Number(id);
@@ -50,7 +52,7 @@ export function ApprovalDetail() {
   useEffect(() => { load(); }, [load]);
 
   if (error && !row) return <Alert className="my-2.5">{error}</Alert>;
-  if (!row) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!row) return <div className="text-sm text-muted-foreground">{t("common.loading")}</div>;
 
   return (
     <>
@@ -63,9 +65,9 @@ export function ApprovalDetail() {
         }
         actions={
           <>
-          <Button onClick={() => setReviewing(true)}>Review</Button>
+          <Button onClick={() => setReviewing(true)}>{t("common.review")}</Button>
           <Button variant="outline" onClick={() => navigate({ to: "/workspace/approvals" })}>
-            Back to approvals
+            {t("approval.back")}
           </Button>
           </>
         }
@@ -74,21 +76,21 @@ export function ApprovalDetail() {
 
       <Card size="sm" className="mb-4">
         <CardContent>
-        <h2 className="m-0 mb-4 text-base font-semibold">Request</h2>
+        <h2 className="m-0 mb-4 text-base font-semibold">{t("common.request")}</h2>
         <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
-          <dt>Repository</dt><dd>{row.repo_name}</dd>
-          <dt>Package</dt><dd className="font-mono">{row.package}</dd>
-          <dt>Requested version</dt>
+          <dt>{t("common.repository")}</dt><dd>{row.repo_name}</dd>
+          <dt>{t("common.package")}</dt><dd className="font-mono">{row.package}</dd>
+          <dt>{t("approval.requested-version")}</dt>
           <dd className="font-mono">
-            {row.last_requested_version || <span className="text-muted-foreground">unknown (metadata request blocked before a version was resolved)</span>}
+            {row.last_requested_version || <span className="text-muted-foreground">{t("approval.version-unknown")}</span>}
           </dd>
-          <dt>Requested by</dt><dd>{row.requested_by || <span className="text-muted-foreground">anonymous</span>}</dd>
-          <dt>Requests</dt><dd>{row.request_count}</dd>
-          <dt>First requested</dt><dd className="text-muted-foreground">{new Date(row.first_requested_at).toLocaleString()}</dd>
-          <dt>Last requested</dt><dd className="text-muted-foreground">{new Date(row.last_requested_at).toLocaleString()}</dd>
-          {row.decided_by && <><dt>Decided by</dt><dd>{row.decided_by}</dd></>}
-          {row.decided_at && <><dt>Decided at</dt><dd className="text-muted-foreground">{new Date(row.decided_at).toLocaleString()}</dd></>}
-          {row.note && <><dt>Note</dt><dd>{row.note}</dd></>}
+          <dt>{t("approval.requested-by")}</dt><dd>{row.requested_by || <span className="text-muted-foreground">{t("common.anonymous")}</span>}</dd>
+          <dt>{t("common.requests")}</dt><dd>{row.request_count}</dd>
+          <dt>{t("approval.first-requested")}</dt><dd className="text-muted-foreground">{new Date(row.first_requested_at).toLocaleString()}</dd>
+          <dt>{t("approval.last-requested")}</dt><dd className="text-muted-foreground">{new Date(row.last_requested_at).toLocaleString()}</dd>
+          {row.decided_by && <><dt>{t("approval.decided-by")}</dt><dd>{row.decided_by}</dd></>}
+          {row.decided_at && <><dt>{t("approval.decided-at")}</dt><dd className="text-muted-foreground">{new Date(row.decided_at).toLocaleString()}</dd></>}
+          {row.note && <><dt>{t("common.note")}</dt><dd>{row.note}</dd></>}
         </dl>
         </CardContent>
       </Card>
@@ -113,6 +115,7 @@ export function ApprovalDetail() {
 // id, severity, CVSS score and a link to osv.dev. Empty until the async scan
 // lands.
 function OvsAnalysis({ row }: { row: Approval }) {
+  const { t } = useTranslation();
   const advisories = row.vuln_advisories ?? [];
   const ids = row.vuln_ids ?? [];
   const pkgScope = row.vuln_scope === "package";
@@ -120,11 +123,10 @@ function OvsAnalysis({ row }: { row: Approval }) {
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
-      <h2 className="m-0 mb-4 text-base font-semibold">Vulnerability analysis</h2>
+      <h2 className="m-0 mb-4 text-base font-semibold">{t("approval.vuln-analysis")}</h2>
       {row.vuln_severity === undefined ? (
         <p className="m-0 text-sm leading-relaxed text-muted-foreground">
-          Not scanned yet. The scan runs asynchronously after the request is
-          queued; reload in a moment.
+          {t("approval.not-scanned")}
         </p>
       ) : (
         <>
@@ -132,20 +134,20 @@ function OvsAnalysis({ row }: { row: Approval }) {
             <SeverityBar severity={row.vuln_severity} counts={row.vuln_counts} scope={row.vuln_scope} source={row.vuln_source} scannedAt={row.vuln_scanned_at} size="lg" />
           </div>
           <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2 [&_dd]:m-0 [&_dt]:text-muted-foreground">
-            <dt>Data source</dt>
+            <dt>{t("approval.data-source")}</dt>
             <dd>
               {!row.vuln_source || row.vuln_source === "OSV"
-                ? <a className="underline underline-offset-4 hover:no-underline" href="https://osv.dev" target="_blank" rel="noreferrer">OSV (osv.dev)</a>
+                ? <a className="underline underline-offset-4 hover:no-underline" href="https://osv.dev" target="_blank" rel="noreferrer">{t("approval.osv-source")}</a>
                 : row.vuln_source}
             </dd>
-            <dt>Result</dt>
-            <dd>{clean ? "Clean (no known advisories)" : <>Vulnerable, highest severity <strong>{row.vuln_severity}</strong></>}</dd>
-            <dt>Scope</dt>
-            <dd>{pkgScope ? "Package-level (all versions; requested version unknown)" : `Version ${row.last_requested_version}`}</dd>
-            <dt>Scanned at</dt>
-            <dd className="text-muted-foreground">{row.vuln_scanned_at ? new Date(row.vuln_scanned_at).toLocaleString() : "n/a"}</dd>
-            <dt>Duration</dt>
-            <dd className="text-muted-foreground">{row.vuln_scan_ms != null ? `${row.vuln_scan_ms} ms` : "n/a"}</dd>
+            <dt>{t("common.result")}</dt>
+            <dd>{clean ? t("approval.clean") : <>{t("approval.vulnerable-highest")} <strong>{row.vuln_severity}</strong></>}</dd>
+            <dt>{t("common.scope")}</dt>
+            <dd>{pkgScope ? t("approval.package-level") : `Version ${row.last_requested_version}`}</dd>
+            <dt>{t("approval.scanned-at")}</dt>
+            <dd className="text-muted-foreground">{row.vuln_scanned_at ? new Date(row.vuln_scanned_at).toLocaleString() : t("common.na")}</dd>
+            <dt>{t("common.duration")}</dt>
+            <dd className="text-muted-foreground">{row.vuln_scan_ms != null ? `${row.vuln_scan_ms} ms` : t("common.na")}</dd>
           </dl>
           {advisories.length > 0 ? (
             <AdvisoryTable advisories={advisories} />
@@ -156,7 +158,7 @@ function OvsAnalysis({ row }: { row: Approval }) {
               ))}
             </ul>
           ) : (
-            <p className="mb-0">No known advisories.</p>
+            <p className="mb-0">{t("approval.no-advisories")}</p>
           )}
         </>
       )}
@@ -188,6 +190,7 @@ function SortIcon({ state }: { state: "asc" | "desc" | null }) {
 // shows ▲/▼ and the rest show ↕ to signal they are sortable. # sorts by the
 // original (as-scanned) order, severity by rank, and CVSS numerically.
 function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
+  const { t } = useTranslation();
   const [key, setKey] = useState<SortKey>("idx");
   const [dir, setDir] = useState<"asc" | "desc">("asc");
 
@@ -229,8 +232,8 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
         <TableHeader>
           <TableRow>
             <TableHead className="w-14"><SortBtn k="idx">#</SortBtn></TableHead>
-            <TableHead><SortBtn k="id">Advisory ID</SortBtn></TableHead>
-            <TableHead><SortBtn k="severity">Severity</SortBtn></TableHead>
+            <TableHead><SortBtn k="id">{t("common.advisory-id")}</SortBtn></TableHead>
+            <TableHead><SortBtn k="severity">{t("common.severity")}</SortBtn></TableHead>
             <TableHead>
               <SortBtn k="cvss">CVSS</SortBtn>
               <Tooltip>
@@ -238,7 +241,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
                   <span className="ml-[5px] text-[0.85em] text-muted-foreground">ⓘ</span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  This is the CVSS version 3.x base score, which ranges from 0 to 10 and is calculated from the advisory&apos;s CVSS vector. A higher number means a more severe vulnerability. A score of 9.0 or above is critical, 7.0 or above is high, 4.0 or above is medium, and anything above 0 is low.
+                  {t("approval.cvss-help")}
                 </TooltipContent>
               </Tooltip>
             </TableHead>
@@ -252,7 +255,7 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
                 <a className="underline underline-offset-4 hover:no-underline" href={`https://osv.dev/${a.id}`} target="_blank" rel="noreferrer">{a.id}</a>
               </TableCell>
               <TableCell><SeverityBadge severity={a.severity} /></TableCell>
-              <TableCell className="tabular-nums">{a.score || <span className="text-muted-foreground">n/a</span>}</TableCell>
+              <TableCell className="tabular-nums">{a.score || <span className="text-muted-foreground">{t("common.na")}</span>}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -265,14 +268,15 @@ function AdvisoryTable({ advisories }: { advisories: Advisory[] }) {
 // clear who can act on the request. OIDC-group approvers who have never signed
 // in are not enumerable and so are not shown.
 function ReviewersPanel({ reviewers }: { reviewers?: string[] }) {
+  const { t } = useTranslation();
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
       <h2 className="m-0 mb-4 text-base font-semibold">
-        Reviewers <span className="text-xs font-normal text-muted-foreground">· users who can approve this repository</span>
+        {t("common.reviewers")} <span className="text-xs font-normal text-muted-foreground">{t("repo.approvers-subtitle")}</span>
       </h2>
       {!reviewers || reviewers.length === 0 ? (
-        <p className="mb-0 text-sm text-muted-foreground">No users currently have approve permission for this repository.</p>
+        <p className="mb-0 text-sm text-muted-foreground">{t("approval.no-approvers")}</p>
       ) : (
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {reviewers.map((u) => <Badge key={u}>{u}</Badge>)}

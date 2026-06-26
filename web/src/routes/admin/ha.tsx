@@ -16,6 +16,7 @@ import {
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/admin/ha")({
   component: AdminHARoute,
@@ -23,11 +24,12 @@ export const Route = createFileRoute("/admin/ha")({
 
 function AdminHARoute() {
   const { me } = useAuth();
+  const { t } = useTranslation();
   if (!me.admin) return <Navigate to="/workspace/repositories" replace />;
 
   return (
     <>
-      <PageHeader title="HA Status" />
+      <PageHeader title={t("ha.title")} />
       <HAStatusPanel />
     </>
   );
@@ -58,6 +60,7 @@ function formatUptime(startedAt: string): string {
 // manual-failover (step-down) control. Embedded as the "HA Status" tab on the
 // admin page; the step-down danger zone only shows for the active leader.
 export function HAStatusPanel() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<HAStatusType | null>(null);
   const [error, setError] = useState("");
   const [confirmStepDown, setConfirmStepDown] = useState(false);
@@ -98,7 +101,7 @@ export function HAStatusPanel() {
     setNotice("");
     try {
       await api.stepDownHA();
-      setNotice("Stepping down — a standby is taking over. Traffic follows the new leader.");
+      setNotice(t("ha.stepping-down-notice"));
       reload();
     } catch (e) {
       setError((e as Error).message);
@@ -114,17 +117,17 @@ export function HAStatusPanel() {
   return (
     <>
       <PageDescription>
-        Review storage topology, leader election state, and fencing token for the active cluster.
+        {t("ha.description")}
       </PageDescription>
 
       <Card size="sm" className="mb-4">
         <CardContent>
           <div className="flex min-w-0 items-center gap-2 mb-4 max-sm:flex-wrap justify-between gap-3 max-sm:flex-col max-sm:items-start">
-            <h2 className="m-0 text-base font-semibold">Cluster status</h2>
+            <h2 className="m-0 text-base font-semibold">{t("ha.cluster-status")}</h2>
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-2 max-sm:w-full max-sm:justify-between">
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-input px-[9px] py-0.5 text-[11px] text-muted-foreground tabular-nums"
-                title="Auto-refreshes the HA status"
+                title={t("ha.auto-refresh-title")}
               >
                 <span
                   className="size-1.5 flex-none rounded-full bg-[var(--fx-success)] [animation:refresh-pulse_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
@@ -133,7 +136,7 @@ export function HAStatusPanel() {
                 auto-refresh {secsLeft}s
               </span>
               <Button variant="outline" type="button" onClick={reload}>
-                Refresh
+                {t("common.refresh")}
               </Button>
             </div>
           </div>
@@ -141,39 +144,39 @@ export function HAStatusPanel() {
           {error && <Alert className="mb-4">{error}</Alert>}
           {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
           {!status ? (
-            <p className="m-0 text-sm text-muted-foreground">Loading...</p>
+            <p className="m-0 text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : (
             <>
               <HAArchitecture status={status} />
               <TableWrap className="mt-4">
                 <Table>
                   <TableBody>
-                    <TableRow><TableCell className="w-44 text-muted-foreground">Mode</TableCell><TableCell>{status.mode}</TableCell></TableRow>
-                    <TableRow><TableCell className="text-muted-foreground">Storage backend</TableCell><TableCell>{status.backend}</TableCell></TableRow>
-                    <TableRow><TableCell className="text-muted-foreground">Leader election</TableCell><TableCell>{status.enabled ? "enabled" : "disabled (single instance)"}</TableCell></TableRow>
-                    <TableRow><TableCell className="text-muted-foreground">This pod</TableCell><TableCell className="font-mono text-xs">{status.identity || "-"}</TableCell></TableRow>
+                    <TableRow><TableCell className="w-44 text-muted-foreground">{t("common.mode")}</TableCell><TableCell>{status.mode}</TableCell></TableRow>
+                    <TableRow><TableCell className="text-muted-foreground">{t("ha.storage-backend")}</TableCell><TableCell>{status.backend}</TableCell></TableRow>
+                    <TableRow><TableCell className="text-muted-foreground">{t("ha.leader-election")}</TableCell><TableCell>{status.enabled ? t("common.status.enabled") : "disabled (single instance)"}</TableCell></TableRow>
+                    <TableRow><TableCell className="text-muted-foreground">{t("ha.this-pod")}</TableCell><TableCell className="font-mono text-xs">{status.identity || "-"}</TableCell></TableRow>
                     <TableRow>
-                      <TableCell className="text-muted-foreground">Role</TableCell>
+                      <TableCell className="text-muted-foreground">{t("common.role")}</TableCell>
                       <TableCell>
                         <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap gap-2">
                           <Badge variant={status.is_leader ? "success" : "outline"}>
                             {status.role || "-"}
                           </Badge>
-                          {status.is_leader && <span className="text-sm text-muted-foreground">serving traffic</span>}
+                          {status.is_leader && <span className="text-sm text-muted-foreground">{t("ha.serving-traffic")}</span>}
                         </div>
                       </TableCell>
                     </TableRow>
-                    <TableRow><TableCell className="text-muted-foreground">Current leader</TableCell><TableCell className="font-mono text-xs">{status.leader || "-"}</TableCell></TableRow>
-                    {status.version && <TableRow><TableCell className="text-muted-foreground">Version</TableCell><TableCell>{status.version}</TableCell></TableRow>}
+                    <TableRow><TableCell className="text-muted-foreground">{t("ha.current-leader")}</TableCell><TableCell className="font-mono text-xs">{status.leader || "-"}</TableCell></TableRow>
+                    {status.version && <TableRow><TableCell className="text-muted-foreground">{t("common.version")}</TableCell><TableCell>{status.version}</TableCell></TableRow>}
                     {status.started_at && (
                       <TableRow>
-                        <TableCell className="text-muted-foreground">Uptime</TableCell>
+                        <TableCell className="text-muted-foreground">{t("ha.uptime")}</TableCell>
                         <TableCell>{formatUptime(status.started_at)} <span className="text-muted-foreground">· since {status.started_at.slice(0, 19).replace("T", " ")}</span></TableCell>
                       </TableRow>
                     )}
-                    {status.lease_name && <TableRow><TableCell className="text-muted-foreground">Lease</TableCell><TableCell className="font-mono text-xs">{status.lease_name}</TableCell></TableRow>}
+                    {status.lease_name && <TableRow><TableCell className="text-muted-foreground">{t("ha.lease")}</TableCell><TableCell className="font-mono text-xs">{status.lease_name}</TableCell></TableRow>}
                     {typeof status.fencing_token === "number" && status.fencing_token > 0 && (
-                      <TableRow><TableCell className="text-muted-foreground">Fencing token</TableCell><TableCell>{status.fencing_token}</TableCell></TableRow>
+                      <TableRow><TableCell className="text-muted-foreground">{t("ha.fencing-token")}</TableCell><TableCell>{status.fencing_token}</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -191,17 +194,14 @@ export function HAStatusPanel() {
       {canStepDown && (
         <Card size="sm" className="mb-4 border-destructive/70">
           <CardContent>
-            <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
+            <h2 className="m-0 mb-3 text-base font-semibold text-destructive">{t("common.danger-zone")}</h2>
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap justify-between gap-4 max-sm:flex-col max-sm:items-start">
               <p className="m-0 text-sm leading-relaxed text-muted-foreground">
-                Manual failover gracefully steps this leader down so a standby is elected and takes over.
-                The leader releases its lease and traffic moves to the new leader. This pod stays Ready and can
-                be re-elected later. Use it for planned maintenance or to drain this pod. Expect a brief
-                in-flight disruption while traffic moves.
+                {t("ha.failover-note")}
               </p>
               <Button variant="destructive" type="button" disabled={stepping}
                 onClick={() => setConfirmStepDown(true)}>
-                {stepping ? "Stepping down…" : "Step down (manual failover)"}
+                {stepping ? t("ha.stepping-down") : t("ha.step-down-button")}
               </Button>
             </div>
           </CardContent>
@@ -210,9 +210,9 @@ export function HAStatusPanel() {
 
       <ConfirmModal
         open={confirmStepDown}
-        title="Step down as leader?"
-        message="This leader gracefully releases its lease and a standby is elected. Traffic moves to the new leader. Expect a brief disruption. This pod stays Ready and can be re-elected later."
-        confirmLabel="Step down"
+        title={t("ha.step-down-confirm-title")}
+        message={t("ha.step-down-confirm-message")}
+        confirmLabel={t("ha.step-down")}
         danger
         onConfirm={stepDown}
         onCancel={() => setConfirmStepDown(false)}
@@ -228,6 +228,7 @@ export function HAStatusPanel() {
 // poll. In single-instance mode (election disabled) only the lone active pod is
 // drawn. Active elements are green; the standby and its paths are dashed/dimmed.
 function HAArchitecture({ status }: { status: HAStatusType }) {
+  const { t } = useTranslation();
   const ha = status.enabled;
   const s3 = status.backend === "s3";
   const showFencing = s3 && typeof status.fencing_token === "number" && status.fencing_token > 0;
@@ -259,9 +260,9 @@ function HAArchitecture({ status }: { status: HAStatusType }) {
 
   return (
     <div className="mt-3 w-full overflow-x-auto">
-      <div className="mb-1.5 text-xs text-muted-foreground">Active / standby topology</div>
+      <div className="mb-1.5 text-xs text-muted-foreground">{t("ha.topology")}</div>
       <svg className="block h-auto w-full min-w-[720px]" viewBox="0 0 1080 340" role="img"
-        aria-label="High availability active/standby architecture">
+        aria-label={t("ha.diagram-label")}>
         <defs>
           <marker id="ha-head" viewBox="0 0 8 8" markerWidth="7" markerHeight="7" refX="6.5" refY="4" orient="auto-start-reverse">
             <path className="fill-muted-foreground" d="M0,1 L7,4 L0,7 Z" />
@@ -273,13 +274,13 @@ function HAArchitecture({ status }: { status: HAStatusType }) {
 
         {/* Client */}
         <rect className={boxClass} x="20" y="140" width="150" height="56" rx="8" />
-        <text className={labelClass} x="95" y="164" textAnchor="middle">Client</text>
-        <text className={subLabelClass} x="95" y="181" textAnchor="middle">package managers</text>
+        <text className={labelClass} x="95" y="164" textAnchor="middle">{t("ha.client")}</text>
+        <text className={subLabelClass} x="95" y="181" textAnchor="middle">{t("ha.package-managers")}</text>
 
         {/* Service */}
         <rect className={boxClass} x="250" y="134" width="180" height="68" rx="8" />
-        <text className={labelClass} x="340" y="164" textAnchor="middle">Service (forklift)</text>
-        <text className={subLabelClass} x="340" y="182" textAnchor="middle">routes to leader</text>
+        <text className={labelClass} x="340" y="164" textAnchor="middle">{t("ha.service")}</text>
+        <text className={subLabelClass} x="340" y="182" textAnchor="middle">{t("ha.routes-to-leader")}</text>
 
         {/* Client -> Service */}
         <line className={cn(edgeClass, flowEdgeClass)} x1="170" y1="168" x2="250" y2="168" markerEnd="url(#ha-head)" />
@@ -290,7 +291,7 @@ function HAArchitecture({ status }: { status: HAStatusType }) {
         <path className="fill-[var(--fx-success)]"
           d={`M644,${apY + 17} L644,${apY + 7} L649.5,${apY + 12} L655,${apY + 5} L660.5,${apY + 12} L666,${apY + 7} L666,${apY + 17} Z`} />
         <text className={cn(tagClass, "fill-[var(--fx-success)]")} x="655" y={apY + 33} textAnchor="middle">
-          {ha ? "ACTIVE · LEADER" : "ACTIVE · SINGLE INSTANCE"}
+          {ha ? t("ha.active-leader") : t("ha.active-single")}
         </text>
         <text className={monoLabelClass} x="655" y={apY + 52} textAnchor="middle"><title>{activeName}</title>{trunc(activeName, 24)}</text>
         {podSub(activeThis) && <text className={subLabelClass} x="655" y={apY + 72} textAnchor="middle">{podSub(activeThis)}</text>}
@@ -300,24 +301,24 @@ function HAArchitecture({ status }: { status: HAStatusType }) {
 
         {/* Active -> Storage (single writer) */}
         <line className={cn(edgeClass, activeEdgeClass, flowEdgeClass)} x1="770" y1={apCy} x2="900" y2={ha ? 150 : 168} markerEnd="url(#ha-head-ok)" />
-        <text className={subLabelClass} x="835" y={ha ? 108 : 160} textAnchor="middle">single writer</text>
+        <text className={subLabelClass} x="835" y={ha ? 108 : 160} textAnchor="middle">{t("ha.single-writer")}</text>
 
         {ha && (
           <>
             {/* Standby pod */}
             <rect className={cn(boxClass, standbyBoxClass)} x="540" y="212" width="230" height="92" rx="8" />
-            <text className={cn(tagClass, "fill-muted-foreground")} x="655" y="240" textAnchor="middle">STANDBY</text>
+            <text className={cn(tagClass, "fill-muted-foreground")} x="655" y="240" textAnchor="middle">{t("ha.standby")}</text>
             <text className={monoLabelClass} x="655" y="264" textAnchor="middle"><title>{standbyName}</title>{trunc(standbyName, 24)}</text>
             {podSub(standbyThis) && <text className={subLabelClass} x="655" y="284" textAnchor="middle">{podSub(standbyThis)}</text>}
 
             {/* Service -> Standby (ready, not served) */}
             <line className={cn(edgeClass, dimEdgeClass)} x1="430" y1="186" x2="540" y2="258" markerEnd="url(#ha-head)" />
-            <text className={subLabelClass} x="485" y="232" textAnchor="middle">ready</text>
+            <text className={subLabelClass} x="485" y="232" textAnchor="middle">{t("ha.ready")}</text>
 
             {/* Lease link between the two pods (vertical) */}
             <line className={edgeClass} x1="655" y1="132" x2="655" y2="210" markerStart="url(#ha-head)" markerEnd="url(#ha-head)" />
-            <text className={subLabelClass} x="678" y="166" textAnchor="start">Lease</text>
-            <text className={subLabelClass} x="678" y="182" textAnchor="start">leader election</text>
+            <text className={subLabelClass} x="678" y="166" textAnchor="start">{t("ha.lease")}</text>
+            <text className={subLabelClass} x="678" y="182" textAnchor="start">{t("ha.leader-election-caption")}</text>
 
             {/* Standby -> Storage */}
             <line className={cn(edgeClass, dimEdgeClass)} x1="770" y1="258" x2="900" y2="186" markerEnd="url(#ha-head)" />
@@ -332,7 +333,7 @@ function HAArchitecture({ status }: { status: HAStatusType }) {
           <title>{status.storage_endpoint || "—"}</title>{trunc(status.storage_endpoint || "—", 24)}
         </text>
         <text className={subLabelClass} x="985" y="194" textAnchor="middle">
-          {s3 ? (showFencing ? `fenced · token ${status.fencing_token}` : "fenced writes") : "single writer"}
+          {s3 ? (showFencing ? `fenced · token ${status.fencing_token}` : "fenced writes") : t("ha.single-writer")}
         </text>
       </svg>
     </div>

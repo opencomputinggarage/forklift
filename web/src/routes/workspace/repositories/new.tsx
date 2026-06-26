@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/workspace/repositories/new")({
   component: RepositoryNewRoute,
@@ -40,10 +41,10 @@ function RepositoryNewRoute() {
 }
 
 const REPO_TYPES = [
-  { value: "hosted", title: "Hosted", desc: "Store artifacts uploaded directly by your team" },
-  { value: "proxy", title: "Proxy", desc: "Cache and serve artifacts from an upstream registry" },
-  { value: "group", title: "Group", desc: "Combine repositories behind a single read-only URL" },
-];
+  { value: "hosted", titleKey: "repo.type.hosted", descKey: "repo.type.hosted-desc" },
+  { value: "proxy", titleKey: "repo.type.proxy", descKey: "repo.type.proxy-desc" },
+  { value: "group", titleKey: "repo.type.group", descKey: "repo.type.group-desc" },
+] as const;
 
 type SelectOption = { value: string; label: string; description?: string };
 
@@ -58,6 +59,7 @@ function SelectControl({
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
+  const { t } = useTranslation();
   const selectValue = value === "" && !options.some((o) => o.value === "") ? null : value;
   return (
     <Select items={options} value={selectValue} onValueChange={(next) => onChange(next ?? "")}>
@@ -76,7 +78,7 @@ function SelectControl({
           </SelectItem>
         ))}
         {options.length === 0 && (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">No options</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t("common.no-options")}</div>
         )}
       </SelectContent>
     </Select>
@@ -84,6 +86,7 @@ function SelectControl({
 }
 
 export function RepositoryNew() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [format, setFormat] = useState("maven");
@@ -159,9 +162,9 @@ export function RepositoryNew() {
   return (
     <>
       <header className="mb-4">
-        <h1 className="m-0 text-2xl font-semibold tracking-normal">New repository</h1>
+        <h1 className="m-0 text-2xl font-semibold tracking-normal">{t("repo.new")}</h1>
         <p className="mt-1 max-w-[58rem] text-sm leading-relaxed text-muted-foreground">
-          Register a hosted, proxy, or group repository for package delivery.
+          {t("repo.new-description")}
         </p>
       </header>
 
@@ -170,16 +173,16 @@ export function RepositoryNew() {
           <form onSubmit={submit} className="space-y-5">
             <section>
               <div className="mb-4">
-                <h2 className="m-0 text-base font-semibold">Basics</h2>
+                <h2 className="m-0 text-base font-semibold">{t("repo.basics")}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Choose the protocol and serving mode. The generated endpoint follows this selection.
+                  {t("repo.basics-description")}
                 </p>
               </div>
 
               <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="repository-name">
-                  Name<span className="text-destructive">*</span>
+                  {t("common.name")}<span className="text-destructive">*</span>
                 </FieldLabel>
                 <Input
                   id="repository-name"
@@ -189,13 +192,13 @@ export function RepositoryNew() {
                   required
                   autoFocus
                   pattern="[A-Za-z0-9_-]{1,64}"
-                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                  title={t("common.name-rule-64")}
                 />
-                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+                <FieldDescription>{t("common.name-rule")}</FieldDescription>
               </Field>
 
               <Field>
-                <FieldLabel>Format<span className="text-destructive">*</span></FieldLabel>
+                <FieldLabel>{t("common.format")}<span className="text-destructive">*</span></FieldLabel>
                 <SelectControl
                   value={format}
                   onChange={(v) => { setFormat(v); setMembers([]); }}
@@ -210,23 +213,23 @@ export function RepositoryNew() {
               </Field>
 
               <Field>
-                <FieldLabel>Type<span className="text-destructive">*</span></FieldLabel>
+                <FieldLabel>{t("common.type")}<span className="text-destructive">*</span></FieldLabel>
                 <div className="grid gap-2 md:grid-cols-3" role="radiogroup" aria-label="Repository type">
-                  {REPO_TYPES.map((t) => (
+                  {REPO_TYPES.map((rt) => (
                     <Button
-                      key={t.value}
+                      key={rt.value}
                       type="button"
                       variant="ghost"
                       role="radio"
-                      aria-checked={type === t.value}
+                      aria-checked={type === rt.value}
                       className={cn(
                         "h-full w-full flex-col items-start justify-start whitespace-normal rounded-lg border border-border bg-input px-3.5 py-3 text-left text-sm transition-colors hover:bg-muted",
-                        type === t.value && "border-primary bg-primary/10"
+                        type === rt.value && "border-primary bg-primary/10"
                       )}
-                      onClick={() => setType(t.value)}
+                      onClick={() => setType(rt.value)}
                     >
-                      <div className={cn("mb-1 font-semibold", type === t.value && "text-primary")}>{t.title}</div>
-                      <div className="text-xs leading-relaxed text-muted-foreground">{t.desc}</div>
+                      <div className={cn("mb-1 font-semibold", type === rt.value && "text-primary")}>{t(rt.titleKey)}</div>
+                      <div className="text-xs leading-relaxed text-muted-foreground">{t(rt.descKey)}</div>
                     </Button>
                   ))}
                 </div>
@@ -237,16 +240,16 @@ export function RepositoryNew() {
             {type === "proxy" && (
               <section className="border-t border-border pt-5">
                 <div className="mb-4">
-                  <h2 className="m-0 text-base font-semibold">Proxy upstream</h2>
+                  <h2 className="m-0 text-base font-semibold">{t("repo.proxy-upstream")}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Configure the remote registry and optional supply-chain cooldown.
+                    {t("repo.proxy-description")}
                   </p>
                 </div>
 
                 <FieldGroup className="gap-4">
                   <Field>
                     <FieldLabel htmlFor="upstream-url">
-                      Upstream URL<span className="text-destructive">*</span>
+                      {t("repo.upstream-url")}<span className="text-destructive">*</span>
                     </FieldLabel>
                     <Input
                       id="upstream-url"
@@ -259,24 +262,24 @@ export function RepositoryNew() {
                   </Field>
 
                   <Field>
-                    <FieldLabel>Age policy</FieldLabel>
+                    <FieldLabel>{t("repo.age-policy")}</FieldLabel>
                     <label className="inline-flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={ageEnabled}
                         onCheckedChange={(checked) => setAgeEnabled(checked === true)}
-                        aria-label="Block versions newer than a cooldown window"
+                        aria-label={t("repo.cooldown-label")}
                       />
-                      <span>Block versions newer than a cooldown window</span>
+                      <span>{t("repo.cooldown-label")}</span>
                     </label>
                     <FieldDescription>
-                      Use this when newly published packages should cool down before serving.
+                      {t("repo.cooldown-note")}
                     </FieldDescription>
                   </Field>
 
                   {ageEnabled && (
                     <Field>
                       <FieldLabel htmlFor="minimum-age">
-                        Minimum age<span className="text-destructive">*</span>
+                        {t("repo.minimum-age")}<span className="text-destructive">*</span>
                       </FieldLabel>
                       <Input
                         id="minimum-age"
@@ -285,7 +288,7 @@ export function RepositoryNew() {
                         placeholder="3d"
                         required
                       />
-                      <FieldDescription>Examples: 3d, 72h, 2w.</FieldDescription>
+                      <FieldDescription>{t("repo.cooldown-examples")}</FieldDescription>
                     </Field>
                   )}
                 </FieldGroup>
@@ -295,9 +298,9 @@ export function RepositoryNew() {
             {type === "group" && (
               <section className="border-t border-border pt-5">
                 <div className="mb-4">
-                  <h2 className="m-0 text-base font-semibold">Members</h2>
+                  <h2 className="m-0 text-base font-semibold">{t("repo.members")}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Select member repositories in lookup order. The first hit wins.
+                    {t("repo.members-note")}
                   </p>
                 </div>
 
@@ -310,7 +313,7 @@ export function RepositoryNew() {
                 <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-wrap">
                   <SelectControl
                     value=""
-                    placeholder="add member..."
+                    placeholder={t("repo.add-member-placeholder")}
                     onChange={(v) => v && setMembers([...members, v])}
                     options={candidates.map((r) => ({ value: r.name, label: `${r.name} (${r.type})` }))}
                   />
@@ -330,8 +333,8 @@ export function RepositoryNew() {
             )}
 
             <div className="flex min-w-0 items-center gap-2 border-t border-border pt-5 max-sm:flex-col max-sm:items-stretch">
-              <Button type="submit" disabled={!valid}>Create repository</Button>
-              <Button variant="outline" type="button" onClick={() => navigate({ to: "/workspace/repositories" })}>Cancel</Button>
+              <Button type="submit" disabled={!valid}>{t("repo.create")}</Button>
+              <Button variant="outline" type="button" onClick={() => navigate({ to: "/workspace/repositories" })}>{t("common.cancel")}</Button>
             </div>
           </form>
         </CardContent>
@@ -345,9 +348,10 @@ export function RepositoryNew() {
 function ConnectivityHint({ checking, health, hasUrl }: {
   checking: boolean; health: UpstreamHealth | null; hasUrl: boolean;
 }) {
+  const { t } = useTranslation();
   if (!hasUrl) return null;
   if (checking) {
-    return <p className="mt-1.5 text-sm text-muted-foreground">Checking connectivity…</p>;
+    return <p className="mt-1.5 text-sm text-muted-foreground">{t("common.checking-connectivity")}</p>;
   }
   if (!health) return null;
   if (health.reachable) {
@@ -373,6 +377,7 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
   repoIndex?: Record<string, number>;
   repoTypes?: Record<string, string>;
 }) {
+  const { t } = useTranslation();
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
     if (j < 0 || j >= members.length) return;
@@ -380,7 +385,7 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next);
   };
-  if (members.length === 0) return <p className="text-muted-foreground">No members selected.</p>;
+  if (members.length === 0) return <p className="text-muted-foreground">{t("repo.no-members")}</p>;
   return (
     <Table>
       <TableBody>
@@ -399,19 +404,19 @@ export function MemberList({ members, onChange, repoIndex, repoTypes }: {
             <TableCell className="whitespace-nowrap text-right">
               <div className="flex justify-end gap-1">
                 <Button variant="outline" size="icon-sm" type="button" disabled={i === 0}
-                  title="Move up" onClick={() => move(i, -1)}>
+                  title={t("common.move-up")} onClick={() => move(i, -1)}>
                   <ArrowUp className="size-3.5" aria-hidden="true" />
-                  <span className="sr-only">Move up</span>
+                  <span className="sr-only">{t("common.move-up")}</span>
                 </Button>
                 <Button variant="outline" size="icon-sm" type="button" disabled={i === members.length - 1}
-                  title="Move down" onClick={() => move(i, 1)}>
+                  title={t("common.move-down")} onClick={() => move(i, 1)}>
                   <ArrowDown className="size-3.5" aria-hidden="true" />
-                  <span className="sr-only">Move down</span>
+                  <span className="sr-only">{t("common.move-down")}</span>
                 </Button>
-                <Button variant="destructive" size="icon-sm" type="button" title="Remove member"
+                <Button variant="destructive" size="icon-sm" type="button" title={t("repo.remove-member")}
                   onClick={() => onChange(members.filter((m) => m !== name))}>
                   <X className="size-3.5" aria-hidden="true" />
-                  <span className="sr-only">Remove member</span>
+                  <span className="sr-only">{t("repo.remove-member")}</span>
                 </Button>
               </div>
             </TableCell>

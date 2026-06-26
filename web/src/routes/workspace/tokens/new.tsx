@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, X } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/workspace/tokens/new")({
   component: TokenNew,
@@ -59,6 +60,7 @@ function formatDateLabel(d: Date): string {
 // the :id route param selects the target and where Done/Cancel return to. All
 // fields are required; expiry is capped at one year by the API.
 export function TokenNew() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams({ strict: false });
   const forUserId = id ? Number(id) : null;
@@ -118,7 +120,7 @@ export function TokenNew() {
     e.preventDefault();
     setError("");
     if (!valid) {
-      setError("Complete all required fields before creating a token.");
+      setError(t("token.incomplete-note"));
       return;
     }
     try {
@@ -146,9 +148,9 @@ export function TokenNew() {
   if (created) {
     return (
       <>
-        <PageHeader title="Token created" />
+        <PageHeader title={t("token.created")} />
         <PageDescription>
-          Copy this token now. It will not be shown again.
+          {t("token.copy-warning")}
         </PageDescription>
         <Card size="sm" className="mb-4 max-w-[40rem]">
           <CardContent>
@@ -157,10 +159,10 @@ export function TokenNew() {
                 {created}
               </div>
               <Button variant="outline" type="button" onClick={copy}>
-                {copied ? "Copied" : "Copy"}
+                {copied ? t("common.copied") : t("common.copy")}
               </Button>
             </div>
-            <Button className="mt-5" onClick={() => navigate(forUserId ? { to: "/access/users/$id", params: { id: String(forUserId) } } : { to: "/workspace/tokens" })}>Done</Button>
+            <Button className="mt-5" onClick={() => navigate(forUserId ? { to: "/access/users/$id", params: { id: String(forUserId) } } : { to: "/workspace/tokens" })}>{t("common.done")}</Button>
           </CardContent>
         </Card>
       </>
@@ -169,9 +171,9 @@ export function TokenNew() {
 
   return (
     <>
-      <PageHeader title={forUserId !== null ? "Create token for user" : "Create token"} />
+      <PageHeader title={forUserId !== null ? t("token.create-for-user") : t("token.create")} />
       <PageDescription>
-        Issue a scoped access token with an expiration date and repository permissions.
+        {t("token.new-description")}
       </PageDescription>
 
       <Card size="sm" className="mb-4 max-w-[44rem]">
@@ -180,7 +182,7 @@ export function TokenNew() {
             <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="token-name">
-                  Token name<span className="text-destructive">*</span>
+                  {t("token.name")}<span className="text-destructive">*</span>
                 </FieldLabel>
                 <Input
                   id="token-name"
@@ -190,27 +192,27 @@ export function TokenNew() {
                   autoFocus
                   required
                   pattern="[A-Za-z0-9_-]{1,64}"
-                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                  title={t("common.name-rule-64")}
                 />
-                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+                <FieldDescription>{t("common.name-rule")}</FieldDescription>
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="token-description">
-                  Token description<span className="text-destructive">*</span>
+                  {t("token.description")}<span className="text-destructive">*</span>
                 </FieldLabel>
                 <Input
                   id="token-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What this token is used for"
+                  placeholder={t("token.description-placeholder")}
                   required
                 />
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="expires-on">
-                  Expires on<span className="text-destructive">*</span>
+                  {t("token.expires-on")}<span className="text-destructive">*</span>
                 </FieldLabel>
                 <Popover open={expiresPickerOpen} onOpenChange={setExpiresPickerOpen}>
                   <PopoverTrigger
@@ -225,7 +227,7 @@ export function TokenNew() {
                     }
                   >
                     <CalendarIcon data-icon="inline-start" />
-                    {expiresOn ? formatDateLabel(expiresOn) : "Select expiration date"}
+                    {expiresOn ? formatDateLabel(expiresOn) : t("token.select-expiration")}
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-auto p-0">
                     <Calendar
@@ -241,16 +243,16 @@ export function TokenNew() {
                     />
                   </PopoverContent>
                 </Popover>
-                <FieldDescription>Tokens expire after at most one year.</FieldDescription>
+                <FieldDescription>{t("token.expiry-note")}</FieldDescription>
               </Field>
             </FieldGroup>
 
             <div className="space-y-3 border-t border-border pt-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="m-0 text-sm font-semibold">Permissions</h2>
+                  <h2 className="m-0 text-sm font-semibold">{t("common.permissions")}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add repository patterns and allowed token actions.
+                    {t("token.permissions-description")}
                   </p>
                 </div>
                 <Badge className="mt-0.5">{scopes.length}</Badge>
@@ -266,7 +268,7 @@ export function TokenNew() {
                       size="icon-xs"
                       variant="ghost"
                       type="button"
-                      title="Remove permission"
+                      title={t("common.remove-permission")}
                       onClick={() => setScopes((cur) => cur.filter((_, j) => j !== i))}
                     >
                       <X className="size-3" aria-hidden="true" />
@@ -274,7 +276,7 @@ export function TokenNew() {
                   </Badge>
                 ))}
                   {scopes.length === 0 && (
-                    <span className="px-1 text-sm text-muted-foreground">No permissions added.</span>
+                    <span className="px-1 text-sm text-muted-foreground">{t("common.no-permissions-added")}</span>
                   )}
                 </div>
               </div>
@@ -282,7 +284,7 @@ export function TokenNew() {
               <div className="rounded-lg border border-border/80 bg-background/40 p-3">
                 <FieldGroup className="gap-3">
                   <Field>
-                    <FieldLabel>Repository pattern</FieldLabel>
+                    <FieldLabel>{t("common.repository-pattern")}</FieldLabel>
                     <Combobox
                       items={repoOptions}
                       inputValue={pattern}
@@ -292,9 +294,9 @@ export function TokenNew() {
                         if (typeof next === "string") setPattern(next);
                       }}
                     >
-                      <ComboboxInput placeholder="repo pattern (* or maven-*)" className="w-full" />
+                      <ComboboxInput placeholder={t("common.repo-pattern-placeholder")} className="w-full" />
                       <ComboboxContent>
-                        <ComboboxEmpty>No repositories found.</ComboboxEmpty>
+                        <ComboboxEmpty>{t("common.no-repositories-found")}</ComboboxEmpty>
                         <ComboboxList>
                           {repoOptions.map((option) => (
                             <ComboboxItem key={option} value={option}>
@@ -314,7 +316,7 @@ export function TokenNew() {
                   </Field>
 
                   <Field>
-                    <FieldLabel>Actions</FieldLabel>
+                    <FieldLabel>{t("common.actions")}</FieldLabel>
                     <Combobox
                       multiple
                       items={actionOptions}
@@ -331,11 +333,11 @@ export function TokenNew() {
                           <ComboboxChip key={action}>{action}</ComboboxChip>
                         ))}
                         <ComboboxChipsInput
-                          placeholder={actions.length ? "Add action" : "Select actions"}
+                          placeholder={actions.length ? t("common.add-action") : t("common.select-actions")}
                         />
                       </ComboboxChips>
                       <ComboboxContent anchor={actionAnchorRef}>
-                        <ComboboxEmpty>No actions found.</ComboboxEmpty>
+                        <ComboboxEmpty>{t("common.no-actions-found")}</ComboboxEmpty>
                         <ComboboxList>
                           {actionOptions.map((action) => (
                             <ComboboxItem key={action} value={action}>
@@ -355,7 +357,7 @@ export function TokenNew() {
                       disabled={!pattern.trim() || actions.length === 0}
                     >
                       <Plus data-icon="inline-start" />
-                      Add permission
+                      {t("common.add-permission")}
                     </Button>
                   </div>
                 </FieldGroup>
@@ -364,8 +366,8 @@ export function TokenNew() {
 
             {error && <Alert>{error}</Alert>}
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
-              <Button type="submit" disabled={!valid}>Create token</Button>
-              <Button variant="outline" type="button" onClick={() => navigate(forUserId ? { to: "/access/users/$id", params: { id: String(forUserId) } } : { to: "/workspace/tokens" })}>Cancel</Button>
+              <Button type="submit" disabled={!valid}>{t("token.create")}</Button>
+              <Button variant="outline" type="button" onClick={() => navigate(forUserId ? { to: "/access/users/$id", params: { id: String(forUserId) } } : { to: "/workspace/tokens" })}>{t("common.cancel")}</Button>
             </div>
           </form>
         </CardContent>

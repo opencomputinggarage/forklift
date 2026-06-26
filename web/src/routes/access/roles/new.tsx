@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Plus, X } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/access/roles/new")({
   component: RoleNewRoute,
@@ -47,6 +48,7 @@ interface Permission {
 // Admin-only role creation, reached from the Create button on /access/roles.
 // Permissions can be granted here at creation, or added later on the Roles page.
 export function RoleNew() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -97,9 +99,9 @@ export function RoleNew() {
 
   return (
     <>
-      <PageHeader title="Create role" />
+      <PageHeader title={t("role.create")} />
       <PageDescription>
-        Define a reusable access profile and optional repository permissions.
+        {t("role.new-description")}
       </PageDescription>
 
       <Card size="sm" className="mb-4 max-w-[44rem]">
@@ -108,7 +110,7 @@ export function RoleNew() {
             <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="role-name">
-                  Role name<span className="text-destructive">*</span>
+                  {t("common.role-name")}<span className="text-destructive">*</span>
                 </FieldLabel>
                 <Input
                   id="role-name"
@@ -118,18 +120,18 @@ export function RoleNew() {
                   autoFocus
                   required
                   pattern="[A-Za-z0-9_-]{1,64}"
-                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                  title={t("common.name-rule-64")}
                 />
-                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+                <FieldDescription>{t("common.name-rule")}</FieldDescription>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="role-description">Description</FieldLabel>
+                <FieldLabel htmlFor="role-description">{t("common.description")}</FieldLabel>
                 <Input
                   id="role-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="optional"
+                  placeholder={t("common.optional")}
                 />
               </Field>
             </FieldGroup>
@@ -137,9 +139,9 @@ export function RoleNew() {
             <div className="space-y-3 border-t border-border pt-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="m-0 text-sm font-semibold">Permissions</h2>
+                  <h2 className="m-0 text-sm font-semibold">{t("common.permissions")}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add repository patterns and allowed actions. Wildcards are accepted.
+                    {t("role.permissions-description")}
                   </p>
                 </div>
                 <Badge className="mt-0.5">{permissions.length}</Badge>
@@ -155,7 +157,7 @@ export function RoleNew() {
                         size="icon-xs"
                         variant="ghost"
                         type="button"
-                        title="Remove permission"
+                        title={t("common.remove-permission")}
                         onClick={() => setPermissions((cur) => cur.filter((_, j) => j !== i))}
                       >
                         <X className="size-3" aria-hidden="true" />
@@ -163,7 +165,7 @@ export function RoleNew() {
                     </Badge>
                   ))}
                   {permissions.length === 0 && (
-                    <span className="px-1 text-sm text-muted-foreground">No permissions added.</span>
+                    <span className="px-1 text-sm text-muted-foreground">{t("common.no-permissions-added")}</span>
                   )}
                 </div>
               </div>
@@ -171,7 +173,7 @@ export function RoleNew() {
               <div className="rounded-lg border border-border/80 bg-background/40 p-3">
                 <FieldGroup className="gap-3">
                   <Field>
-                    <FieldLabel>Repository pattern</FieldLabel>
+                    <FieldLabel>{t("common.repository-pattern")}</FieldLabel>
                     <Combobox
                       items={repoOptions}
                       inputValue={pattern}
@@ -181,9 +183,9 @@ export function RoleNew() {
                         if (typeof next === "string") setPattern(next);
                       }}
                     >
-                      <ComboboxInput placeholder="repo pattern (* or maven-*)" className="w-full" />
+                      <ComboboxInput placeholder={t("common.repo-pattern-placeholder")} className="w-full" />
                       <ComboboxContent>
-                        <ComboboxEmpty>No repositories found.</ComboboxEmpty>
+                        <ComboboxEmpty>{t("common.no-repositories-found")}</ComboboxEmpty>
                         <ComboboxList>
                           {repoOptions.map((option) => (
                             <ComboboxItem key={option} value={option}>
@@ -203,7 +205,7 @@ export function RoleNew() {
                   </Field>
 
                   <Field>
-                    <FieldLabel>Actions</FieldLabel>
+                    <FieldLabel>{t("common.actions")}</FieldLabel>
                     <Combobox
                       multiple
                       items={actionOptions}
@@ -220,11 +222,11 @@ export function RoleNew() {
                           <ComboboxChip key={action}>{action}</ComboboxChip>
                         ))}
                         <ComboboxChipsInput
-                          placeholder={actions.length ? "Add action" : "Select actions"}
+                          placeholder={actions.length ? t("common.add-action") : t("common.select-actions")}
                         />
                       </ComboboxChips>
                       <ComboboxContent anchor={actionAnchorRef}>
-                        <ComboboxEmpty>No actions found.</ComboboxEmpty>
+                        <ComboboxEmpty>{t("common.no-actions-found")}</ComboboxEmpty>
                         <ComboboxList>
                           {actionOptions.map((action) => (
                             <ComboboxItem key={action} value={action}>
@@ -244,7 +246,7 @@ export function RoleNew() {
                       disabled={!pattern.trim() || actions.length === 0}
                     >
                       <Plus data-icon="inline-start" />
-                      Add permission
+                      {t("common.add-permission")}
                     </Button>
                   </div>
                 </FieldGroup>
@@ -255,10 +257,10 @@ export function RoleNew() {
 
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
               <Button type="submit" disabled={!name.trim()}>
-                Create role
+                {t("role.create")}
               </Button>
               <Button variant="outline" type="button" onClick={() => navigate({ to: "/access/roles" })}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </form>

@@ -117,11 +117,11 @@ function LoginForm({
               <Field className="gap-3 pt-1">
                 <Button className="h-11 w-full" disabled={busy} type="submit">
                   {busy ? (
-                    t("login.signingIn")
+                    t("login.signing-in")
                   ) : (
                     <>
                       <KeyRound data-icon="inline-start" aria-hidden="true" />
-                      {t("login.signIn")}
+                      {t("login.sign-in")}
                     </>
                   )}
                 </Button>
@@ -136,7 +136,7 @@ function LoginForm({
                   </Button>
                 )}
                 <FieldDescription className="text-center">
-                  {t("login.accessNote")}
+                  {t("login.access-note")}
                 </FieldDescription>
               </Field>
             </FieldGroup>

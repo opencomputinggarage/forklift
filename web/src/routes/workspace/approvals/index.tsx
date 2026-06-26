@@ -22,6 +22,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/workspace/approvals/")({
   component: ApprovalsRoute,
@@ -39,12 +40,13 @@ function ApprovalsRoute() {
 // package across all versions ("package", shown with a "pkg" suffix), the
 // latter used when the requested version is unknown.
 export function ApprovalVulnBadge({ severity, ids, scope }: { severity?: string; ids?: string[]; scope?: string }) {
-  if (severity === undefined) return <span className="text-muted-foreground">not scanned</span>;
+  const { t } = useTranslation();
+  if (severity === undefined) return <span className="text-muted-foreground">{t("approval.not-scanned-short")}</span>;
   const pkgScope = scope === "package";
   const suffix = pkgScope ? " · pkg" : "";
   const scopeTitle = pkgScope ? "package-level scan (requested version unknown)" : "scan for the requested version";
   if (severity === "none")
-    return <SeverityBadge severity="none" title={scopeTitle}>clean{suffix}</SeverityBadge>;
+    return <SeverityBadge severity="none" title={scopeTitle}>{t("approval.clean-short")}{suffix}</SeverityBadge>;
   const count = ids?.length ?? 0;
   return (
     <SeverityBadge severity={severity} title={`${count ? ids!.join(", ") : severity} · ${scopeTitle}`}>
@@ -83,6 +85,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
   severity?: string; counts?: Record<string, number>; scope?: string;
   source?: string; scannedAt?: string | null; size?: "sm" | "lg";
 }) {
+  const { t } = useTranslation();
   const [pop, setPop] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
@@ -111,7 +114,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
     };
   }, [pop, updatePosition]);
   // Unscanned has no provenance to show, so it stays a plain muted label.
-  if (severity === undefined) return <span className="text-muted-foreground">not scanned</span>;
+  if (severity === undefined) return <span className="text-muted-foreground">{t("approval.not-scanned-short")}</span>;
   const c = counts ?? {};
   const total = SEV_ORDER.reduce((n, s) => n + (c[s] ?? 0), 0);
   // Clean = scanned with no advisories (severity "none"), or a scanned result
@@ -137,7 +140,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
     >
       <span className="text-xs font-semibold">
         {clean
-          ? "No known advisories"
+          ? t("approval.no-advisories-short")
           : `${total} vulnerabilit${total === 1 ? "y" : "ies"}`}
         {scope === "package" ? " · package-level" : ""}
       </span>
@@ -164,7 +167,7 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
       onMouseEnter={open} onMouseLeave={() => setPop(false)}
       onFocus={open} onBlur={() => setPop(false)}>
       {clean ? (
-        <SeverityBadge severity="none">clean{suffix}</SeverityBadge>
+        <SeverityBadge severity="none">{t("approval.clean-short")}{suffix}</SeverityBadge>
       ) : (
         <>
           <span
@@ -199,6 +202,7 @@ const STATUSES = ["pending", "approved", "rejected"];
 // pre-approve packages before anyone asks. Per-repository views reuse
 // ApprovalList from the repository detail's Approvals tab.
 export function Approvals() {
+  const { t } = useTranslation();
   const [repo, setRepo] = useState("");
   const [repos, setRepos] = useState<Repository[]>([]);
   const [rows, setRows] = useState<Approval[]>([]);
@@ -228,14 +232,13 @@ export function Approvals() {
   return (
     <>
       <PageHeader
-        title="Approvals"
+        title={t("approval.title")}
         actions={
-        <Button onClick={() => setPreApproving(true)}>Add decision</Button>
+        <Button onClick={() => setPreApproving(true)}>{t("approval.add-decision")}</Button>
         }
       />
       <PageDescription>
-        Quarantine queue for proxied packages. Approve or reject pending requests before a
-        proxy serves them, and block specific poisoned versions outright.
+        {t("approval.queue-description")}
       </PageDescription>
       <div className="space-y-9">
         <ApprovalList
@@ -280,6 +283,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
   // Maps repository name to id so the Repository column can link to its detail.
   repoIds?: Record<string, number>;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [status, setStatus] = useState("pending");
   const [rows, setRows] = useState<Approval[]>([]);
@@ -307,9 +311,9 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
     <section aria-labelledby="approval-queue-title">
       <div className="mb-3 flex min-w-0 items-end justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
         <div className="min-w-0">
-          <h2 id="approval-queue-title" className="m-0 text-base font-semibold">Approval queue</h2>
+          <h2 id="approval-queue-title" className="m-0 text-base font-semibold">{t("approval.queue")}</h2>
           <p className="m-0 mt-1 text-sm leading-6 text-muted-foreground">
-            Review quarantined package requests across proxy repositories.
+            {t("approval.description")}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground max-sm:justify-between">
@@ -339,7 +343,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
             title={pendingCount === 0 ? "No pending approvals" : undefined}
             onClick={() => setApprovingAll(true)}
           >
-            Approve all pending
+            {t("approval.approve-all")}
           </Button>
         )}
       </div>
@@ -353,14 +357,14 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
           <Table className="min-w-[900px] table-fixed">
             <TableHeader>
               <TableRow>
-                {showRepo && <TableHead className="w-[13%]">Repository</TableHead>}
-                <TableHead className="w-[22%]">Package</TableHead>
-                <TableHead className="w-[10%]">Version</TableHead>
-                <TableHead className="w-[9%]">Vuln</TableHead>
-                <TableHead className="w-[13%]">Requested by</TableHead>
-                <TableHead className="w-[7%]">Requests</TableHead>
-                <TableHead className="w-[15%]">Last requested</TableHead>
-                <TableHead className="w-[8%]">Status</TableHead>
+                {showRepo && <TableHead className="w-[13%]">{t("common.repository")}</TableHead>}
+                <TableHead className="w-[22%]">{t("common.package")}</TableHead>
+                <TableHead className="w-[10%]">{t("common.version")}</TableHead>
+                <TableHead className="w-[9%]">{t("common.vuln")}</TableHead>
+                <TableHead className="w-[13%]">{t("approval.requested-by")}</TableHead>
+                <TableHead className="w-[7%]">{t("common.requests")}</TableHead>
+                <TableHead className="w-[15%]">{t("approval.last-requested")}</TableHead>
+                <TableHead className="w-[8%]">{t("common.status")}</TableHead>
                 <TableHead className="w-[72px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
@@ -369,9 +373,9 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
                 <TableRow key={a.id}>
                   {showRepo && <TableCell className="truncate" title={a.repo_name}>{repoLink(a.repo_name, repoIds)}</TableCell>}
                   <TableCell className="max-w-[260px] truncate font-mono text-xs" title={a.package}>{a.package}</TableCell>
-                  <TableCell className="font-mono text-xs">{a.last_requested_version || <span className="text-muted-foreground">unknown</span>}</TableCell>
+                  <TableCell className="font-mono text-xs">{a.last_requested_version || <span className="text-muted-foreground">{t("common.unknown")}</span>}</TableCell>
                   <TableCell><SeverityBar severity={a.vuln_severity} counts={a.vuln_counts} scope={a.vuln_scope} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
-                  <TableCell className="truncate" title={a.requested_by || "anonymous"}>{a.requested_by || <span className="text-muted-foreground">anonymous</span>}</TableCell>
+                  <TableCell className="truncate" title={a.requested_by || t("common.anonymous")}>{a.requested_by || <span className="text-muted-foreground">{t("common.anonymous")}</span>}</TableCell>
                   <TableCell className="tabular-nums">{a.request_count}</TableCell>
                   <TableCell className="truncate text-muted-foreground" title={new Date(a.last_requested_at).toLocaleString()}>{new Date(a.last_requested_at).toLocaleString()}</TableCell>
                   <TableCell>
@@ -381,7 +385,7 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
                     <Button
                       onClick={() => navigate({ to: "/workspace/approvals/$id", params: { id: String(a.id) } })}
                     >
-                      Review
+                      {t("common.review")}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -393,9 +397,9 @@ export function ApprovalList({ repo = "", showRepo = true, reloadKey = 0, onRows
       {count > PAGE && (
         <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch max-sm:flex-wrap">
           <Button variant="outline" disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
+            onClick={() => setOffset(Math.max(0, offset - PAGE))}>{t("common.newer")}</Button>
           <Button variant="outline" disabled={offset + PAGE >= count}
-            onClick={() => setOffset(offset + PAGE)}>Older</Button>
+            onClick={() => setOffset(offset + PAGE)}>{t("common.older")}</Button>
           <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
         </div>
       )}
@@ -420,6 +424,7 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [repo, setRepo] = useState(initialRepo || repoNames[0] || "");
   const [note, setNote] = useState("");
   const [pending, setPending] = useState<number | null>(null);
@@ -453,10 +458,10 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
       <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
-        <h2 className="m-0 mb-4 text-base font-semibold">Approve all pending</h2>
+        <h2 className="m-0 mb-4 text-base font-semibold">{t("approval.approve-all")}</h2>
         <form onSubmit={submit} className="space-y-4">
           <Field>
-          <FieldLabel>Proxy repository</FieldLabel>
+          <FieldLabel>{t("approval.proxy-repository")}</FieldLabel>
           {single ? (
             <Input value={repo} disabled />
           ) : (
@@ -466,19 +471,19 @@ function ApproveAllModal({ repoNames, initialRepo, onDone, onCancel }: {
           </Field>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {pending === null
-              ? "Counting pending requests…"
+              ? t("approval.counting")
               : pending === 0
                 ? `No pending requests on ${repo}.`
                 : `All ${pending} pending ${pending === 1 ? "request" : "requests"} on ${repo} will be approved and served (age policy still applies). This cannot be undone in bulk.`}
           </p>
           <Field>
-          <FieldLabel>Note (optional)</FieldLabel>
-          <Input value={note} autoFocus placeholder="reason for the record"
+          <FieldLabel>{t("approval.note-optional")}</FieldLabel>
+          <Input value={note} autoFocus placeholder={t("approval.reason-placeholder")}
             onChange={(e) => setNote(e.target.value)} />
           </Field>
           {error && <Alert>{error}</Alert>}
           <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-            <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
+            <Button variant="outline" type="button" onClick={onCancel}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={busy || !repo || !pending}>
               {busy ? "Approving…" : pending ? `Approve ${pending}` : "Approve"}
             </Button>
@@ -498,6 +503,7 @@ export function ReviewModal({ row, onDone, onCancel }: {
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
@@ -524,20 +530,20 @@ export function ReviewModal({ row, onDone, onCancel }: {
           applies); reject to block the package, including already-cached content.
         </p>
         <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap mb-3 max-sm:flex-col max-sm:items-stretch">
-          <span className="text-sm text-muted-foreground">Vulnerabilities:</span>
+          <span className="text-sm text-muted-foreground">{t("approval.vulnerabilities-label")}</span>
           <ApprovalVulnBadge severity={row.vuln_severity} ids={row.vuln_ids} scope={row.vuln_scope} />
         </div>
         <Field>
-        <FieldLabel>Note (optional)</FieldLabel>
-        <Input value={note} autoFocus placeholder="reason for the record"
+        <FieldLabel>{t("approval.note-optional")}</FieldLabel>
+        <Input value={note} autoFocus placeholder={t("approval.reason-placeholder")}
           onChange={(e) => setNote(e.target.value)} />
         </Field>
         {error && <Alert className="mt-4">{error}</Alert>}
         <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap justify-end max-sm:flex-col max-sm:items-stretch">
-          <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
+          <Button variant="outline" type="button" onClick={onCancel}>{t("common.cancel")}</Button>
           {row.status !== "rejected" && (
             <Button variant="destructive" type="button" disabled={busy !== null}
-              onClick={() => decide("reject")}>{busy === "reject" ? "Rejecting…" : "Reject"}</Button>
+              onClick={() => decide("reject")}>{busy === "reject" ? t("approval.rejecting") : "Reject"}</Button>
           )}
           {row.status !== "approved" && (
             <Button type="button" disabled={busy !== null}
@@ -560,6 +566,7 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
   // Maps repository name to id so the Repository column can link to its detail.
   repoIds?: Record<string, number>;
 }) {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<VersionDeny[]>([]);
   const [count, setCount] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -592,30 +599,29 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
     <section aria-labelledby="version-denies-title">
       <div className="mb-3 flex items-end justify-between gap-3 border-t border-[var(--fx-border-subtle)] pt-7 max-sm:flex-col max-sm:items-stretch">
         <div>
-          <h2 id="version-denies-title" className="m-0 text-base font-semibold">Version denies</h2>
+          <h2 id="version-denies-title" className="m-0 text-base font-semibold">{t("approval.version-denies")}</h2>
           <p className="m-0 mt-1 text-sm leading-6 text-muted-foreground">
-            Blocks one exact version even when the package is approved. Applies
-            immediately, including already-cached copies.
+            {t("approval.deny-version-hint")}
           </p>
         </div>
-        <Button className="shrink-0" variant="destructive" onClick={() => setAdding(true)}>Deny version</Button>
+        <Button className="shrink-0" variant="destructive" onClick={() => setAdding(true)}>{t("approval.deny-version")}</Button>
       </div>
       {error && <Alert className="mb-4">{error}</Alert>}
       {rows.length === 0 ? (
         <div className="rounded-md border border-dashed border-[var(--fx-border-subtle)] px-3 py-8 text-center text-sm text-muted-foreground">
-          No denied versions.
+          {t("approval.no-denied")}
         </div>
       ) : (
         <TableWrap>
           <Table className="min-w-[860px] table-fixed">
             <TableHeader>
               <TableRow>
-                {showRepo && <TableHead className="w-[14%]">Repository</TableHead>}
-                <TableHead className="w-[24%]">Package</TableHead>
-                <TableHead className="w-[12%]">Version</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead className="w-[12%]">Denied by</TableHead>
-                <TableHead className="w-[16%]">Denied at</TableHead>
+                {showRepo && <TableHead className="w-[14%]">{t("common.repository")}</TableHead>}
+                <TableHead className="w-[24%]">{t("common.package")}</TableHead>
+                <TableHead className="w-[12%]">{t("common.version")}</TableHead>
+                <TableHead>{t("common.reason")}</TableHead>
+                <TableHead className="w-[12%]">{t("approval.denied-by")}</TableHead>
+                <TableHead className="w-[16%]">{t("approval.denied-at")}</TableHead>
                 <TableHead className="w-[76px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
@@ -625,11 +631,11 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
                   {showRepo && <TableCell className="truncate" title={d.repo_name}>{repoLink(d.repo_name, repoIds)}</TableCell>}
                   <TableCell className="max-w-[260px] truncate font-mono text-xs" title={d.package}>{d.package}</TableCell>
                   <TableCell className="font-mono text-xs">{d.version}</TableCell>
-                  <TableCell className="truncate" title={d.reason || "none"}>{d.reason || <span className="text-muted-foreground">none</span>}</TableCell>
-                  <TableCell className="truncate" title={d.created_by || "unknown"}>{d.created_by || <span className="text-muted-foreground">unknown</span>}</TableCell>
+                  <TableCell className="truncate" title={d.reason || t("common.none")}>{d.reason || <span className="text-muted-foreground">{t("common.none")}</span>}</TableCell>
+                  <TableCell className="truncate" title={d.created_by || t("common.unknown")}>{d.created_by || <span className="text-muted-foreground">{t("common.unknown")}</span>}</TableCell>
                   <TableCell className="truncate text-muted-foreground" title={new Date(d.created_at).toLocaleString()}>{new Date(d.created_at).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="outline" onClick={() => setRemoving(d)}>Remove</Button>
+                    <Button variant="outline" onClick={() => setRemoving(d)}>{t("common.remove")}</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -640,9 +646,9 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
       {count > PAGE && (
         <div className="mt-3 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch max-sm:flex-wrap">
           <Button variant="outline" disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - PAGE))}>Newer</Button>
+            onClick={() => setOffset(Math.max(0, offset - PAGE))}>{t("common.newer")}</Button>
           <Button variant="outline" disabled={offset + PAGE >= count}
-            onClick={() => setOffset(offset + PAGE)}>Older</Button>
+            onClick={() => setOffset(offset + PAGE)}>{t("common.older")}</Button>
           <span className="text-sm text-muted-foreground">{offset + 1}–{Math.min(offset + PAGE, count)} of {count}</span>
         </div>
       )}
@@ -656,11 +662,11 @@ export function VersionDenies({ repo = "", showRepo = true, repoNames, repoIds =
       )}
       <ConfirmModal
         open={removing !== null}
-        title="Remove deny entry"
+        title={t("approval.remove-deny")}
         message={removing
           ? `${removing.package}@${removing.version} on ${removing.repo_name} will be served again (approval and age policies still apply).`
           : undefined}
-        confirmLabel="Remove"
+        confirmLabel={t("common.remove")}
         onConfirm={() => removing && remove(removing)}
         onCancel={() => setRemoving(null)}
       />
@@ -675,6 +681,7 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [repo, setRepo] = useState(initialRepo || (repoNames[0] ?? ""));
   const [pkg, setPkg] = useState("");
   const [version, setVersion] = useState("");
@@ -695,37 +702,36 @@ function DenyVersionModal({ repoNames, initialRepo, onDone, onCancel }: {
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
       <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
-        <h2 className="m-0 mb-3 text-base font-semibold">Deny version</h2>
+        <h2 className="m-0 mb-3 text-base font-semibold">{t("approval.deny-version")}</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Only this exact version is blocked; other versions keep flowing.
-          Cached copies stop being served immediately.
+          {t("approval.deny-version-note")}
         </p>
         <form onSubmit={submit} className="space-y-4">
           <Field>
-          <FieldLabel>Proxy repository</FieldLabel>
+          <FieldLabel>{t("approval.proxy-repository")}</FieldLabel>
           <Select value={repo} onChange={setRepo}
             options={repoNames.map((name) => ({ value: name, label: name }))} />
           </Field>
           <Field>
-          <FieldLabel>Package</FieldLabel>
+          <FieldLabel>{t("common.package")}</FieldLabel>
           <Input value={pkg} placeholder="lodash, @scope/pkg, group:artifact…"
             onChange={(e) => setPkg(e.target.value)} />
           </Field>
           <Field>
-          <FieldLabel>Version</FieldLabel>
+          <FieldLabel>{t("common.version")}</FieldLabel>
           <Input value={version} placeholder="4.17.99 (go modules: v1.2.3)"
             onChange={(e) => setVersion(e.target.value)} />
           </Field>
           <Field>
-          <FieldLabel>Reason (optional)</FieldLabel>
-          <Input value={reason} placeholder="CVE, IOC, incident reference…"
+          <FieldLabel>{t("approval.reason-optional")}</FieldLabel>
+          <Input value={reason} placeholder={t("approval.deny-reason-placeholder")}
             onChange={(e) => setReason(e.target.value)} />
           </Field>
           {error && <Alert>{error}</Alert>}
           <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-            <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
+            <Button variant="outline" type="button" onClick={onCancel}>{t("common.cancel")}</Button>
             <Button variant="destructive" type="submit" disabled={!repo || !pkg.trim() || !version.trim()}>
-              Deny
+              {t("approval.deny")}
             </Button>
           </div>
         </form>
@@ -740,6 +746,7 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [repo, setRepo] = useState(repoNames[0] ?? "");
   const [pkg, setPkg] = useState("");
   const [decision, setDecision] = useState("approved");
@@ -760,20 +767,20 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-[3px]" onClick={onCancel}>
       <div className="w-[380px] max-w-[90vw] rounded-lg border border-border bg-card p-5 shadow-[var(--fx-overlay-shadow)]" onClick={(e) => e.stopPropagation()}>
-        <h2 className="m-0 mb-4 text-base font-semibold">Add decision</h2>
+        <h2 className="m-0 mb-4 text-base font-semibold">{t("approval.add-decision")}</h2>
         <form onSubmit={submit} className="space-y-4">
           <Field>
-          <FieldLabel>Proxy repository</FieldLabel>
+          <FieldLabel>{t("approval.proxy-repository")}</FieldLabel>
           <Select value={repo} onChange={setRepo}
             options={repoNames.map((name) => ({ value: name, label: name }))} />
           </Field>
           <Field>
-          <FieldLabel>Package</FieldLabel>
+          <FieldLabel>{t("common.package")}</FieldLabel>
           <Input value={pkg} placeholder="lodash, @scope/pkg, group:artifact…"
             onChange={(e) => setPkg(e.target.value)} />
           </Field>
           <Field>
-          <FieldLabel>Decision</FieldLabel>
+          <FieldLabel>{t("common.decision")}</FieldLabel>
           <Select value={decision} onChange={setDecision}
             options={[
               { value: "approved", label: "approved" },
@@ -781,13 +788,13 @@ function PreApproveModal({ repoNames, onDone, onCancel }: {
             ]} />
           </Field>
           <Field>
-          <FieldLabel>Note (optional)</FieldLabel>
+          <FieldLabel>{t("approval.note-optional")}</FieldLabel>
           <Input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           {error && <Alert>{error}</Alert>}
           <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-            <Button variant="outline" type="button" onClick={onCancel}>Cancel</Button>
-            <Button type="submit" disabled={!repo || !pkg.trim()}>Save</Button>
+            <Button variant="outline" type="button" onClick={onCancel}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={!repo || !pkg.trim()}>{t("common.save")}</Button>
           </div>
         </form>
       </div>

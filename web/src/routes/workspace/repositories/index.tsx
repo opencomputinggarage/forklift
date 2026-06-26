@@ -19,6 +19,9 @@ import {
 } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+
+type TranslateFn = ReturnType<typeof useTranslation>["t"];
 
 export const Route = createFileRoute("/workspace/repositories/")({
   component: RepositoriesRoute,
@@ -64,24 +67,25 @@ function RepoSize({ repo }: { repo: Repository }) {
 // (age policy) and a shield (package approval), each lit when enabled and
 // carrying a concise tooltip. Non-proxy repos have no upstream to gate.
 function SecurityIcons({ repo }: { repo: Repository }) {
+  const { t } = useTranslation();
   if (repo.type !== "proxy") return <span className="text-muted-foreground">—</span>;
   const age = repo.config.age_policy;
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce" };
   const minAge = age.min_age || "0";
   const ageTip = !age.enabled
-    ? "Age policy is disabled."
+    ? t("repo.age-disabled")
     : age.action === "warn"
       ? `Age policy warns about versions published less than ${minAge} ago.`
       : `Age policy blocks versions published less than ${minAge} ago.`;
   const approvalTip = !approval.enabled
-    ? "Package approval is disabled."
+    ? t("repo.approval-disabled")
     : approval.mode === "audit"
-      ? "Package approval is in audit mode. Requests are logged but packages are still served."
-      : "Package approval is on. An admin must approve a package before this proxy serves it.";
+      ? t("repo.approval-audit")
+      : t("repo.approval-on");
   return (
     <span className="inline-flex items-center gap-2">
       <Tooltip>
-        <TooltipTrigger render={<span tabIndex={0} aria-label="Age policy" />}>
+        <TooltipTrigger render={<span tabIndex={0} aria-label={t("repo.age-policy")} />}>
           <span className={cn("inline-flex text-muted-foreground", age.enabled && "text-primary")}>
             <Clock className="size-4" aria-hidden="true" />
           </span>
@@ -89,7 +93,7 @@ function SecurityIcons({ repo }: { repo: Repository }) {
         <TooltipContent>{ageTip}</TooltipContent>
       </Tooltip>
       <Tooltip>
-        <TooltipTrigger render={<span tabIndex={0} aria-label="Package approval" />}>
+        <TooltipTrigger render={<span tabIndex={0} aria-label={t("repo.package-approval")} />}>
           <span className={cn("inline-flex text-muted-foreground", approval.enabled && "text-primary")}>
             <ShieldCheck className="size-4" aria-hidden="true" />
           </span>
@@ -102,14 +106,14 @@ function SecurityIcons({ repo }: { repo: Repository }) {
 
 // repoCells renders the columns after Name, shared by top-level and nested
 // (group member) rows so a member shows its own format/type/endpoint/status.
-function repoCells(r: Repository, canViewStatus: boolean) {
+function repoCells(r: Repository, canViewStatus: boolean, t: TranslateFn) {
   return (
     <>
       <TableCell>{r.format}</TableCell>
       <TableCell>{r.type}</TableCell>
       <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs" title={repoEndpoint(r.format, r.name).url}>
         {repoEndpoint(r.format, r.name).url}
-        {r.type === "proxy" && !r.config.cache.enabled && <span className="text-muted-foreground"> (cache off)</span>}
+        {r.type === "proxy" && !r.config.cache.enabled && <span className="text-muted-foreground"> {t("repo.cache-off")}</span>}
       </TableCell>
       <TableCell className="whitespace-nowrap"><ArtifactCount repo={r} /></TableCell>
       <TableCell className="whitespace-nowrap"><RepoSize repo={r} /></TableCell>
@@ -122,6 +126,7 @@ function repoCells(r: Repository, canViewStatus: boolean) {
 }
 
 export function Repositories({ me }: { me: Me }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [repos, setRepos] = useState<Repository[]>([]);
   const [error, setError] = useState("");
@@ -160,22 +165,21 @@ export function Repositories({ me }: { me: Me }) {
   return (
     <>
       <PageHeader
-        title="Repositories"
+        title={t("common.repositories")}
         actions={me.admin && (
           <Button onClick={() => navigate({ to: "/workspace/repositories/new" })}>
-            New repository
+            {t("repo.new")}
           </Button>
         )}
       />
       <PageDescription>
-        Host and proxy artifacts across Maven, npm, Cargo, Go, and PyPI. Configure
-        per-repository caching and supply-chain policies (age cooldown, package approval).
+        {t("repo.list-description")}
       </PageDescription>
       {error && <Alert className="mb-4">{error}</Alert>}
       <TableWrap>
         <Table className="table-fixed">
           <TableHeader>
-            <TableRow><TableHead className="w-[16%]">Name</TableHead><TableHead className="w-[8%]">Format</TableHead><TableHead className="w-[8%]">Type</TableHead><TableHead className="w-[31%]">Endpoint (forklift)</TableHead><TableHead className="w-[9%]">Artifacts</TableHead><TableHead className="w-[8%]">Size</TableHead><TableHead className="w-[11%]">Upstream</TableHead><TableHead className="w-[9%]">Security</TableHead></TableRow>
+            <TableRow><TableHead className="w-[16%]">{t("common.name")}</TableHead><TableHead className="w-[8%]">{t("common.format")}</TableHead><TableHead className="w-[8%]">{t("common.type")}</TableHead><TableHead className="w-[31%]">{t("common.endpoint")}</TableHead><TableHead className="w-[9%]">{t("common.artifacts")}</TableHead><TableHead className="w-[8%]">{t("common.size")}</TableHead><TableHead className="w-[11%]">{t("common.upstream")}</TableHead><TableHead className="w-[9%]">{t("common.security")}</TableHead></TableRow>
           </TableHeader>
           <TableBody>
             {topLevel.flatMap((r) => {
@@ -188,7 +192,7 @@ export function Repositories({ me }: { me: Me }) {
                     {isGroup ? (
                       <span className="flex min-w-0 items-center gap-1">
                         <Button type="button" variant="ghost" size="icon-xs" className="size-5 text-muted-foreground hover:text-foreground" aria-expanded={open}
-                          aria-label={open ? "Collapse group" : "Expand group"} onClick={() => toggle(r.id)}>
+                          aria-label={open ? t("repo.collapse-group") : t("repo.expand-group")} onClick={() => toggle(r.id)}>
                           {open ? "▾" : "▸"}
                         </Button>
                         {nameNode(r.id, r.name)}
@@ -198,7 +202,7 @@ export function Repositories({ me }: { me: Me }) {
                       nameNode(r.id, r.name)
                     )}
                   </TableCell>
-                  {repoCells(r, canViewStatus)}
+                  {repoCells(r, canViewStatus, t)}
                 </TableRow>,
               ];
               if (isGroup && open) {
@@ -213,8 +217,8 @@ export function Repositories({ me }: { me: Me }) {
                           : <span className="text-muted-foreground">{name}</span>}
                       </TableCell>
                       {m
-                        ? repoCells(m, canViewStatus)
-                        : <TableCell colSpan={7} className="text-muted-foreground">member not found</TableCell>}
+                        ? repoCells(m, canViewStatus, t)
+                        : <TableCell colSpan={7} className="text-muted-foreground">{t("repo.member-not-found")}</TableCell>}
                     </TableRow>,
                   );
                 });
@@ -222,7 +226,7 @@ export function Repositories({ me }: { me: Me }) {
               return rows;
             })}
             {repos.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-muted-foreground">No repositories yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-muted-foreground">{t("repo.empty")}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

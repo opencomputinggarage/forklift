@@ -7,6 +7,7 @@ import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/app-ui/table";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/workspace/tokens/")({
   component: Tokens,
@@ -27,21 +28,22 @@ function parseScopes(json: string): Scope[] {
 }
 
 export function Tokens() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [error, setError] = useState("");
   const [revokeId, setRevokeId] = useState<number | null>(null);
   const columns: ColumnDef<Token>[] = [
     {
-      header: "Name",
+      header: t("common.name"),
       cell: ({ row }) => row.original.name,
     },
     {
-      header: "Description",
+      header: t("common.description"),
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.description}</span>,
     },
     {
-      header: "Permissions",
+      header: t("common.permissions"),
       cell: ({ row }) => (
         <>
           {parseScopes(row.original.scopes_json).map((scope, i) => (
@@ -53,22 +55,22 @@ export function Tokens() {
       ),
     },
     {
-      header: "Created",
+      header: t("common.created"),
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.created_at?.slice(0, 10)}</span>,
     },
     {
-      header: "Expires",
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.expires_at ? row.original.expires_at.slice(0, 10) : "never"}</span>,
+      header: t("common.expires"),
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.expires_at ? row.original.expires_at.slice(0, 10) : t("common.never")}</span>,
     },
     {
-      header: "Last used",
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.last_used_at ? row.original.last_used_at.slice(0, 10) : "never"}</span>,
+      header: t("common.last-used"),
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.last_used_at ? row.original.last_used_at.slice(0, 10) : t("common.never")}</span>,
     },
     {
       id: "actions",
       cell: ({ row }) => (
         <div className="text-right">
-          <Button variant="destructive" onClick={() => setRevokeId(row.original.id)}>Revoke</Button>
+          <Button variant="destructive" onClick={() => setRevokeId(row.original.id)}>{t("token.revoke")}</Button>
         </div>
       ),
     },
@@ -87,28 +89,26 @@ export function Tokens() {
   return (
     <>
       <PageHeader
-        title="Personal access tokens"
+        title={t("token.personal-title")}
         actions={
           <Button onClick={() => navigate({ to: "/workspace/tokens/new" })}>
-            New token
+            {t("token.new")}
           </Button>
         }
       />
       <PageDescription>
-        Scoped credentials for package clients, limited to chosen repositories and actions
-        within your own permissions. Use a token as the password in your package manager
-        (npm <code>_authToken</code>, Maven, Cargo, <code>.netrc</code> for Go).
+        {t("token.help-1")} <code>_authToken</code>, Maven, Cargo, <code>.netrc</code> {t("token.help-2")}
       </PageDescription>
 
       {error && <Alert className="mb-4">{error}</Alert>}
 
-      <DataTable columns={columns} data={tokens} empty="No tokens yet." />
+      <DataTable columns={columns} data={tokens} empty={t("token.empty")} />
 
       <ConfirmModal
         open={revokeId !== null}
-        title="Revoke this token?"
-        message="Clients using this token will immediately lose access. This cannot be undone."
-        confirmLabel="Revoke"
+        title={t("token.revoke-confirm-title")}
+        message={t("token.revoke-confirm-message")}
+        confirmLabel={t("token.revoke")}
         danger
         onConfirm={revoke}
         onCancel={() => setRevokeId(null)}

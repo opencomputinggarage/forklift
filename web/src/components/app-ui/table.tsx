@@ -6,6 +6,8 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table"
 
+import { useTranslation } from "@/lib/i18n"
+
 import {
   Table as ShadcnTable,
   TableBody as ShadcnTableBody,
@@ -93,6 +95,7 @@ function DataTable<TData>({
   className?: string
   tableClassName?: string
 }) {
+  const { t } = useTranslation()
   const table = useReactTable({
     data,
     columns,
@@ -130,7 +133,7 @@ function DataTable<TData>({
           ) : (
             <TableRow>
               <TableCell colSpan={columnCount} className="text-muted-foreground">
-                {empty ?? "No results."}
+                {empty ?? t("common.no-results")}
               </TableCell>
             </TableRow>
           )}

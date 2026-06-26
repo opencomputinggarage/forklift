@@ -8,6 +8,7 @@ import { Badge } from "@/components/app-ui/badge";
 import { PageDescription, PageHeader } from "@/components/app-ui/page";
 import { DataTable, type ColumnDef } from "@/components/app-ui/table";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/admin/notifications/")({
   component: AdminNotificationsRoute,
@@ -15,11 +16,12 @@ export const Route = createFileRoute("/admin/notifications/")({
 
 function AdminNotificationsRoute() {
   const { me } = useAuth();
+  const { t } = useTranslation();
   if (!me.admin) return <Navigate to="/workspace/repositories" replace />;
 
   return (
     <>
-      <PageHeader title="Notifications" />
+      <PageHeader title={t("notification.title")} />
       <Receivers />
     </>
   );
@@ -31,6 +33,7 @@ function AdminNotificationsRoute() {
 // test posts a sample payload to the stored webhook. Rendered as the
 // standalone Notifications admin surface (the route gates admin-only access).
 export function Receivers() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [receivers, setReceivers] = useState<Receiver[] | null>(null);
   const [error, setError] = useState("");
@@ -39,30 +42,30 @@ export function Receivers() {
   const [deleting, setDeleting] = useState<Receiver | null>(null);
   const columns: ColumnDef<Receiver>[] = [
     {
-      header: "Name",
+      header: t("common.name"),
       cell: ({ row }) => <span className="whitespace-nowrap">{row.original.name}</span>,
     },
     {
-      header: "Description",
+      header: t("common.description"),
       cell: ({ row }) => <span className="text-muted-foreground">{row.original.description || "—"}</span>,
     },
     {
-      header: "Webhook",
-      cell: ({ row }) => <span className="text-muted-foreground">{row.original.webhook_configured ? "configured" : "—"}</span>,
+      header: t("common.webhook"),
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.webhook_configured ? t("common.status.configured") : "—"}</span>,
     },
     {
-      header: "Created by",
+      header: t("common.created-by"),
       cell: ({ row }) => row.original.created_by || <span className="text-muted-foreground">—</span>,
     },
     {
-      header: "Created",
+      header: t("common.created"),
       cell: ({ row }) => <span className="whitespace-nowrap text-muted-foreground">{row.original.created_at?.slice(0, 10)}</span>,
     },
     {
-      header: "Enabled",
+      header: t("common.enabled"),
       cell: ({ row }) => row.original.enabled
-        ? <Badge variant="success">enabled</Badge>
-        : <Badge variant="outline">disabled</Badge>,
+        ? <Badge variant="success">{t("common.status.enabled")}</Badge>
+        : <Badge variant="outline">{t("common.status.disabled")}</Badge>,
     },
     {
       id: "actions",
@@ -72,14 +75,14 @@ export function Receivers() {
           <div className="flex min-w-0 items-center justify-end gap-2 max-sm:flex-wrap">
             <Button variant="outline" type="button" disabled={testing === receiver.id}
               onClick={() => sendTest(receiver)}>
-              {testing === receiver.id ? "Sending…" : "Test"}
+              {testing === receiver.id ? t("common.sending") : t("common.test")}
             </Button>
             <Button variant="outline" type="button"
               onClick={() => navigate({ to: "/admin/notifications/$id", params: { id: String(receiver.id) } })}>
-              Edit
+              {t("common.edit")}
             </Button>
             <Button variant="destructive" type="button" onClick={() => setDeleting(receiver)}>
-              Delete
+              {t("common.delete")}
             </Button>
           </div>
         );
@@ -120,34 +123,33 @@ export function Receivers() {
   return (
     <>
       <PageDescription>
-        A receiver is a webhook (Slack/Mattermost-compatible) alerted when a package enters a
-        repository's approval queue. Each repository chooses which receivers to notify in its Settings.
+        {t("notification.description")}
       </PageDescription>
 
       <div className="mb-4 flex min-w-0 items-center justify-between gap-3 max-sm:flex-col max-sm:items-start">
         <h2 className="m-0 text-base font-semibold">
-          Receivers <span className="text-xs font-normal text-muted-foreground">· alarm channels</span>
+          {t("notification.receivers")} <span className="text-xs font-normal text-muted-foreground">{t("notification.subtitle")}</span>
         </h2>
         <Button onClick={() => navigate({ to: "/admin/notifications/new" })}>
-          Add receiver
+          {t("notification.add")}
         </Button>
       </div>
       {error && <Alert className="mb-4">{error}</Alert>}
       {notice && <div className="mb-4 text-sm text-muted-foreground">{notice}</div>}
       {!receivers ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
       ) : (
-        <DataTable columns={columns} data={receivers} empty="No receivers yet. Add one to start sending approval alarms." />
+        <DataTable columns={columns} data={receivers} empty={t("notification.empty")} />
       )}
       <p className="mt-4 text-sm text-muted-foreground">
-        The webhook URL is never shown again after it is saved. Leave it blank when editing to keep the current URL.
+        {t("notification.webhook-note")}
       </p>
 
       <ConfirmModal
         open={deleting !== null}
-        title={deleting ? `Delete receiver "${deleting.name}"?` : "Delete receiver"}
-        message="Repositories selecting this receiver will stop notifying it. This cannot be undone."
-        confirmLabel="Delete"
+        title={deleting ? `Delete receiver "${deleting.name}"?` : t("notification.delete")}
+        message={t("notification.delete-confirm")}
+        confirmLabel={t("common.delete")}
         danger
         onConfirm={() => deleting && del(deleting)}
         onCancel={() => setDeleting(null)}

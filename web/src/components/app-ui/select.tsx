@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export interface SelectOption {
@@ -28,6 +29,7 @@ export function Select({
   className?: string;
   size?: "sm";
 }) {
+  const { t } = useTranslation();
   const hasEmptyOption = options.some((o) => o.value === "");
   const selectValue = value === "" && !hasEmptyOption ? null : value;
 
@@ -57,7 +59,7 @@ export function Select({
           </SelectItem>
         ))}
         {options.length === 0 && (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">No options</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">{t("common.no-options")}</div>
         )}
       </SelectContent>
     </SelectRoot>

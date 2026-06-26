@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, UpstreamHealth } from "@/api";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 // UpstreamStatus probes a proxy repository's upstream and renders a health
 // badge. compact shows only reachable/unreachable (list view); the full form
@@ -15,6 +16,7 @@ export function UpstreamStatus({
   withButton?: boolean;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const [h, setH] = useState<UpstreamHealth | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,22 +46,22 @@ export function UpstreamStatus({
   }, [repoId]);
 
   let badge;
-  if (loading) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-muted-foreground bg-transparent" /> checking…</span>;
+  if (loading) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-muted-foreground bg-transparent" /> {t("common.checking")}</span>;
   else if (!h || !h.applicable) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">—</span>;
   else if (h.reachable)
     badge = (
       <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="inline-block size-[9px] rounded-full border border-[var(--fx-success)] bg-[var(--fx-success)]" /> reachable{!compact && <> · {h.status} · {h.latency_ms}ms</>}
+        <span className="inline-block size-[9px] rounded-full border border-[var(--fx-success)] bg-[var(--fx-success)]" /> {t("common.status.reachable")}{!compact && <> · {h.status} · {h.latency_ms}ms</>}
       </span>
     );
   else
-    badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-[var(--fx-danger)] bg-[var(--fx-danger)]" /> unreachable</span>;
+    badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-[var(--fx-danger)] bg-[var(--fx-danger)]" /> {t("common.status.unreachable")}</span>;
 
   if (!withButton) return badge;
   return (
     <span className="flex items-center gap-2.5 max-sm:flex-col max-sm:items-stretch">
       {badge}
-      <Button variant="outline" type="button" onClick={() => check()} disabled={loading}>Recheck</Button>
+      <Button variant="outline" type="button" onClick={() => check()} disabled={loading}>{t("common.recheck")}</Button>
     </span>
   );
 }

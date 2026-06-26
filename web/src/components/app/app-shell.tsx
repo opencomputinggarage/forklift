@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { api, type Me } from "@/api";
 import { AuthProvider } from "@/authContext";
-import { I18nLiteralBridge } from "@/components/app/i18n-literal-bridge";
 import { Login } from "@/components/auth/login";
 import { Logo } from "@/components/app/logo";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +46,6 @@ export function AppShell() {
   return (
     <AuthProvider value={{ me }}>
       <TooltipProvider>
-        <I18nLiteralBridge />
         <div className="min-h-dvh bg-background text-foreground lg:flex lg:items-start">
           <Sidebar me={me} onLogout={() => api.logout().then(refresh)} />
           <main className="w-full min-w-0 flex-1 px-[var(--fx-main-gutter-x)] py-[var(--fx-main-gutter-y)] max-lg:px-3 max-lg:py-3 max-sm:px-2 max-sm:py-2">
@@ -112,7 +110,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
       </div>
       <div className="mb-2 flex h-7 items-center gap-2 rounded-md border border-[var(--fx-border-subtle)] bg-[var(--fx-surface-1)] px-2 text-[13px] text-[var(--fx-text-subtle)] max-lg:hidden">
         <Search className="size-3.5" aria-hidden="true" />
-        <span>Search...</span>
+        <span>{t("common.search")}</span>
       </div>
       <nav className="-mx-1 flex flex-col gap-0.5 px-1 max-lg:flex-row max-lg:overflow-x-auto max-lg:pb-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden">
         <NavGroup title={t("nav.group.workspace")}>
@@ -168,7 +166,7 @@ function Sidebar({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <div className="mt-3 flex flex-col gap-1 border-t border-[var(--fx-border-subtle)] pt-3 max-lg:mt-2 max-lg:flex-row max-lg:items-center max-lg:justify-between max-lg:gap-3 max-lg:overflow-x-auto max-lg:pt-2 max-sm:gap-2">
         <a className={navLinkClass()} href="/api-docs" target="_blank" rel="noreferrer">
           <BookOpen className="size-4 opacity-75 group-hover:opacity-100" aria-hidden="true" />
-          {t("nav.apiDocs")}
+          {t("nav.api-docs")}
         </a>
         <div className="min-w-0 px-2 text-xs text-muted-foreground max-lg:flex max-lg:items-center max-lg:gap-2 max-lg:px-0 max-sm:ml-auto max-sm:w-auto">
           <div className="truncate">

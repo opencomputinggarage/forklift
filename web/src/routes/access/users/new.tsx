@@ -14,6 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/access/users/new")({
   component: UserNewRoute,
@@ -27,6 +28,7 @@ function UserNewRoute() {
 // Admin-only local user creation, reached from the Create button on /access/users.
 // OIDC users are never created here; they appear at first SSO login.
 export function UserNew() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +50,7 @@ export function UserNew() {
     e.preventDefault();
     setError("");
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("user.password-mismatch"));
       return;
     }
     try {
@@ -64,9 +66,9 @@ export function UserNew() {
 
   return (
     <>
-      <PageHeader title="Create local user" />
+      <PageHeader title={t("user.create-local")} />
       <PageDescription>
-        Create a local account and optionally assign an initial role.
+        {t("user.new-description")}
       </PageDescription>
 
       <Card size="sm" className="mb-4 max-w-[44rem]">
@@ -75,7 +77,7 @@ export function UserNew() {
             <FieldGroup className="gap-4">
               <Field>
                 <FieldLabel htmlFor="username">
-                  Username<span className="text-destructive">*</span>
+                  {t("common.username")}<span className="text-destructive">*</span>
                 </FieldLabel>
                 <Input
                   id="username"
@@ -84,30 +86,30 @@ export function UserNew() {
                   autoFocus
                   required
                   pattern="[A-Za-z0-9_-]{1,64}"
-                  title="Letters, digits, '-' and '_' only (max 64 characters)"
+                  title={t("common.name-rule-64")}
                 />
-                <FieldDescription>Letters, digits, dash and underscore only.</FieldDescription>
+                <FieldDescription>{t("common.name-rule")}</FieldDescription>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <FieldLabel htmlFor="email">{t("common.email")}</FieldLabel>
                 <Input
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="optional"
+                  placeholder={t("common.optional")}
                 />
                 <FieldDescription>
-                  OIDC users are created automatically at first login.
+                  {t("user.oidc-note")}
                 </FieldDescription>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="role">Role</FieldLabel>
+                <FieldLabel htmlFor="role">{t("common.role")}</FieldLabel>
                 <Select
                   value={roleId}
                   onChange={setRoleId}
-                  placeholder="no role"
+                  placeholder={t("user.no-role-placeholder")}
                   options={roles.map((r) => ({
                     value: String(r.id),
                     label: r.name,
@@ -115,23 +117,23 @@ export function UserNew() {
                   }))}
                 />
                 <FieldDescription>
-                  A user with no role cannot access repositories until one is assigned.
+                  {t("user.no-role-note")}
                 </FieldDescription>
               </Field>
             </FieldGroup>
 
             <div className="space-y-3 border-t border-border pt-4">
               <div>
-                <h2 className="m-0 text-sm font-semibold">Password</h2>
+                <h2 className="m-0 text-sm font-semibold">{t("common.password")}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Set an initial password for this local account.
+                  {t("user.initial-password-note")}
                 </p>
               </div>
 
               <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="password">
-                    Password<span className="text-destructive">*</span>
+                    {t("common.password")}<span className="text-destructive">*</span>
                   </FieldLabel>
                   <div className="flex min-w-0 items-stretch gap-2 max-sm:flex-wrap max-sm:flex-col">
                     <Input
@@ -145,16 +147,16 @@ export function UserNew() {
                       type="button"
                       variant="outline"
                       onClick={() => setShow((s) => !s)}
-                      aria-label={show ? "Hide password" : "Show password"}
+                      aria-label={show ? t("common.hide-password") : t("common.show-password")}
                     >
-                      {show ? "Hide" : "Show"}
+                      {show ? t("common.hide") : t("common.show")}
                     </Button>
                   </div>
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="confirm-password">
-                    Confirm password<span className="text-destructive">*</span>
+                    {t("common.confirm-password")}<span className="text-destructive">*</span>
                   </FieldLabel>
                   <Input
                     id="confirm-password"
@@ -164,7 +166,7 @@ export function UserNew() {
                     required
                     aria-invalid={mismatch}
                   />
-                  {mismatch && <Alert>Passwords do not match.</Alert>}
+                  {mismatch && <Alert>{t("user.password-mismatch")}</Alert>}
                 </Field>
               </FieldGroup>
             </div>
@@ -172,8 +174,8 @@ export function UserNew() {
             {error && <Alert>{error}</Alert>}
 
             <div className="flex min-w-0 items-center gap-2 max-sm:flex-wrap border-t border-border pt-4">
-              <Button type="submit" disabled={!canSubmit}>Create user</Button>
-              <Button variant="outline" type="button" onClick={() => navigate({ to: "/access/users" })}>Cancel</Button>
+              <Button type="submit" disabled={!canSubmit}>{t("user.create")}</Button>
+              <Button variant="outline" type="button" onClick={() => navigate({ to: "/access/users" })}>{t("common.cancel")}</Button>
             </div>
           </form>
         </CardContent>

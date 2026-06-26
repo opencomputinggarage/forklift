@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/access/users/$id/")({
   component: UserModifyRoute,
@@ -50,6 +51,7 @@ function parseScopes(json: string): Scope[] {
 // Per-user modify page: role mapping, password reset, enable/disable, and the
 // danger zone (delete). The Users list is read-only; all edits happen here.
 export function UserModify({ me }: { me: Me }) {
+  const { t } = useTranslation();
   const { id } = useParams({ strict: false }) as { id?: string };
   const navigate = useNavigate();
   const userId = Number(id);
@@ -71,7 +73,7 @@ export function UserModify({ me }: { me: Me }) {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId]);
 
   if (error && !user) return <Alert className="my-2.5">{error}</Alert>;
-  if (!user) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!user) return <div className="text-sm text-muted-foreground">{t("common.loading")}</div>;
 
   const self = user.username === me.username;
 
@@ -87,12 +89,12 @@ export function UserModify({ me }: { me: Me }) {
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="min-w-0 truncate">{user.username}</span>
             <Badge>{user.source}</Badge>
-            {self && <Badge>you</Badge>}
+            {self && <Badge>{t("common.you")}</Badge>}
           </div>
         }
         actions={
           <Button variant="outline" onClick={() => navigate({ to: "/access/users" })}>
-            Back to users
+            {t("user.back")}
           </Button>
         }
       />
@@ -113,15 +115,16 @@ export function UserModify({ me }: { me: Me }) {
 // by the identity provider (OIDC) or set at creation (local), so they are not
 // editable here — only displayed.
 function AccountPanel({ user }: { user: User }) {
+  const { t } = useTranslation();
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
-        <h2 className="m-0 mb-4 text-base font-semibold">Account</h2>
+        <h2 className="m-0 mb-4 text-base font-semibold">{t("common.account")}</h2>
         <FieldGroup className="grid gap-4 sm:grid-cols-2">
-          <ReadOnlyField label="Username" value={user.username} />
-          <ReadOnlyField label="Email" value={user.email || "—"} />
-          <ReadOnlyField label="Created" value={user.created_at ? new Date(user.created_at).toLocaleString() : "—"} />
-          <ReadOnlyField label="Last login" value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "never"} />
+          <ReadOnlyField label={t("common.username")} value={user.username} />
+          <ReadOnlyField label={t("common.email")} value={user.email || "—"} />
+          <ReadOnlyField label={t("common.created")} value={user.created_at ? new Date(user.created_at).toLocaleString() : "—"} />
+          <ReadOnlyField label={t("common.last-login")} value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : t("common.never")} />
         </FieldGroup>
       </CardContent>
     </Card>
@@ -138,13 +141,14 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 }
 
 function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[]; run: (p: Promise<unknown>) => void; canWrite: boolean }) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState("");
   const assignable = roles.filter((r) => !user.roles.some((ur) => ur.id === r.id));
 
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
-      <h2 className="m-0 mb-4 text-base font-semibold">Roles</h2>
+      <h2 className="m-0 mb-4 text-base font-semibold">{t("common.roles")}</h2>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {user.roles.map((r) => (
           <Badge key={r.id} className="gap-1">
@@ -155,24 +159,24 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
                 variant="ghost"
                 size="icon-xs"
                 className="-mr-1 size-4 rounded-full text-muted-foreground hover:bg-background/40 hover:text-foreground"
-                title="Remove role"
+                title={t("user.remove-role")}
                 onClick={() => run(api.removeRole(user.id, r.id))}
               >
                 <X className="size-3" aria-hidden="true" />
-                <span className="sr-only">Remove role</span>
+                <span className="sr-only">{t("user.remove-role")}</span>
               </Button>
             )}
           </Badge>
         ))}
-        {user.roles.length === 0 && <span className="text-sm text-muted-foreground">No roles assigned.</span>}
+        {user.roles.length === 0 && <span className="text-sm text-muted-foreground">{t("user.no-roles")}</span>}
       </div>
       {canWrite && assignable.length > 0 && (
         <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap items-stretch max-sm:flex-col">
-          <Select value={selected} onChange={setSelected} placeholder="add role…"
+          <Select value={selected} onChange={setSelected} placeholder={t("user.add-role-placeholder")}
             options={assignable.map((r) => ({ value: String(r.id), label: r.name, description: r.description || undefined }))} />
           <Button variant="outline" type="button" disabled={!selected}
             onClick={() => { run(api.assignRole(user.id, Number(selected))); setSelected(""); }}>
-            Add
+            {t("common.add")}
           </Button>
         </div>
       )}
@@ -188,6 +192,7 @@ function RolesPanel({ user, roles, run, canWrite }: { user: User; roles: Role[];
 function TokensPanel({ user, tokens, canWrite, run }: {
   user: User; tokens: Token[]; canWrite: boolean; run: (p: Promise<unknown>) => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [revokeId, setRevokeId] = useState<number | null>(null);
 
@@ -196,47 +201,47 @@ function TokensPanel({ user, tokens, canWrite, run }: {
       <CardContent>
       <div className="mb-4 flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
         <h2 className="m-0 text-base font-semibold">
-          Access tokens <span className="text-xs font-normal text-muted-foreground">· scoped credentials for package clients</span>
+          {t("token.title")} <span className="text-xs font-normal text-muted-foreground">{t("token.subtitle")}</span>
         </h2>
         {canWrite && (
           <Button
             onClick={() => navigate({ to: "/access/users/$id/tokens/new", params: { id: String(user.id) } })}
           >
-            New token
+            {t("token.new")}
           </Button>
         )}
       </div>
       <TableWrap>
         <Table>
-        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Permissions</TableHead><TableHead>Created</TableHead><TableHead>Expires</TableHead><TableHead>Last used</TableHead>{canWrite && <TableHead></TableHead>}</TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead>{t("common.name")}</TableHead><TableHead>{t("common.description")}</TableHead><TableHead>{t("common.permissions")}</TableHead><TableHead>{t("common.created")}</TableHead><TableHead>{t("common.expires")}</TableHead><TableHead>{t("common.last-used")}</TableHead>{canWrite && <TableHead></TableHead>}</TableRow></TableHeader>
         <TableBody>
-          {tokens.map((t) => (
-            <TableRow key={t.id}>
-              <TableCell>{t.name}</TableCell>
-              <TableCell className="text-muted-foreground">{t.description}</TableCell>
+          {tokens.map((tok) => (
+            <TableRow key={tok.id}>
+              <TableCell>{tok.name}</TableCell>
+              <TableCell className="text-muted-foreground">{tok.description}</TableCell>
               <TableCell>
-                {parseScopes(t.scopes_json).map((s, i) => (
+                {parseScopes(tok.scopes_json).map((s, i) => (
                   <Badge key={i} className="mr-1 font-mono">
                     {s.repo_pattern}: {s.actions.join(",")}
                   </Badge>
                 ))}
               </TableCell>
-              <TableCell className="text-muted-foreground">{t.created_at?.slice(0, 10)}</TableCell>
-              <TableCell className="text-muted-foreground">{t.expires_at ? t.expires_at.slice(0, 10) : "never"}</TableCell>
-              <TableCell className="text-muted-foreground">{t.last_used_at ? t.last_used_at.slice(0, 10) : "never"}</TableCell>
-              {canWrite && <TableCell><Button variant="destructive" onClick={() => setRevokeId(t.id)}>Revoke</Button></TableCell>}
+              <TableCell className="text-muted-foreground">{tok.created_at?.slice(0, 10)}</TableCell>
+              <TableCell className="text-muted-foreground">{tok.expires_at ? tok.expires_at.slice(0, 10) : t("common.never")}</TableCell>
+              <TableCell className="text-muted-foreground">{tok.last_used_at ? tok.last_used_at.slice(0, 10) : t("common.never")}</TableCell>
+              {canWrite && <TableCell><Button variant="destructive" onClick={() => setRevokeId(tok.id)}>{t("token.revoke")}</Button></TableCell>}
             </TableRow>
           ))}
-          {tokens.length === 0 && <TableRow><TableCell colSpan={canWrite ? 7 : 6} className="text-muted-foreground">No tokens yet.</TableCell></TableRow>}
+          {tokens.length === 0 && <TableRow><TableCell colSpan={canWrite ? 7 : 6} className="text-muted-foreground">{t("token.empty")}</TableCell></TableRow>}
         </TableBody>
         </Table>
       </TableWrap>
-      {!canWrite && <p className="mb-0 mt-3 text-sm text-muted-foreground">Read-only: only administrators can create or revoke tokens.</p>}
+      {!canWrite && <p className="mb-0 mt-3 text-sm text-muted-foreground">{t("token.readonly-note")}</p>}
       <ConfirmModal
         open={revokeId !== null}
-        title="Revoke this token?"
-        message="Clients using this token will immediately lose access. This cannot be undone."
-        confirmLabel="Revoke"
+        title={t("token.revoke-confirm-title")}
+        message={t("token.revoke-confirm-message")}
+        confirmLabel={t("token.revoke")}
         danger
         onConfirm={() => { if (revokeId !== null) run(api.deleteUserToken(user.id, revokeId)); setRevokeId(null); }}
         onCancel={() => setRevokeId(null)}
@@ -247,6 +252,7 @@ function TokensPanel({ user, tokens, canWrite, run }: {
 }
 
 function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => void }) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -266,9 +272,9 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
-      <h2 className="m-0 mb-4 text-base font-semibold">Password</h2>
+      <h2 className="m-0 mb-4 text-base font-semibold">{t("common.password")}</h2>
       <Field>
-        <FieldLabel>New password</FieldLabel>
+        <FieldLabel>{t("common.new-password")}</FieldLabel>
         <div className="relative">
         <Input className="pr-16" type={show ? "text" : "password"} value={password}
           onChange={(e) => { setPassword(e.target.value); setSaved(false); }} />
@@ -278,15 +284,15 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
           size="icon"
           className="absolute right-0 top-0 h-full rounded-l-none text-muted-foreground"
           onClick={() => setShow((s) => !s)}
-          aria-label={show ? "Hide password" : "Show password"}
+          aria-label={show ? t("common.hide-password") : t("common.show-password")}
         >
           {show ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
         </Button>
         </div>
       </Field>
       <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-        <Button type="button" disabled={!password} onClick={reset}>Reset password</Button>
-        {saved && <span className="text-sm text-muted-foreground">Password updated.</span>}
+        <Button type="button" disabled={!password} onClick={reset}>{t("user.reset-password")}</Button>
+        {saved && <span className="text-sm text-muted-foreground">{t("user.password-updated")}</span>}
       </div>
       </CardContent>
     </Card>
@@ -297,29 +303,29 @@ function PasswordPanel({ user, onError }: { user: User; onError: (e: string) => 
 // it after a lockout. The default admin is protected: the toggle is disabled so
 // it can never be locked out of the only guaranteed admin account.
 function LockoutPanel({ user, run }: { user: User; run: (p: Promise<unknown>) => void }) {
+  const { t } = useTranslation();
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
-      <h2 className="m-0 mb-3 text-base font-semibold">Account lockout</h2>
+      <h2 className="m-0 mb-3 text-base font-semibold">{t("common.account-lockout")}</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        When enabled, the account is locked after 5 consecutive failed password attempts and must be
-        unlocked by an administrator. {user.protected && "The default admin account cannot be locked out."}
+        {t("user.lockout-note")} {user.protected && t("user.lockout-protected-note")}
       </p>
       <label className="inline-flex items-center gap-2 text-sm">
         <Switch
           checked={user.lockout_enabled}
           disabled={user.protected}
           onCheckedChange={(v) => run(api.updateUser(user.id, { lockout_enabled: v }))}
-          aria-label={user.lockout_enabled ? "Lockout enabled" : "Lockout disabled"}
+          aria-label={user.lockout_enabled ? t("user.lockout-enabled") : t("user.lockout-disabled")}
         />
-        <span>{user.lockout_enabled ? "Lockout enabled" : "Lockout disabled"}</span>
+        <span>{user.lockout_enabled ? t("user.lockout-enabled") : t("user.lockout-disabled")}</span>
       </label>
       {user.locked && (
         <div className="flex min-w-0 items-center gap-2 mt-4 max-sm:flex-wrap max-sm:flex-col max-sm:items-stretch">
-          <StateBadge state="locked">Locked</StateBadge>
+          <StateBadge state="locked">{t("common.locked")}</StateBadge>
           <Button type="button"
             onClick={() => run(api.updateUser(user.id, { unlock: true }))}>
-            Unlock account
+            {t("user.unlock")}
           </Button>
         </div>
       )}
@@ -343,44 +349,38 @@ function LockNote({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: Promise<unknown>) => void }) {
+  const { t } = useTranslation();
   const lockedFromEditing = self || user.protected;
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
-      <h2 className="m-0 mb-3 text-base font-semibold">Status</h2>
+      <h2 className="m-0 mb-3 text-base font-semibold">{t("common.status")}</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        An <strong>active</strong> account can sign in to Forklift and use its credentials to pull and publish
-        artifacts, while <strong>disabling</strong> immediately revokes that access by stopping all sessions and
-        tokens. The account, its tokens and its role assignments are preserved, so disabling is a reversible
-        alternative to deletion that you can undo at any time by re-enabling.
+        An <strong>{t("common.status.active")}</strong> {t("user.status-desc-1")} <strong>{t("user.status-desc-disabling")}</strong> {t("user.status-desc-2")}
       </p>
       <label className="inline-flex items-center gap-2 text-sm">
         <Switch
           checked={!user.disabled}
           disabled={lockedFromEditing}
           onCheckedChange={(v) => run(api.updateUser(user.id, { disabled: !v }))}
-          aria-label={user.disabled ? "Account disabled" : "Account active"}
+          aria-label={user.disabled ? t("user.account-disabled") : t("user.account-active")}
         />
-        <span>{user.disabled ? "Account disabled" : "Account active"}</span>
+        <span>{user.disabled ? t("user.account-disabled") : t("user.account-active")}</span>
       </label>
       {user.protected ? (
-        <LockNote title="Status locked">
-          This is the default administrator account, created when Forklift first started. Its status is locked
-          active so the system always keeps at least one administrator who can sign in and recover access. It
-          cannot be disabled by anyone, including other administrators.
+        <LockNote title={t("user.status-locked")}>
+          {t("user.protected-note")}
         </LockNote>
       ) : self && (
-        <LockNote title="Status locked">
-          You are signed in as this account, so you cannot disable it yourself. This guards against accidentally
-          locking yourself out of Forklift. If this account needs to be disabled, ask another administrator to
-          do it.
+        <LockNote title={t("user.status-locked")}>
+          {t("user.self-note")}
         </LockNote>
       )}
       {user.locked && (
         <p className="mb-0 mt-3">
-          <StateBadge state="locked">Locked</StateBadge>
+          <StateBadge state="locked">{t("common.locked")}</StateBadge>
           <span className="ml-2 text-sm text-muted-foreground">
-            Locked after too many failed password attempts — unlock it in Account lockout.
+            {t("user.locked-note")}
           </span>
         </p>
       )}
@@ -392,6 +392,7 @@ function StatusPanel({ user, self, run }: { user: User; self: boolean; run: (p: 
 function DangerPanel({ user, self, onDeleted, onError }: {
   user: User; self: boolean; onDeleted: () => void; onError: (e: string) => void;
 }) {
+  const { t } = useTranslation();
   const [confirm, setConfirm] = useState(false);
   const del = async () => {
     try {
@@ -404,17 +405,17 @@ function DangerPanel({ user, self, onDeleted, onError }: {
   return (
     <Card size="sm" className="mb-4 border-destructive/70">
       <CardContent>
-      <h2 className="m-0 mb-3 text-base font-semibold text-destructive">Danger zone</h2>
+      <h2 className="m-0 mb-3 text-base font-semibold text-destructive">{t("common.danger-zone")}</h2>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Deleting a user revokes all of their tokens and role assignments. This cannot be undone.
-        {self && " You cannot delete your own account."}
+        {t("user.delete-note")}
+        {self && ` ${t("user.delete-self-note")}`}
       </p>
-      <Button variant="destructive" type="button" disabled={self} onClick={() => setConfirm(true)}>Delete user</Button>
+      <Button variant="destructive" type="button" disabled={self} onClick={() => setConfirm(true)}>{t("user.delete")}</Button>
       <ConfirmModal
         open={confirm}
         title={`Delete user "${user.username}"?`}
         message="This revokes all of the user's tokens and role assignments. This cannot be undone."
-        confirmLabel="Delete"
+        confirmLabel={t("common.delete")}
         danger
         onConfirm={() => { setConfirm(false); del(); }}
         onCancel={() => setConfirm(false)}

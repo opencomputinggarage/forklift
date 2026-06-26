@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { Badge } from "@/components/app-ui/badge"
+import { useTranslation } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 type BadgeProps = Omit<React.ComponentProps<typeof Badge>, "variant">
@@ -19,9 +20,10 @@ function SeverityBadge({
   children,
   ...props
 }: { severity: string } & BadgeProps) {
+  const { t } = useTranslation()
   return (
     <Badge className={cn(severityClassName[severity] ?? severityClassName.low, className)} {...props}>
-      {children ?? (severity === "none" ? "clean" : severity)}
+      {children ?? (severity === "none" ? t("approval.clean-short") : severity)}
     </Badge>
   )
 }

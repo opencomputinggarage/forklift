@@ -10,9 +10,6 @@ import { Badge } from "@/components/app-ui/badge";
 import { PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/app-ui/select";
-import { ActionBadge } from "@/components/app-ui/action-badge";
-import { EventBadge } from "@/components/app-ui/event-badge";
-import { FormatBadge, RepoTypeBadge } from "@/components/app-ui/repo-type-badge";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import {
   Table,
@@ -79,8 +76,8 @@ export function RepositoryDetail({ me }: { me: Me }) {
         title={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="min-w-0 truncate">{repo.name}</span>
-            <RepoTypeBadge type={repo.type} />
-            <FormatBadge format={repo.format} />
+            <Badge variant="secondary">{repo.type}</Badge>
+            <Badge>{repo.format}</Badge>
           </div>
         }
       />
@@ -964,7 +961,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
                   <TableCell className="font-mono text-xs">{p.repo_pattern}</TableCell>
                   <TableCell>
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      {p.actions.map((a) => <ActionBadge key={a} action={a} />)}
+                      {p.actions.map((a) => <Badge key={a}>{a}</Badge>)}
                     </div>
                   </TableCell>
                   <TableCell>{p.user_count}</TableCell>
@@ -1004,7 +1001,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       {t.unscoped
                         ? <span className="text-muted-foreground">per owner roles</span>
-                        : t.actions.map((a) => <ActionBadge key={a} action={a} />)}
+                        : t.actions.map((a) => <Badge key={a}>{a}</Badge>)}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{t.expires_at ? new Date(t.expires_at).toLocaleDateString() : "never"}</TableCell>
@@ -1148,7 +1145,7 @@ function AuditLogs({ repoId }: { repoId: number }) {
           {data?.logs.map((l) => (
             <TableRow key={l.id}>
               <TableCell className="text-muted-foreground">{l.created_at?.slice(0, 19).replace("T", " ")}</TableCell>
-              <TableCell><EventBadge event={l.event} /></TableCell>
+              <TableCell><Badge>{l.event}</Badge></TableCell>
               <TableCell className="break-all font-mono text-xs">{l.path || "-"}</TableCell>
               <TableCell>{l.username || <span className="text-muted-foreground">anonymous</span>}</TableCell>
               <TableCell className={l.status >= 400 ? "text-destructive" : "text-muted-foreground"}>{l.status}</TableCell>

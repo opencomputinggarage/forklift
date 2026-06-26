@@ -7,9 +7,7 @@ import { PageDescription, PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/app-ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrap } from "@/components/app-ui/table";
-import { ActionBadge, PermissionBadge, RoleBadge } from "@/components/app-ui/action-badge";
-import { RepoTypeBadge, FormatBadge } from "@/components/app-ui/repo-type-badge";
-import { StateBadge, ApprovalStatusBadge, CountBadge } from "@/components/app-ui/status-badge";
+import { StateBadge, ApprovalStatusBadge } from "@/components/app-ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -38,8 +36,8 @@ export const Components: Story = {
           title={
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span>Repository policy</span>
-              <RepoTypeBadge type={repoType} />
-              <FormatBadge format="npm" />
+              <Badge variant="secondary">{repoType}</Badge>
+              <Badge>npm</Badge>
             </div>
           }
           actions={
@@ -96,10 +94,10 @@ export const Components: Story = {
                 <Badge variant="destructive">destructive</Badge>
                 <StateBadge state={enabled ? "online" : "offline"}>{enabled ? "online" : "offline"}</StateBadge>
                 <ApprovalStatusBadge status="pending" />
-                <CountBadge>12</CountBadge>
-                <RoleBadge>admin</RoleBadge>
-                <PermissionBadge>npm-*: read,write</PermissionBadge>
-                <ActionBadge action="approve" />
+                <Badge className="tabular-nums">12</Badge>
+                <Badge>admin</Badge>
+                <Badge className="font-mono">npm-*: read,write</Badge>
+                <Badge>approve</Badge>
               </div>
             </CardContent>
           </Card>
@@ -121,9 +119,9 @@ export const Components: Story = {
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-mono text-xs">npm-public</TableCell>
-                    <TableCell><RepoTypeBadge type={repoType} /></TableCell>
+                    <TableCell><Badge variant="secondary">{repoType}</Badge></TableCell>
                     <TableCell><StateBadge state={enabled ? "online" : "offline"}>{enabled ? "online" : "offline"}</StateBadge></TableCell>
-                    <TableCell><PermissionBadge>npm-*: read,write</PermissionBadge></TableCell>
+                    <TableCell><Badge className="font-mono">npm-*: read,write</Badge></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>

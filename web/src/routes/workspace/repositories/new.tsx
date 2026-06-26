@@ -111,14 +111,14 @@ export function RepositoryNew() {
       setChecking(false);
       return;
     }
-    let cancelled = false;
+    const ctl = new AbortController();
     setChecking(true);
     const t = setTimeout(() => {
-      api.checkUpstream(url)
-        .then((h) => { if (!cancelled) { setHealth(h); setChecking(false); } })
-        .catch(() => { if (!cancelled) { setHealth(null); setChecking(false); } });
+      api.checkUpstream(url, ctl.signal)
+        .then((h) => { if (!ctl.signal.aborted) { setHealth(h); setChecking(false); } })
+        .catch(() => { if (!ctl.signal.aborted) { setHealth(null); setChecking(false); } });
     }, 600);
-    return () => { cancelled = true; clearTimeout(t); };
+    return () => { ctl.abort(); clearTimeout(t); };
   }, [upstream, type]);
 
   // Candidate members: same format, not a group itself, not yet selected.

@@ -1,4 +1,5 @@
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { Approval, Repository, VersionDeny, api } from "@/api";
 import { useAuth } from "@/authContext";
@@ -83,6 +84,32 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
   source?: string; scannedAt?: string | null; size?: "sm" | "lg";
 }) {
   const [pop, setPop] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
+  const updatePosition = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const tooltipWidth = 240;
+    const gap = 8;
+    const margin = 12;
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2, margin + tooltipWidth / 2),
+      window.innerWidth - margin - tooltipWidth / 2,
+    );
+    const belowTop = rect.bottom + gap;
+    const above = belowTop + 180 > window.innerHeight && rect.top > 180;
+    setPos({ top: above ? rect.top - gap : belowTop, left, above });
+  }, []);
+  useLayoutEffect(() => {
+    if (!pop) return;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [pop, updatePosition]);
   // Unscanned has no provenance to show, so it stays a plain muted label.
   if (severity === undefined) return <span className="text-muted-foreground">not scanned</span>;
   const c = counts ?? {};
@@ -93,14 +120,47 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
   const clean = severity === "none" || total === 0;
   const suffix = scope === "package" ? " · pkg" : "";
   const label = size === "lg" ? `${total} vuln${total !== 1 ? "s" : ""}${suffix}` : `${total}`;
-  const open = () => setPop(true);
-  const segs = SEV_ORDER.flatMap((s) =>
+  const open = () => {
+    updatePosition();
+    setPop(true);
+  };
+  const segments = () => SEV_ORDER.flatMap((s) =>
     Array.from({ length: c[s] ?? 0 }, (_, i) => (
       <span key={`${s}-${i}`} className={cn("h-full min-w-[3px] flex-1", SEV_BG_CLASS[s])} />
     ))
   );
+  const tooltip = pop && pos && typeof document !== "undefined" ? createPortal(
+    <span
+      className="pointer-events-none fixed z-[1000] flex w-[240px] max-w-[calc(100vw-24px)] flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[var(--fx-overlay-shadow)]"
+      style={{ left: pos.left, top: pos.top, transform: pos.above ? "translate(-50%, -100%)" : "translateX(-50%)" }}
+      role="tooltip"
+    >
+      <span className="text-xs font-semibold">
+        {clean
+          ? "No known advisories"
+          : `${total} vulnerabilit${total === 1 ? "y" : "ies"}`}
+        {scope === "package" ? " · package-level" : ""}
+      </span>
+      {!clean && <span className="inline-flex h-2.5 w-full overflow-hidden rounded-[5px] bg-border">{segments()}</span>}
+      {!clean && (
+        <span className="flex min-w-[150px] flex-col gap-1">
+          {SEV_ORDER.map((s) => (
+            <span key={s} className="flex items-center gap-[9px] text-xs leading-[1.2]">
+              <span className={cn("size-[9px] shrink-0 rounded-[2px]", SEV_BG_CLASS[s])} />
+              <span className="capitalize text-foreground">{s}</span>
+              <span className="ml-auto font-semibold tabular-nums">{c[s] ?? 0}</span>
+            </span>
+          ))}
+        </span>
+      )}
+      <span className="border-t border-border pt-[7px] text-[11px] text-muted-foreground">
+        Source {source || "OSV"} · scanned {scannedAt ? new Date(scannedAt).toLocaleString() : "n/a"}
+      </span>
+    </span>,
+    document.body,
+  ) : null;
   return (
-    <span className={cn("relative inline-flex cursor-help items-center gap-2 outline-none", size === "lg" && "gap-3")} tabIndex={0}
+    <span ref={triggerRef} className={cn("relative inline-flex cursor-help items-center gap-2 outline-none", size === "lg" && "gap-3")} tabIndex={0}
       onMouseEnter={open} onMouseLeave={() => setPop(false)}
       onFocus={open} onBlur={() => setPop(false)}>
       {clean ? (
@@ -113,39 +173,12 @@ export function SeverityBar({ severity, counts, scope, source, scannedAt, size =
               size === "lg" ? "h-4 w-[280px] rounded-lg max-[760px]:w-[180px]" : "h-1.5 w-[54px]"
             )}
           >
-            {segs}
+            {segments()}
           </span>
           <span className={cn("text-xs text-muted-foreground tabular-nums", size === "lg" && "text-sm")}>{label}</span>
         </>
       )}
-      {pop && (
-        <span
-          className="pointer-events-none absolute top-full left-1/2 z-[200] mt-2 flex w-max -translate-x-1/2 flex-col gap-[9px] rounded-[var(--radius)] border border-border bg-[var(--panel-3)] px-3 py-2.5 text-foreground shadow-[var(--fx-overlay-shadow)]"
-          role="tooltip"
-        >
-          <span className="text-xs font-semibold">
-            {clean
-              ? "No known advisories"
-              : `${total} vulnerabilit${total === 1 ? "y" : "ies"}`}
-            {scope === "package" ? " · package-level" : ""}
-          </span>
-          {!clean && <span className="inline-flex h-2.5 w-[200px] overflow-hidden rounded-[5px] bg-border">{segs}</span>}
-          {!clean && (
-            <span className="flex min-w-[150px] flex-col gap-1">
-              {SEV_ORDER.map((s) => (
-                <span key={s} className="flex items-center gap-[9px] text-xs leading-[1.2]">
-                  <span className={cn("size-[9px] shrink-0 rounded-[2px]", SEV_BG_CLASS[s])} />
-                  <span className="capitalize text-foreground">{s}</span>
-                  <span className="ml-auto font-semibold tabular-nums">{c[s] ?? 0}</span>
-                </span>
-              ))}
-            </span>
-          )}
-          <span className="border-t border-border pt-[7px] text-[11px] text-muted-foreground">
-            Source {source || "OSV"} · scanned {scannedAt ? new Date(scannedAt).toLocaleString() : "n/a"}
-          </span>
-        </span>
-      )}
+      {tooltip}
     </span>
   );
 }

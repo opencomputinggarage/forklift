@@ -337,6 +337,17 @@ func TestNpmPublishAndInstall(t *testing.T) {
 	if rec.Code != http.StatusOK || rec.Body.String() != "TGZBYTES" {
 		t.Fatalf("tarball = %d %q", rec.Code, rec.Body.String())
 	}
+	repo, err := store.GetRepositoryByName(t.Context(), "local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := store.GetArtifact(t.Context(), repo.ID, "mylib/-/mylib-1.0.0.tgz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if art.Version != "1.0.0" {
+		t.Fatalf("stored tarball version = %q, want 1.0.0", art.Version)
+	}
 }
 
 // upstreamURL reconstructs the test server base from a request.

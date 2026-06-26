@@ -641,6 +641,15 @@ func (h *Handler) auditArtifact(r *http.Request, repoName, path string, status i
 	})
 }
 
+// upstreamHealthTimeout bounds the whole probe handler — the metadata read plus
+// the outbound probe — with a deadline the server owns. The metadata DB uses a
+// single SQLite connection (SetMaxOpenConns(1)), so a contended connection would
+// otherwise block GetRepository indefinitely (the request context has no
+// deadline of its own), leaving the client's "checking…" badge spinning. Set
+// slightly above the 5s probe client timeout so a genuinely slow upstream still
+// resolves via the probe rather than tripping this guard.
+const upstreamHealthTimeout = 8 * time.Second
+
 // upstreamHealth probes a proxy repository's upstream with a short timeout. Any
 // HTTP response (even 4xx) means the upstream is reachable; only transport
 // errors are treated as unreachable.
@@ -649,7 +658,9 @@ func (h *Handler) upstreamHealth(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	repo, err := h.store.GetRepository(r.Context(), id)
+	ctx, cancel := context.WithTimeout(r.Context(), upstreamHealthTimeout)
+	defer cancel()
+	repo, err := h.store.GetRepository(ctx, id)
 	if err != nil {
 		mapError(w, err)
 		return
@@ -658,7 +669,7 @@ func (h *Handler) upstreamHealth(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"applicable": false})
 		return
 	}
-	writeJSON(w, http.StatusOK, h.probeUpstream(r.Context(), repo.UpstreamURL))
+	writeJSON(w, http.StatusOK, h.probeUpstream(ctx, repo.UpstreamURL))
 }
 
 type checkUpstreamReq struct {
@@ -685,7 +696,9 @@ func (h *Handler) checkUpstream(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	writeJSON(w, http.StatusOK, h.probeUpstream(r.Context(), raw))
+	ctx, cancel := context.WithTimeout(r.Context(), upstreamHealthTimeout)
+	defer cancel()
+	writeJSON(w, http.StatusOK, h.probeUpstream(ctx, raw))
 }
 
 // probeUpstream issues a short GET to rawURL and reports reachability, the HTTP

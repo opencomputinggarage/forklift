@@ -18,15 +18,30 @@ export function UpstreamStatus({
   const [h, setH] = useState<UpstreamHealth | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const check = () => {
+  // signal is supplied by the mount effect so an in-flight probe is aborted when
+  // repoId changes or the component unmounts; results from an aborted (stale)
+  // request are ignored. The Recheck button calls check() with no signal.
+  const check = (signal?: AbortSignal) => {
     setLoading(true);
     api
-      .upstreamHealth(repoId)
-      .then(setH)
-      .catch(() => setH({ applicable: true, reachable: false, error: "check failed" }))
-      .finally(() => setLoading(false));
+      .upstreamHealth(repoId, signal)
+      .then((res) => {
+        if (signal?.aborted) return;
+        setH(res);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (signal?.aborted) return;
+        setH({ applicable: true, reachable: false, error: "check failed" });
+        setLoading(false);
+      });
   };
-  useEffect(check, [repoId]);
+  useEffect(() => {
+    const ctl = new AbortController();
+    check(ctl.signal);
+    return () => ctl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repoId]);
 
   let badge;
   if (loading) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-muted-foreground bg-transparent" /> checking…</span>;
@@ -44,7 +59,7 @@ export function UpstreamStatus({
   return (
     <span className="flex items-center gap-2.5 max-sm:flex-col max-sm:items-stretch">
       {badge}
-      <Button variant="outline" type="button" onClick={check} disabled={loading}>Recheck</Button>
+      <Button variant="outline" type="button" onClick={() => check()} disabled={loading}>Recheck</Button>
     </span>
   );
 }

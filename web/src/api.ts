@@ -308,13 +308,45 @@ export function humanSize(bytes: number): string {
   return `${v.toFixed(1)} ${units[i]}`;
 }
 
-async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: "include",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+// Default per-request deadline. The backend bounds its own handlers (e.g. the
+// 8s upstream-probe timeout), so a request that outlives this never returned —
+// abort it client-side so callers settle into a terminal state instead of
+// spinning forever (e.g. a stuck "checking…" badge). Generous enough not to
+// trip legitimately slow management calls.
+const REQUEST_TIMEOUT_MS = 15_000;
+
+async function req<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  opts?: { signal?: AbortSignal; timeoutMs?: number },
+): Promise<T> {
+  const ctl = new AbortController();
+  const timer = setTimeout(
+    () => ctl.abort(new DOMException("request timed out", "TimeoutError")),
+    opts?.timeoutMs ?? REQUEST_TIMEOUT_MS,
+  );
+  // Forward an external abort (e.g. a React effect cleanup) to our controller so
+  // navigating away or a superseding request cancels the in-flight fetch.
+  const ext = opts?.signal;
+  const onExternalAbort = () => ctl.abort(ext?.reason);
+  if (ext) {
+    if (ext.aborted) ctl.abort(ext.reason);
+    else ext.addEventListener("abort", onExternalAbort, { once: true });
+  }
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1${path}`, {
+      method,
+      credentials: "include",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+    ext?.removeEventListener("abort", onExternalAbort);
+  }
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   // Error bodies are not always JSON (e.g. middleware returns plaintext
@@ -378,8 +410,10 @@ export const api = {
     req<void>("DELETE", `/repositories/${id}/artifacts?path=${encodeURIComponent(path)}`),
   purgeArtifacts: (id: number) =>
     req<{ deleted: number }>("DELETE", `/repositories/${id}/artifacts`),
-  upstreamHealth: (id: number) => req<UpstreamHealth>("GET", `/repositories/${id}/upstream-health`),
-  checkUpstream: (url: string) => req<UpstreamHealth>("POST", "/repositories/check-upstream", { url }),
+  upstreamHealth: (id: number, signal?: AbortSignal) =>
+    req<UpstreamHealth>("GET", `/repositories/${id}/upstream-health`, undefined, { signal }),
+  checkUpstream: (url: string, signal?: AbortSignal) =>
+    req<UpstreamHealth>("POST", "/repositories/check-upstream", { url }, { signal }),
   listAuditLogs: (id: number, event = "", limit = 100, offset = 0) =>
     req<AuditLogList>(
       "GET",

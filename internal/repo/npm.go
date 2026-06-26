@@ -279,7 +279,7 @@ func (m *Manager) npmPublish(w http.ResponseWriter, r *http.Request, res resolve
 				return
 			}
 			tarballPath := res.path + "/-/" + path.Base(name)
-			if err := m.engine.put(ctx, res.repo, tarballPath, "", "application/octet-stream", nil, bytes.NewReader(decoded)); err != nil {
+			if err := m.engine.put(ctx, res.repo, tarballPath, npmVersion(tarballPath), "application/octet-stream", nil, bytes.NewReader(decoded)); err != nil {
 				http.Error(w, "store tarball failed", http.StatusInternalServerError)
 				return
 			}

@@ -44,7 +44,8 @@ RUN apk add --no-cache ca-certificates
 
 FROM scratch AS runtime
 
-# Rebuilt 0.2.1 to embed the upstream-status badge fix (reachable transition).
+# Rebuilt 0.2.1 to embed the upstream-status badge fix (reachable transition);
+# retriggered after granting contents:read to the release detect job.
 LABEL org.opencontainers.image.title="forklift" \
       org.opencontainers.image.description="Lightweight Kubernetes-native artifact repository (Maven, npm, Cargo, Go) with proxy caching and supply-chain age policy" \
       org.opencontainers.image.version="0.2.1" \

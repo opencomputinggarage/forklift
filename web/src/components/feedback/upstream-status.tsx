@@ -45,17 +45,23 @@ export function UpstreamStatus({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoId]);
 
+  // Each state carries a distinct key so React replaces the whole badge subtree
+  // on a state change instead of reusing the previous one's DOM nodes. The
+  // variants differ in child count (the reachable form appends status/latency),
+  // and without a key React's keyless sibling reconciliation can update the dot
+  // element but leave the adjacent text node stale — e.g. the green "reachable"
+  // dot rendered next to leftover "checking…" text, leaving the badge stuck.
   let badge;
-  if (loading) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-muted-foreground bg-transparent" /> {t("common.checking")}</span>;
-  else if (!h || !h.applicable) badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">—</span>;
+  if (loading) badge = <span key="loading" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="inline-block size-[9px] rounded-full border border-muted-foreground bg-transparent" /> {t("common.checking")}</span>;
+  else if (!h || !h.applicable) badge = <span key="na" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">—</span>;
   else if (h.reachable)
     badge = (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span key="reachable" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
         <span className="inline-block size-[9px] rounded-full border border-[var(--fx-success)] bg-[var(--fx-success)]" /> {t("common.status.reachable")}{!compact && <> · {h.status} · {h.latency_ms}ms</>}
       </span>
     );
   else
-    badge = <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-[var(--fx-danger)] bg-[var(--fx-danger)]" /> {t("common.status.unreachable")}</span>;
+    badge = <span key="unreachable" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" title={h.error}><span className="inline-block size-[9px] rounded-full border border-[var(--fx-danger)] bg-[var(--fx-danger)]" /> {t("common.status.unreachable")}</span>;
 
   if (!withButton) return badge;
   return (

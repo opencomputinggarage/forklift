@@ -334,35 +334,40 @@ async function req<T>(
     if (ext.aborted) ctl.abort(ext.reason);
     else ext.addEventListener("abort", onExternalAbort, { once: true });
   }
-  let res: Response;
+  // The deadline and external abort must cover the WHOLE request, including the
+  // body read: fetch() resolves once response headers arrive, so a stalled body
+  // stream (slow upstream, buffering proxy/LB) would otherwise hang res.text()
+  // forever — leaving the caller's "checking…" badge spinning. Keep the timer
+  // and listener live until the body is fully consumed by clearing them in a
+  // finally that wraps fetch + text parsing.
   try {
-    res = await fetch(`/api/v1${path}`, {
+    const res = await fetch(`/api/v1${path}`, {
       method,
       credentials: "include",
       headers: body ? { "Content-Type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,
       signal: ctl.signal,
     });
+    if (res.status === 204) return undefined as T;
+    const text = await res.text();
+    // Error bodies are not always JSON (e.g. middleware returns plaintext
+    // "forbidden" / "unauthorized"), so parse defensively and fall back to the
+    // raw text instead of throwing a misleading "Unexpected token" parse error.
+    let data: unknown;
+    try {
+      data = text ? JSON.parse(text) : undefined;
+    } catch {
+      data = undefined;
+    }
+    if (!res.ok) {
+      const fromJson = (data as { error?: string } | undefined)?.error;
+      throw new Error(fromJson || text.trim() || res.statusText);
+    }
+    return data as T;
   } finally {
     clearTimeout(timer);
     ext?.removeEventListener("abort", onExternalAbort);
   }
-  if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  // Error bodies are not always JSON (e.g. middleware returns plaintext
-  // "forbidden" / "unauthorized"), so parse defensively and fall back to the
-  // raw text instead of throwing a misleading "Unexpected token" parse error.
-  let data: unknown;
-  try {
-    data = text ? JSON.parse(text) : undefined;
-  } catch {
-    data = undefined;
-  }
-  if (!res.ok) {
-    const fromJson = (data as { error?: string } | undefined)?.error;
-    throw new Error(fromJson || text.trim() || res.statusText);
-  }
-  return data as T;
 }
 
 export const api = {

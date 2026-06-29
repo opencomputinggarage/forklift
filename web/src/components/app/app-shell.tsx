@@ -1,6 +1,6 @@
 import type React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   BookOpen,
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { api, type Me } from "@/api";
 import { AuthProvider } from "@/authContext";
-import { Login } from "@/components/auth/login";
 import { Logo } from "@/components/app/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 export function AppShell() {
   const { t } = useTranslation();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const meQueryOptions = openApiQueryOptions.getMe();
   const { data: me, isLoading } = useQuery({
@@ -40,7 +40,11 @@ export function AppShell() {
   if (isLoading) return <div className="flex min-h-screen w-full items-center justify-center">{t("common.loading")}</div>;
 
   if (!me?.authenticated) {
-    return <Login onLogin={refresh} />;
+    return location.pathname === "/login" ? <Outlet /> : <Navigate to="/login" replace />;
+  }
+
+  if (location.pathname === "/login") {
+    return <Navigate to="/workspace/repositories" replace />;
   }
 
   return (

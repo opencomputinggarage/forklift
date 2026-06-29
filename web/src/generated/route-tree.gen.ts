@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './../routes/__root'
+import { Route as LoginRouteImport } from './../routes/login'
 import { Route as IndexRouteImport } from './../routes/index'
 import { Route as WorkspaceIndexRouteImport } from './../routes/workspace/index'
 import { Route as SystemIndexRouteImport } from './../routes/system/index'
@@ -43,6 +44,11 @@ import { Route as AccessUsersIdIndexRouteImport } from './../routes/access/users
 import { Route as WorkspaceRepositoriesIdTabRouteImport } from './../routes/workspace/repositories/$id/$tab'
 import { Route as AccessUsersIdTokensNewRouteImport } from './../routes/access/users/$id/tokens/new'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -215,6 +221,7 @@ const AccessUsersIdTokensNewRoute = AccessUsersIdTokensNewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/access/roles': typeof AccessRolesRouteWithChildren
   '/access/users': typeof AccessUsersRouteWithChildren
   '/admin/ha': typeof AdminHaRoute
@@ -250,6 +257,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/admin/ha': typeof AdminHaRoute
   '/system/settings': typeof SystemSettingsRoute
   '/access': typeof AccessIndexRoute
@@ -278,6 +286,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/access/roles': typeof AccessRolesRouteWithChildren
   '/access/users': typeof AccessUsersRouteWithChildren
   '/admin/ha': typeof AdminHaRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/access/roles'
     | '/access/users'
     | '/admin/ha'
@@ -350,6 +360,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/admin/ha'
     | '/system/settings'
     | '/access'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/access/roles'
     | '/access/users'
     | '/admin/ha'
@@ -413,6 +425,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   AccessRolesRoute: typeof AccessRolesRouteWithChildren
   AccessUsersRoute: typeof AccessUsersRouteWithChildren
   AdminHaRoute: typeof AdminHaRoute
@@ -429,6 +442,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -786,6 +806,7 @@ const WorkspaceTokensRouteWithChildren = WorkspaceTokensRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   AccessRolesRoute: AccessRolesRouteWithChildren,
   AccessUsersRoute: AccessUsersRouteWithChildren,
   AdminHaRoute: AdminHaRoute,

@@ -14,7 +14,9 @@ cover.out
 # Node / Vite
 web/node_modules/
 web/.vite/
+web/playwright-report/
 web/storybook-static/
+web/test-results/
 /.pnpm-store/
 
 # Embedded UI build output: keep the committed placeholder index.html so the Go

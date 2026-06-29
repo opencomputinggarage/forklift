@@ -9,8 +9,14 @@
     "generate:queries": "node scripts/generate-openapi-query-options.mjs",
     "build": "pnpm generate:queries && tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "pnpm generate:queries && storybook build"
+    "build-storybook": "pnpm generate:queries && storybook build",
+    "test:storybook": "test-storybook --url http://127.0.0.1:6006",
+    "test:storybook:ci": "concurrently -k -s first -n storybook,test \"pnpm storybook --ci --host 127.0.0.1\" \"wait-on tcp:127.0.0.1:6006 && pnpm test:storybook\""
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -29,19 +35,28 @@
     "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@storybook/addon-docs": "^10.4.6",
     "@storybook/react-vite": "^10.4.6",
+    "@storybook/test-runner": "^0.24.4",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/router-plugin": "^1.168.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "jsdom": "^29.1.1",
     "shadcn": "^4.11.0",
     "storybook": "^10.4.6",
     "tailwindcss": "^4.3.1",
     "typescript": "^5.5.4",
     "vite": "^8.0.16",
+    "vitest": "^4.1.9",
+    "wait-on": "^9.0.10",
     "yaml": "^2.9.0"
   }
 }

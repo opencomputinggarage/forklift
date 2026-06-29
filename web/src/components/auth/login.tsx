@@ -53,6 +53,7 @@ function LoginForm({
   const [busy, setBusy] = useState(false);
   // Only offer Keycloak when OIDC is configured; otherwise /auth/login 404s.
   const [oidcEnabled, setOidcEnabled] = useState(false);
+  const canSubmit = username.trim() !== "" && password !== "";
 
   useEffect(() => {
     api
@@ -63,6 +64,8 @@ function LoginForm({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!canSubmit || busy) return;
+
     setError("");
     setBusy(true);
     try {
@@ -115,7 +118,7 @@ function LoginForm({
                 {error && <FieldError>{error}</FieldError>}
               </Field>
               <Field className="gap-3 pt-1">
-                <Button className="h-11 w-full" disabled={busy} type="submit">
+                <Button className="h-11 w-full" disabled={busy || !canSubmit} type="submit">
                   {busy ? (
                     t("login.signing-in")
                   ) : (

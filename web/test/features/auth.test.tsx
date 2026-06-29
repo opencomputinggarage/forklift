@@ -61,6 +61,20 @@ describe("auth login", () => {
     await waitFor(() => expect(onLogin).toHaveBeenCalledOnce());
   });
 
+  test("submits with Enter only after username and password are both filled", async () => {
+    const user = userEvent.setup();
+    const onLogin = vi.fn();
+    render(<Login onLogin={onLogin} />);
+
+    await user.type(screen.getByLabelText("Username"), "admin{Enter}");
+    expect(mockedApi.login).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Password"), "change-me{Enter}");
+
+    expect(mockedApi.login).toHaveBeenCalledWith("admin", "change-me");
+    await waitFor(() => expect(onLogin).toHaveBeenCalledOnce());
+  });
+
   test("shows the login error and does not complete login when credentials fail", async () => {
     const user = userEvent.setup();
     const onLogin = vi.fn();

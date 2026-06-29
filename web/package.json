@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite",
     "generate:queries": "node scripts/generate-openapi-query-options.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build": "pnpm generate:queries && tsc && vite build",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
@@ -33,15 +35,19 @@
     "@storybook/react-vite": "^10.4.6",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/router-plugin": "^1.168.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^29.1.1",
     "shadcn": "^4.11.0",
     "storybook": "^10.4.6",
     "tailwindcss": "^4.3.1",
     "typescript": "^5.5.4",
     "vite": "^8.0.16",
+    "vitest": "^4.1.9",
     "yaml": "^2.9.0"
   }
 }

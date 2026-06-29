@@ -11,7 +11,7 @@ COVER_MIN   ?= 73
 PLATFORMS   ?= linux/amd64,linux/arm64
 DATA_DIR    ?= ./.data
 
-.PHONY: all build run dev test coverage fmt lint vet tidy clean web-build docker-build docker-push helm-lint helm-template creds
+.PHONY: all build run dev test coverage fmt lint vet tidy clean web-dev web-build docker-build docker-push helm-lint helm-template creds
 
 all: fmt vet lint test build
 
@@ -26,6 +26,10 @@ run: build
 ## dev: run with debug logging
 dev:
 	FORKLIFT_DATA_DIR=./.data FORKLIFT_LOG_FORMAT=text FORKLIFT_LOG_LEVEL=debug go run $(PKG)
+
+## web-dev: run the React UI dev server
+web-dev:
+	cd web && mise exec -- pnpm dev
 
 ## test: run tests with race detector
 test:

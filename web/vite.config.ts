@@ -25,10 +25,13 @@ export default defineConfig({
     },
   },
   server: {
+    host: "127.0.0.1",
     // During `npm run dev`, proxy API and package routes to the Go server.
     proxy: {
       "/api": "http://localhost:8080",
+      "/api-docs": "http://localhost:8080",
       "/auth": "http://localhost:8080",
+      "/openapi.yaml": "http://localhost:8080",
       "/maven": "http://localhost:8080",
       "/npm": "http://localhost:8080",
       "/cargo": "http://localhost:8080",

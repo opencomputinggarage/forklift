@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/younsl/o/box/kubernetes/forklift/internal/artifactscan"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
@@ -532,6 +535,13 @@ type artifactDTO struct {
 	ArtifactScanFindingCount int        `json:"artifact_scan_finding_count,omitempty"`
 }
 
+type artifactScanJobDTO struct {
+	JobID      string `json:"job_id"`
+	Status     string `json:"status"`
+	Scanner    string `json:"scanner"`
+	BlobSHA256 string `json:"blob_sha256"`
+}
+
 // listArtifacts returns the artifacts stored (hosted or cached) in a repository,
 // powering the Nexus-style artifact browser in the UI.
 func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
@@ -590,7 +600,11 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		if res, serr := h.store.LatestArtifactScanResult(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); serr == nil {
+		if job, jerr := h.store.LatestArtifactScanJob(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); jerr == nil &&
+			(job.Status == artifactscan.StatusQueued || job.Status == artifactscan.StatusRunning) {
+			dto.ArtifactScanStatus = string(job.Status)
+			dto.ArtifactScanScanner = job.Scanner
+		} else if res, serr := h.store.LatestArtifactScanResult(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); serr == nil {
 			dto.ArtifactScanStatus = string(res.Status)
 			dto.ArtifactScanSeverity = string(res.MaxSeverity)
 			dto.ArtifactScanScanner = res.Scanner
@@ -607,6 +621,49 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"count": count, "total_size": size, "artifacts": out,
+	})
+}
+
+// scanArtifact enqueues a manual artifact-byte scan for one stored artifact.
+// This does not execute scanner tools in the API process; an isolated scanner
+// worker claims the queued job through /internal/scans.
+func (h *Handler) scanArtifact(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(r.Context(), id)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "path required")
+		return
+	}
+	artifact, err := h.store.GetArtifact(r.Context(), id, path)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
+	jobID, err := randomArtifactScanJobID()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	job, err := h.store.EnqueueArtifactScan(r.Context(), jobID, artifact.BlobSHA256,
+		cfg.ArtifactScan.EffectiveScanner(), cfg.ArtifactScan.ConfigHash, time.Now().UTC())
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, artifactScanJobDTO{
+		JobID:      job.ID,
+		Status:     string(job.Status),
+		Scanner:    job.Scanner,
+		BlobSHA256: job.BlobSHA256,
 	})
 }
 
@@ -660,6 +717,14 @@ func (h *Handler) auditArtifact(r *http.Request, repoName, path string, status i
 		ClientIP:  audit.ClientIP(r),
 		UserAgent: r.UserAgent(),
 	})
+}
+
+func randomArtifactScanJobID() (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b[:]), nil
 }
 
 // upstreamHealthTimeout bounds the whole probe handler — the metadata read plus

@@ -140,3 +140,55 @@ func TestListArtifactsShowsPendingArtifactScanJob(t *testing.T) {
 		t.Fatalf("pending scan status not attached: %+v", out.Artifacts[0])
 	}
 }
+
+func TestScanArtifactEnqueuesJob(t *testing.T) {
+	srv, store, _ := newConsoleServer(t)
+	ctx := context.Background()
+	id := mkProxyRepo(t, srv.URL, "npm-manual-scan")
+
+	const artPath = "pkg/-/pkg-1.0.0.tgz"
+	if _, err := store.PutArtifact(ctx, meta.Artifact{
+		RepoID: id, Path: artPath, Version: "1.0.0", BlobSHA256: "manual-sha", Size: 10,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	resp := adminDo(t, http.MethodPost,
+		srv.URL+"/repositories/"+itoa(id)+"/artifacts/scan?path="+url.QueryEscape(artPath), "")
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("scan artifact status=%d", resp.StatusCode)
+	}
+	var out struct {
+		JobID      string `json:"job_id"`
+		Status     string `json:"status"`
+		Scanner    string `json:"scanner"`
+		BlobSHA256 string `json:"blob_sha256"`
+	}
+	json.NewDecoder(resp.Body).Decode(&out)
+	resp.Body.Close()
+	if out.JobID == "" || out.Status != "queued" || out.Scanner != "grype" || out.BlobSHA256 != "manual-sha" {
+		t.Fatalf("unexpected enqueue response: %+v", out)
+	}
+	job, err := store.LatestArtifactScanJob(ctx, "manual-sha", "grype", "")
+	if err != nil {
+		t.Fatalf("latest scan job: %v", err)
+	}
+	if job.ID != out.JobID || job.Status != artifactscan.StatusQueued {
+		t.Fatalf("stored job = %+v response=%+v", job, out)
+	}
+
+	resp = adminDo(t, http.MethodGet, srv.URL+"/repositories/"+itoa(id)+"/artifacts", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("list artifacts status=%d", resp.StatusCode)
+	}
+	var listed struct {
+		Artifacts []struct {
+			ArtifactScanStatus string `json:"artifact_scan_status"`
+		} `json:"artifacts"`
+	}
+	json.NewDecoder(resp.Body).Decode(&listed)
+	resp.Body.Close()
+	if len(listed.Artifacts) != 1 || listed.Artifacts[0].ArtifactScanStatus != "queued" {
+		t.Fatalf("manual scan status not visible: %+v", listed.Artifacts)
+	}
+}

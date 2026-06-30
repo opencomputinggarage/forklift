@@ -1092,6 +1092,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
   const [prefix, setPrefix] = useState("");
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState<Artifact | null>(null);
+  const [scanningPath, setScanningPath] = useState("");
 
   const load = (p = prefix) =>
     api.listArtifacts(repoId, p).then(setData).catch((e) => setError(e.message));
@@ -1106,6 +1107,19 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
     } catch (e) {
       setError((e as Error).message);
       setDeleting(null);
+    }
+  };
+
+  const scan = async (a: Artifact) => {
+    setError("");
+    setScanningPath(a.path);
+    try {
+      await api.scanArtifact(repoId, a.path);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setScanningPath("");
     }
   };
 
@@ -1149,7 +1163,12 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               <TableCell className="text-muted-foreground">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</TableCell>
               {canDelete && (
                 <TableCell className="text-right">
-                  <Button variant="outline" onClick={() => setDeleting(a)}>{t("common.delete")}</Button>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => scan(a)} disabled={scanningPath === a.path}>
+                      {a.artifact_scan_status ? "Rescan" : "Scan"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setDeleting(a)}>{t("common.delete")}</Button>
+                  </div>
                 </TableCell>
               )}
             </TableRow>

@@ -106,19 +106,20 @@ and scanner with `go run`; that path requires `grype` on the host `PATH`.
 When you do not want host tools, run the scanner through the `scanner-runtime`
 container instead.
 
-Start the local server with artifact scanning enabled:
+Start the normal local dev server with artifact scanning enabled:
 
 ```bash
-make artifact-scan-dev
+make scan-dev
 ```
 
-The target runs forklift on `127.0.0.1:18080`, disables OSV/deps.dev so the
-test only exercises artifact-byte scanning, and prints the worker token and
-worker commands. Override defaults with environment variables, for
-example:
+The target runs forklift on `127.0.0.1:8080`, uses `./.data`, disables
+OSV/deps.dev so the test only exercises artifact-byte scanning, and prints the
+worker token and worker command. This keeps the UI, API, local DB and scanner
+worker on the same default port. Override defaults with environment variables,
+for example:
 
 ```bash
-FORKLIFT_SCAN_DEV_PORT=19080 FORKLIFT_SCAN_DEV_DATA_DIR=/tmp/forklift-scan-dev make artifact-scan-dev
+FORKLIFT_SCAN_DEV_PORT=19080 FORKLIFT_SCAN_DEV_DATA_DIR=/tmp/forklift-scan-dev make scan-dev
 ```
 
 Then use another terminal for the remaining steps.
@@ -134,12 +135,23 @@ Then use another terminal for the remaining steps.
    The target checks the local Grype vulnerability database and runs
    `grype db update` first when the DB is missing or invalid. Scanner execution
    itself still runs with Grype auto-update disabled, matching the worker's
-   production behavior.
+   production behavior. By default it connects to
+   `http://127.0.0.1:${FORKLIFT_SCAN_DEV_PORT:-8080}`. Use
+   `FORKLIFT_SCAN_SERVER=http://127.0.0.1:18080` when you intentionally want a
+   different server.
 
    To keep the local worker polling instead of processing one job and exiting:
 
    ```bash
-   FORKLIFT_SCAN_WORKER_LOOP=true make artifact-scan-worker-dev
+   make artifact-scan-worker-loop
+   ```
+
+   The legacy isolated demo server is still available when you explicitly want
+   a separate database under `/tmp/forklift-scan-dev`:
+
+   ```bash
+   make artifact-scan-dev
+   FORKLIFT_SCAN_DEV_PORT=18080 make artifact-scan-worker-dev
    ```
 
    Container path, no host Grype install:

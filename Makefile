@@ -11,7 +11,7 @@ COVER_MIN   ?= 73
 PLATFORMS   ?= linux/amd64,linux/arm64
 DATA_DIR    ?= ./.data
 
-.PHONY: all build run dev test coverage fmt lint vet tidy clean web-dev web-build artifact-scan-dev artifact-scan-worker-dev docker-build docker-push helm-lint helm-template creds
+.PHONY: all build run dev scan-dev web-dev test coverage fmt lint vet tidy clean web-build artifact-scan-dev artifact-scan-worker-dev artifact-scan-worker-loop docker-build docker-push helm-lint helm-template creds
 
 all: fmt vet lint test build
 
@@ -26,6 +26,26 @@ run: build
 ## dev: run with debug logging
 dev:
 	FORKLIFT_DATA_DIR=./.data FORKLIFT_LOG_FORMAT=text FORKLIFT_LOG_LEVEL=debug go run $(PKG)
+
+## scan-dev: run the normal dev server on 8080 with artifact scanning enabled
+scan-dev:
+	@echo "artifact scan dev server: http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-8080}"
+	@echo "data dir: $${FORKLIFT_SCAN_DEV_DATA_DIR:-./.data}"
+	@echo "login: $${FORKLIFT_SCAN_DEV_ADMIN_USER:-admin} / $${FORKLIFT_SCAN_DEV_ADMIN_PASS:-adminpw}"
+	@echo "worker token: $${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}"
+	@echo "worker run: make artifact-scan-worker-dev"
+	FORKLIFT_DATA_DIR=$${FORKLIFT_SCAN_DEV_DATA_DIR:-./.data} \
+	FORKLIFT_HTTP_ADDR=:$${FORKLIFT_SCAN_DEV_PORT:-8080} \
+	FORKLIFT_METRICS_ADDR=:$${FORKLIFT_SCAN_DEV_METRICS_PORT:-8081} \
+	FORKLIFT_LOG_FORMAT=text \
+	FORKLIFT_LOG_LEVEL=debug \
+	FORKLIFT_BOOTSTRAP_ADMIN_USER=$${FORKLIFT_SCAN_DEV_ADMIN_USER:-admin} \
+	FORKLIFT_BOOTSTRAP_ADMIN_PASSWORD=$${FORKLIFT_SCAN_DEV_ADMIN_PASS:-adminpw} \
+	go run $(PKG) \
+		--osv-url= \
+		--deps-dev-url= \
+		--artifact-scan-enabled \
+		--artifact-scan-worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}
 
 ## web-dev: run the React UI dev server
 web-dev:
@@ -63,12 +83,12 @@ tidy:
 web-build:
 	cd web && mise exec -- pnpm install --frozen-lockfile && mise exec -- pnpm run build
 
-## artifact-scan-dev: run a local server with artifact scanning enabled on port 18080
+## artifact-scan-dev: run an isolated artifact scan demo server on port 18080
 artifact-scan-dev:
 	@echo "artifact scan dev server: http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-18080}"
 	@echo "login: $${FORKLIFT_SCAN_DEV_ADMIN_USER:-admin} / $${FORKLIFT_SCAN_DEV_ADMIN_PASS:-adminpw}"
 	@echo "worker token: $${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}"
-	@echo "worker run, no image build: make artifact-scan-worker-dev"
+	@echo "worker run, no image build: FORKLIFT_SCAN_DEV_PORT=$${FORKLIFT_SCAN_DEV_PORT:-18080} make artifact-scan-worker-dev"
 	@echo "worker run, container: docker run --rm forklift-scanner:dev --server=http://host.docker.internal:$${FORKLIFT_SCAN_DEV_PORT:-18080} --worker-id=local-worker --worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} --once"
 	FORKLIFT_DATA_DIR=$${FORKLIFT_SCAN_DEV_DATA_DIR:-/tmp/forklift-scan-dev} \
 	FORKLIFT_HTTP_ADDR=:$${FORKLIFT_SCAN_DEV_PORT:-18080} \
@@ -87,15 +107,23 @@ artifact-scan-dev:
 artifact-scan-worker-dev:
 	@command -v grype >/dev/null || { echo "grype is required for no-image worker dev. Install it or use the scanner-runtime Docker image."; exit 1; }
 	@grype db status 2>&1 | grep -Eq "Status:[[:space:]]+valid$$" || { echo "updating local grype vulnerability DB..."; grype db update; }
+	@server="$${FORKLIFT_SCAN_SERVER:-http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-8080}}"; \
+	echo "scanner worker target: $$server"; \
+	echo "worker mode: $${FORKLIFT_SCAN_WORKER_LOOP:-false} (set FORKLIFT_SCAN_WORKER_LOOP=true to keep polling)"
 	@once_flag="--once"; \
 	if [ "$${FORKLIFT_SCAN_WORKER_LOOP:-false}" = "true" ]; then once_flag=""; fi; \
+	server="$${FORKLIFT_SCAN_SERVER:-http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-8080}}"; \
 	FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} \
 	go run ./cmd/forklift-scanner \
-		--server=http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-18080} \
+		--server=$$server \
 		--worker-id=$${FORKLIFT_SCAN_WORKER_ID:-local-go-worker} \
 		--worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} \
 		--work-dir=$${FORKLIFT_SCAN_WORKER_DIR:-/tmp/forklift-scan-worker} \
 		$$once_flag
+
+## artifact-scan-worker-loop: run the local scanner worker continuously
+artifact-scan-worker-loop:
+	FORKLIFT_SCAN_WORKER_LOOP=true $(MAKE) artifact-scan-worker-dev
 
 ## creds: list local users and password hashes from the local DB (plaintext is bcrypt-hashed and unrecoverable; the generated admin password is only printed once in bootstrap logs)
 creds:

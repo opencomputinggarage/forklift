@@ -160,6 +160,7 @@ func (h *Handler) Routes() chi.Router {
 		r.Post("/repositories/check-upstream", h.checkUpstream)
 		r.Put("/repositories/{id}", h.updateRepository)
 		r.Post("/repositories/{id}/disabled", h.setRepositoryDisabled)
+		r.Post("/repositories/{id}/artifacts/scan", h.scanArtifact)
 		r.Delete("/repositories/{id}", h.deleteRepository)
 		r.Delete("/repositories/{id}/artifacts", h.deleteArtifact)
 		r.Post("/users", h.createUser)

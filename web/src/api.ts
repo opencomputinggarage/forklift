@@ -186,6 +186,13 @@ export interface ArtifactList {
   artifacts: Artifact[];
 }
 
+export interface ArtifactScanJob {
+  job_id: string;
+  status: string;
+  scanner: string;
+  blob_sha256: string;
+}
+
 export interface RoleRef {
   id: number;
   name: string;
@@ -424,6 +431,8 @@ export const api = {
 
   listArtifacts: (id: number, prefix = "") =>
     req<ArtifactList>("GET", `/repositories/${id}/artifacts?prefix=${encodeURIComponent(prefix)}`),
+  scanArtifact: (id: number, path: string) =>
+    req<ArtifactScanJob>("POST", `/repositories/${id}/artifacts/scan?path=${encodeURIComponent(path)}`),
   deleteArtifact: (id: number, path: string) =>
     req<void>("DELETE", `/repositories/${id}/artifacts?path=${encodeURIComponent(path)}`),
   purgeArtifacts: (id: number) =>

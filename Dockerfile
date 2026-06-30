@@ -28,7 +28,7 @@ RUN apk add --no-cache ca-certificates
 
 FROM scratch AS runtime
 
-# Re-release 0.2.1 container image
+# Re-release 0.2.1 container image (seamless near-realtime vuln/license scanning)
 LABEL org.opencontainers.image.title="forklift" \
       org.opencontainers.image.description="Lightweight Kubernetes-native artifact repository (Maven, npm, Cargo, Go) with proxy caching and supply-chain age policy" \
       org.opencontainers.image.version="0.2.1" \

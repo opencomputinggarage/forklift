@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
+	"github.com/younsl/o/box/kubernetes/forklift/internal/artifactscan"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/repo"
 )
@@ -37,6 +39,31 @@ func TestListArtifactsEnriched(t *testing.T) {
 	if err := store.UpsertLicenseScan(ctx, sys, lpkg, ver, []string{"MIT"}, "deps.dev"); err != nil {
 		t.Fatal(err)
 	}
+	now := time.Now().UTC()
+	job, err := store.EnqueueArtifactScan(ctx, "scan-job-1", "sha", "grype", "", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ClaimArtifactScanJob(ctx, "worker", now.Add(time.Minute), now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.CompleteArtifactScanJob(ctx, job.ID, "worker", artifactscan.Result{
+		JobID:           job.ID,
+		BlobSHA256:      "sha",
+		Scanner:         "grype",
+		ScannerVersion:  "1.0.0",
+		DatabaseBuiltAt: now,
+		Status:          artifactscan.StatusCompleted,
+		MaxSeverity:     artifactscan.SeverityHigh,
+		ScannedAt:       now,
+		Findings: []artifactscan.Finding{{
+			VulnerabilityID: "CVE-2026-2",
+			Severity:        artifactscan.SeverityHigh,
+			PackageName:     "left-pad",
+		}},
+	}, now); err != nil {
+		t.Fatal(err)
+	}
 
 	resp := adminDo(t, http.MethodGet, srv.URL+"/repositories/"+itoa(id)+"/artifacts", "")
 	if resp.StatusCode != http.StatusOK {
@@ -46,10 +73,13 @@ func TestListArtifactsEnriched(t *testing.T) {
 		Count     int   `json:"count"`
 		TotalSize int64 `json:"total_size"`
 		Artifacts []struct {
-			Path        string   `json:"path"`
-			MaxSeverity string   `json:"max_severity"`
-			VulnIDs     []string `json:"vuln_ids"`
-			Licenses    []string `json:"licenses"`
+			Path                     string   `json:"path"`
+			MaxSeverity              string   `json:"max_severity"`
+			VulnIDs                  []string `json:"vuln_ids"`
+			Licenses                 []string `json:"licenses"`
+			ArtifactScanStatus       string   `json:"artifact_scan_status"`
+			ArtifactScanSeverity     string   `json:"artifact_scan_max_severity"`
+			ArtifactScanFindingCount int      `json:"artifact_scan_finding_count"`
 		} `json:"artifacts"`
 	}
 	json.NewDecoder(resp.Body).Decode(&out)
@@ -60,6 +90,9 @@ func TestListArtifactsEnriched(t *testing.T) {
 	a := out.Artifacts[0]
 	if a.MaxSeverity != "high" || len(a.VulnIDs) != 1 || len(a.Licenses) != 1 || a.Licenses[0] != "MIT" {
 		t.Fatalf("enrichment not attached: %+v", a)
+	}
+	if a.ArtifactScanStatus != "completed" || a.ArtifactScanSeverity != "high" || a.ArtifactScanFindingCount != 1 {
+		t.Fatalf("artifact scan enrichment not attached: %+v", a)
 	}
 
 	// Prefix filter that matches nothing returns an empty set, still 200.

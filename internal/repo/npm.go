@@ -338,6 +338,7 @@ func (m *Manager) npmPublish(w http.ResponseWriter, r *http.Request, res resolve
 			}
 			m.scanStored(res.repo, tarballPath)
 			m.resolveStored(res.repo, tarballPath)
+			m.enqueueArtifactStored(res.repo, tarballPath)
 		}
 	}
 	delete(doc, "_attachments")

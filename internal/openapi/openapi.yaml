@@ -1028,6 +1028,11 @@ components:
         licenses: { type: array, items: { type: string }, description: Resolved SPDX license ids. }
         license_source: { type: string }
         license_resolved_at: { type: [string, "null"], format: date-time }
+        artifact_scan_status: { type: string, description: Latest artifact-byte scan status for this blob/scanner profile. }
+        artifact_scan_max_severity: { type: string, description: Highest severity reported by the artifact-byte scanner. }
+        artifact_scan_scanner: { type: string, description: Artifact-byte scanner name, e.g. grype. }
+        artifact_scan_scanned_at: { type: [string, "null"], format: date-time }
+        artifact_scan_finding_count: { type: integer, description: Number of normalized artifact-byte scanner findings. }
     ArtifactList:
       type: object
       properties:

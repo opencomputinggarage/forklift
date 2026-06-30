@@ -522,9 +522,14 @@ type artifactDTO struct {
 	// Resolved SPDX license(s) for this version, when resolved. Empty when not
 	// yet resolved or when the source reports no license. LicenseSource names the
 	// data source (e.g. "deps.dev") and LicenseResolvedAt when it ran.
-	Licenses          []string   `json:"licenses,omitempty"`
-	LicenseSource     string     `json:"license_source,omitempty"`
-	LicenseResolvedAt *time.Time `json:"license_resolved_at,omitempty"`
+	Licenses                 []string   `json:"licenses,omitempty"`
+	LicenseSource            string     `json:"license_source,omitempty"`
+	LicenseResolvedAt        *time.Time `json:"license_resolved_at,omitempty"`
+	ArtifactScanStatus       string     `json:"artifact_scan_status,omitempty"`
+	ArtifactScanSeverity     string     `json:"artifact_scan_max_severity,omitempty"`
+	ArtifactScanScanner      string     `json:"artifact_scan_scanner,omitempty"`
+	ArtifactScanScannedAt    *time.Time `json:"artifact_scan_scanned_at,omitempty"`
+	ArtifactScanFindingCount int        `json:"artifact_scan_finding_count,omitempty"`
 }
 
 // listArtifacts returns the artifacts stored (hosted or cached) in a repository,
@@ -550,6 +555,9 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	}
 	count, _ := h.store.CountArtifacts(r.Context(), id)
 	size, _ := h.store.RepoSize(r.Context(), id)
+	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
+	artifactScanScanner := cfg.ArtifactScan.EffectiveScanner()
+	artifactScanConfigHash := cfg.ArtifactScan.ConfigHash
 	out := make([]artifactDTO, 0, len(arts))
 	for _, a := range arts {
 		dto := artifactDTO{
@@ -580,6 +588,16 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 						dto.LicenseResolvedAt = &resolvedAt
 					}
 				}
+			}
+		}
+		if res, serr := h.store.LatestArtifactScanResult(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); serr == nil {
+			dto.ArtifactScanStatus = string(res.Status)
+			dto.ArtifactScanSeverity = string(res.MaxSeverity)
+			dto.ArtifactScanScanner = res.Scanner
+			dto.ArtifactScanFindingCount = len(res.Findings)
+			if !res.ScannedAt.IsZero() {
+				scannedAt := res.ScannedAt
+				dto.ArtifactScanScannedAt = &scannedAt
 			}
 		}
 		out = append(out, dto)

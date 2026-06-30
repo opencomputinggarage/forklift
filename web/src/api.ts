@@ -165,6 +165,11 @@ export interface Artifact {
   licenses?: string[];
   license_source?: string;
   license_resolved_at?: string | null;
+  artifact_scan_status?: string;
+  artifact_scan_max_severity?: string;
+  artifact_scan_scanner?: string;
+  artifact_scan_scanned_at?: string | null;
+  artifact_scan_finding_count?: number;
 }
 
 export interface ArtifactList {

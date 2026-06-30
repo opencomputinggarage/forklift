@@ -19,6 +19,7 @@ Lightweight, Kubernetes-native artifact repository. A single static Go binary th
 - Version denies: block one exact package version (poisoned release, IOC) while the package stays approved, revoking cached copies immediately
 - Vulnerability policy: scan requested versions against OSV and block, warn, or audit by severity threshold, with periodic re-scanning so newly disclosed advisories surface (direct dependency coordinate match)
 - License policy: resolve each version's SPDX license from deps.dev and block, warn, or audit by per-repository deny/allow lists, with background resolution and periodic refresh ([guide](docs/license-scanning.md))
+- Artifact scan policy: optionally scan stored artifact bytes with an isolated Grype worker and gate downloads by severity without running archive parsers inside the server ([guide](docs/artifact-scanning.md))
 - Per-repository audit log: every download, upload, delete and config change with user, status and client IP
 - React UI and OpenAPI 3.1 docs, both served by the binary
 - Active/standby HA via Kubernetes Lease leader election, on a shared RWX volume, with PV-based replication (per-pod RWO volumes, no RWX storage required), or fully on S3 (no EBS/RWX volume at all)
@@ -256,6 +257,40 @@ curl -u admin:change-me -X PUT http://forklift/api/v1/repositories/<id> \
 - Scope: direct dependency coordinate match only; the SPDX value is whatever deps.dev reports. Transitive dependencies and artifact integrity are out of scope.
 - Configure via flags: `--deps-dev-url` (default `https://api.deps.dev`; empty disables resolution), `--license-rescan-interval` (default `24h`), `--license-ttl` (default `7d` / `168h`), `--license-workers` (default `6`). The matching `FORKLIFT_DEPSDEV_URL` / `FORKLIFT_LICENSE_RESCAN_INTERVAL` / `FORKLIFT_LICENSE_TTL` / `FORKLIFT_LICENSE_WORKERS` env vars still seed the defaults; flags take precedence.
 - Blocks are counted in `forklift_license_blocked_total{repo,action}` and resolutions in `forklift_license_resolves_total{result}`; blocks land in the audit log as `license.block` events. Per-version licenses show in the repository's Artifacts tab. See [docs/license-scanning.md](docs/license-scanning.md).
+
+### Artifact scan policy (isolated worker)
+
+Artifact-byte scanning is optional and separate from OSV/deps.dev coordinate
+checks. The server only coordinates jobs and stores results; a separate scanner
+worker downloads one blob, runs Grype, submits normalized findings, then deletes
+its workspace.
+
+```bash
+helm upgrade --install forklift oci://ghcr.io/younsl/charts/forklift \
+  --namespace forklift --create-namespace \
+  --set artifactScanning.enabled=true \
+  --set artifactScanning.worker.enabled=true \
+  --set artifactScanning.worker.runtimeClassName=gvisor
+```
+
+Per repository, enable enforcement in config:
+
+```json
+{
+  "artifact_scan": {
+    "enabled": true,
+    "scanner": "grype",
+    "threshold": "high",
+    "action": "block",
+    "block_unscanned": false
+  }
+}
+```
+
+- `action` is `block`, `warn`, or `audit`; `threshold` is `critical`, `high`, `medium`, or `low`.
+- `block_unscanned` blocks downloads only when `action=block`; otherwise unknown artifacts are served while the worker catches up.
+- Hosted uploads and proxy cache writes enqueue blob scans. The artifact browser shows latest scan status, maximum severity, scanner, and finding count.
+- The bundled worker image is built from Docker target `scanner-runtime` and uses a read-only root filesystem, non-root UID, `emptyDir` workspace, disabled service-account token, and optional RuntimeClass such as gVisor/Kata. See [docs/artifact-scanning.md](docs/artifact-scanning.md).
 
 API reference: `http://forklift/api-docs` (Scalar) and `http://forklift/openapi.yaml`.
 

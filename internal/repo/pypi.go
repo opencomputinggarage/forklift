@@ -385,6 +385,7 @@ func (m *Manager) pypiUpload(w http.ResponseWriter, r *http.Request, res resolve
 	}
 	m.scanStored(res.repo, p)
 	m.resolveStored(res.repo, p)
+	m.enqueueArtifactStored(res.repo, p)
 	w.WriteHeader(http.StatusCreated)
 }
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/younsl/o/box/kubernetes/forklift/internal/artifactscan"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/storage"
@@ -142,6 +143,9 @@ func (e *Engine) serve(w http.ResponseWriter, r *http.Request, spec fetchSpec) {
 			if e.ageGate(w, spec, art.PublishedAt) {
 				return
 			}
+			if e.artifactScanGate(w, r, spec, art) {
+				return
+			}
 			if spec.repo.Type == meta.TypeProxy {
 				e.cacheHits.WithLabelValues(spec.repo.Name).Inc()
 			}
@@ -215,6 +219,9 @@ func (e *Engine) fetchAndServe(w http.ResponseWriter, r *http.Request, spec fetc
 		art, err := e.store.GetArtifact(r.Context(), spec.repo.ID, spec.path)
 		if err != nil {
 			http.Error(w, "cache read failed", http.StatusInternalServerError)
+			return
+		}
+		if e.artifactScanGate(w, r, spec, art) {
 			return
 		}
 		n := e.serveArtifact(w, r, art)
@@ -544,6 +551,44 @@ func (e *Engine) ageGate(w http.ResponseWriter, spec fetchSpec, published *time.
 	default:
 		return false
 	}
+}
+
+func (e *Engine) artifactScanGate(w http.ResponseWriter, r *http.Request, spec fetchSpec, art meta.Artifact) bool {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return false
+	}
+	cfg := spec.cfg.ArtifactScan
+	if !cfg.Enabled || art.BlobSHA256 == "" {
+		return false
+	}
+	result, err := e.store.LatestArtifactScanResult(r.Context(), art.BlobSHA256, cfg.EffectiveScanner(), cfg.ConfigHash)
+	if errors.Is(err, meta.ErrNotFound) {
+		if cfg.EffectiveAction() == repoconfig.VulnActionBlock && cfg.BlockUnscanned {
+			http.Error(w, "artifact pending security scan", http.StatusForbidden)
+			return true
+		}
+		return false
+	}
+	if err != nil {
+		e.log.Error("artifact scan lookup failed", "repo", spec.repo.Name, "path", spec.path, "err", err)
+		return false
+	}
+	policy := artifactscan.Policy{
+		Enabled:        true,
+		Action:         artifactscan.PolicyAction(cfg.EffectiveAction()),
+		Threshold:      artifactscan.ParseSeverity(cfg.EffectiveThreshold()),
+		BlockUnscanned: cfg.BlockUnscanned,
+	}
+	verdict := artifactscan.Evaluate(policy, &result)
+	if verdict.Allowed {
+		if verdict.Reason == "artifact scan policy violation" {
+			e.log.Warn("artifact scan policy: would block", "repo", spec.repo.Name, "path", spec.path, "severity", result.MaxSeverity, "action", cfg.EffectiveAction())
+		}
+		return false
+	}
+	e.log.Warn("artifact blocked by scan policy", "repo", spec.repo.Name, "path", spec.path, "severity", result.MaxSeverity)
+	http.Error(w, "blocked: artifact scan policy ("+string(result.MaxSeverity)+")", http.StatusForbidden)
+	return true
 }
 
 // fresh reports whether a cached artifact is still fresh under the cache policy.

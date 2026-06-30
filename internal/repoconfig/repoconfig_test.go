@@ -95,6 +95,27 @@ func TestValidate(t *testing.T) {
 	if err := bad.Validate(); err == nil {
 		t.Fatal("expected negative idle_ttl error")
 	}
+	bad = Config{ArtifactScan: ArtifactScanPolicyConfig{Action: "drop"}}
+	if err := bad.Validate(); err == nil {
+		t.Fatal("expected artifact scan action validation error")
+	}
+	bad = Config{ArtifactScan: ArtifactScanPolicyConfig{Threshold: "none"}}
+	if err := bad.Validate(); err == nil {
+		t.Fatal("expected artifact scan threshold validation error")
+	}
+}
+
+func TestArtifactScanDefaults(t *testing.T) {
+	cfg := Default().ArtifactScan
+	if got := cfg.EffectiveScanner(); got != "grype" {
+		t.Fatalf("scanner=%q, want grype", got)
+	}
+	if got := cfg.EffectiveAction(); got != VulnActionAudit {
+		t.Fatalf("action=%q, want audit", got)
+	}
+	if got := cfg.EffectiveThreshold(); got != SeverityHigh {
+		t.Fatalf("threshold=%q, want high", got)
+	}
 }
 
 func TestRetentionConfigRoundTrip(t *testing.T) {

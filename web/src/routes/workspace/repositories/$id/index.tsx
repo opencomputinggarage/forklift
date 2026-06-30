@@ -1067,7 +1067,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       <TableWrap>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>{t("common.path")}</TableHead><TableHead>{t("common.version")}</TableHead><TableHead>{t("common.vuln")}</TableHead><TableHead>{t("common.license")}</TableHead><TableHead>{t("common.size")}</TableHead><TableHead>{t("common.type")}</TableHead><TableHead>{t("common.last-accessed")}</TableHead>{canDelete && <TableHead></TableHead>}</TableRow>
+          <TableRow><TableHead>{t("common.path")}</TableHead><TableHead>{t("common.version")}</TableHead><TableHead>{t("common.vuln")}</TableHead><TableHead>Artifact scan</TableHead><TableHead>{t("common.license")}</TableHead><TableHead>{t("common.size")}</TableHead><TableHead>{t("common.type")}</TableHead><TableHead>{t("common.last-accessed")}</TableHead>{canDelete && <TableHead></TableHead>}</TableRow>
         </TableHeader>
         <TableBody>
           {data?.artifacts.map((a) => (
@@ -1075,6 +1075,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               <TableCell className="break-all font-mono text-xs">{a.path}</TableCell>
               <TableCell>{a.version || "—"}</TableCell>
               <TableCell><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
+              <TableCell><ArtifactScanBadge artifact={a} /></TableCell>
               <TableCell>
                 {a.licenses && a.licenses.length > 0 ? (
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -1095,7 +1096,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
             </TableRow>
           ))}
           {data && data.artifacts.length === 0 && (
-            <TableRow><TableCell colSpan={canDelete ? 8 : 7} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
+            <TableRow><TableCell colSpan={canDelete ? 9 : 8} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
           )}
         </TableBody>
       </Table>
@@ -1114,6 +1115,25 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       </CardContent>
     </Card>
   );
+}
+
+function ArtifactScanBadge({ artifact }: { artifact: Artifact }) {
+  const status = artifact.artifact_scan_status;
+  if (!status) return <span className="text-muted-foreground">—</span>;
+  const severity = artifact.artifact_scan_max_severity || "unknown";
+  const count = artifact.artifact_scan_finding_count ?? 0;
+  const title = [
+    artifact.artifact_scan_scanner || "scanner",
+    artifact.artifact_scan_scanned_at ? artifact.artifact_scan_scanned_at.slice(0, 19).replace("T", " ") : "",
+  ].filter(Boolean).join(" · ");
+  if (status !== "completed") {
+    return <Badge variant={status === "failed" ? "destructive" : "outline"} title={title}>{status}</Badge>;
+  }
+  if (count === 0 || severity === "none" || severity === "unknown") {
+    return <Badge variant="success" title={title}>clean</Badge>;
+  }
+  const variant = severity === "critical" || severity === "high" ? "destructive" : "warning";
+  return <Badge variant={variant} title={title}>{severity} ×{count}</Badge>;
 }
 
 const AUDIT_EVENTS = ["", "download", "upload", "delete", "ttl.expire", "repo.create", "repo.update", "repo.delete",

@@ -26,10 +26,11 @@ type Client struct {
 
 // ClaimedJob is the worker API response for one claimed scan.
 type ClaimedJob struct {
-	JobID      string `json:"job_id"`
-	BlobSHA256 string `json:"blob_sha256"`
-	Scanner    string `json:"scanner"`
-	Token      string `json:"token"`
+	JobID      string                `json:"job_id"`
+	BlobSHA256 string                `json:"blob_sha256"`
+	Scanner    string                `json:"scanner"`
+	Token      string                `json:"token"`
+	Targets    []artifactscan.Target `json:"targets,omitempty"`
 }
 
 // Claim claims one scan job.

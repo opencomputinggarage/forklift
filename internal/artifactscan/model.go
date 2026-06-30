@@ -93,6 +93,22 @@ type Job struct {
 	Error             string
 }
 
+// Target describes the repository artifact that caused a blob scan. A blob may
+// be referenced by more than one artifact; workers treat this as best-effort
+// package coordinate context and still verify the blob digest separately.
+type Target struct {
+	Repository   string     `json:"repository,omitempty"`
+	RepositoryID int64      `json:"repository_id,omitempty"`
+	Format       string     `json:"format,omitempty"`
+	Type         string     `json:"type,omitempty"`
+	Path         string     `json:"path,omitempty"`
+	Version      string     `json:"version,omitempty"`
+	ContentType  string     `json:"content_type,omitempty"`
+	MetadataJSON string     `json:"metadata_json,omitempty"`
+	PublishedAt  *time.Time `json:"published_at,omitempty"`
+	PURL         string     `json:"purl,omitempty"`
+}
+
 // DBProvider records provenance for one source imported into the scanner DB.
 type DBProvider struct {
 	ID          string    `json:"id"`

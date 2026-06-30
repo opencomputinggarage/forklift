@@ -89,6 +89,13 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 	if claim.JobID == "" || claim.BlobSHA256 != blobSHA || claim.Token == "" {
 		t.Fatalf("bad claim response: %+v", claim)
 	}
+	if len(claim.Targets) != 1 ||
+		claim.Targets[0].Repository != "npmjs" ||
+		claim.Targets[0].Format != meta.FormatNPM ||
+		claim.Targets[0].Path != "pkg/-/pkg-1.0.0.tgz" ||
+		claim.Targets[0].Version != "1.0.0" {
+		t.Fatalf("bad claim targets: %+v", claim.Targets)
+	}
 
 	blobReq, err := http.NewRequest(http.MethodGet, srv.URL+"/internal/scans/"+claim.JobID+"/blob", nil)
 	if err != nil {

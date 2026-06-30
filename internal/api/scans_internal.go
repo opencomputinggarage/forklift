@@ -45,10 +45,11 @@ type scanClaimReq struct {
 }
 
 type scanClaimResp struct {
-	JobID      string `json:"job_id"`
-	BlobSHA256 string `json:"blob_sha256"`
-	Scanner    string `json:"scanner"`
-	Token      string `json:"token"`
+	JobID      string                `json:"job_id"`
+	BlobSHA256 string                `json:"blob_sha256"`
+	Scanner    string                `json:"scanner"`
+	Token      string                `json:"token"`
+	Targets    []artifactscan.Target `json:"targets,omitempty"`
 }
 
 func (h *ScanInternal) claim(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +80,7 @@ func (h *ScanInternal) claim(w http.ResponseWriter, r *http.Request) {
 		BlobSHA256: claimed.Job.BlobSHA256,
 		Scanner:    claimed.Job.Scanner,
 		Token:      claimed.Token,
+		Targets:    claimed.Targets,
 	})
 }
 

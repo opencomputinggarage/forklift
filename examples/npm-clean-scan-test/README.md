@@ -1,13 +1,11 @@
-# npm Vulnerable Scan Test
+# npm Clean Scan Test
 
 Small npm project for exercising forklift proxy caching and artifact scanning
-with intentionally old dependency versions.
+with current, commonly used package versions.
 
-## Packages
-
-- `axios@0.21.1`: small, quick scan target.
-- `next@12.0.0`: pulls more transitive packages, useful for large artifact list
-  and batch scan UI testing.
+This is the companion to `examples/npm-vulnerable-scan-test`. Use this project
+when you want the normal/clean path: cache packages through forklift, scan them,
+and verify that the UI mostly reports `clean` or low-noise results.
 
 ## Run
 
@@ -37,7 +35,7 @@ http://127.0.0.1:8080
 ```
 
 Go to the npm repository that has cached artifacts, usually `npmjs`, then open
-the `Artifacts` tab. Use `Scan visible` or click a row to inspect scan details.
+the `Artifacts` tab. Use `Scan visible`, then click rows to inspect scan details.
 
 `npm run cache:proxy` downloads packages through the local forklift npm proxy.
 That cache fill is what creates artifacts for the scanner worker to process.

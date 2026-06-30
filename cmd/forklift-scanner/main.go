@@ -97,6 +97,7 @@ func runOnce(ctx context.Context, log *slog.Logger, client scannerworker.Client,
 	if err != nil {
 		return err
 	}
+	prepared.Targets = job.Targets
 	defer prepared.Cleanup()
 
 	result, err := driver.Scan(ctx, prepared)

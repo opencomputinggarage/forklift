@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/younsl/o/box/kubernetes/forklift/internal/artifactscan"
 )
 
 // WorkspaceLimits bounds the worker's local preparation step. Kubernetes
@@ -26,6 +28,7 @@ type PreparedArtifact struct {
 	BlobSHA256 string
 	FilePath   string
 	Size       int64
+	Targets    []artifactscan.Target
 }
 
 // PrepareArtifact writes one blob into a private workspace and verifies its

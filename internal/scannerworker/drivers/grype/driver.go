@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -67,7 +68,11 @@ func (d Driver) DBStatus(ctx context.Context) (dbStatusDoc, error) {
 // Scan runs grype against the prepared artifact input directory.
 func (d Driver) Scan(ctx context.Context, artifact scannerworker.PreparedArtifact) (artifactscan.Result, error) {
 	outPath := filepath.Join(artifact.OutputDir, "grype.json")
-	cmd := exec.CommandContext(ctx, d.binary(), "dir:"+artifact.InputDir, "-o", "json")
+	target := "dir:" + artifact.InputDir
+	if purl := bestPURLTarget(artifact.Targets); purl != "" {
+		target = purl
+	}
+	cmd := exec.CommandContext(ctx, d.binary(), target, "-o", "json")
 	cmd.Env = append(os.Environ(),
 		"GRYPE_DB_AUTO_UPDATE=false",
 		"GRYPE_CHECK_FOR_APP_UPDATE=false",
@@ -116,4 +121,50 @@ func (d Driver) Scan(ctx context.Context, artifact scannerworker.PreparedArtifac
 func sha256Hex(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+func bestPURLTarget(targets []artifactscan.Target) string {
+	for _, t := range targets {
+		if t.PURL != "" {
+			return t.PURL
+		}
+	}
+	for _, t := range targets {
+		if purl := purlForTarget(t); purl != "" {
+			return purl
+		}
+	}
+	return ""
+}
+
+func purlForTarget(t artifactscan.Target) string {
+	switch t.Format {
+	case "npm":
+		return npmPURL(t)
+	default:
+		return ""
+	}
+}
+
+func npmPURL(t artifactscan.Target) string {
+	if t.Version == "" || !strings.HasSuffix(t.Path, ".tgz") {
+		return ""
+	}
+	i := strings.Index(t.Path, "/-/")
+	if i <= 0 {
+		return ""
+	}
+	name := t.Path[:i]
+	if name == "" {
+		return ""
+	}
+	if strings.HasPrefix(name, "@") {
+		parts := strings.SplitN(name, "/", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return ""
+		}
+		scope := strings.ReplaceAll(url.PathEscape(parts[0]), "@", "%40")
+		return "pkg:npm/" + scope + "/" + url.PathEscape(parts[1]) + "@" + url.PathEscape(t.Version)
+	}
+	return "pkg:npm/" + url.PathEscape(name) + "@" + url.PathEscape(t.Version)
 }

@@ -58,3 +58,35 @@ func TestParseDBStatus(t *testing.T) {
 		t.Fatal("built time is zero")
 	}
 }
+
+func TestBestPURLTargetNPM(t *testing.T) {
+	got := bestPURLTarget([]artifactscan.Target{{
+		Format:  "npm",
+		Path:    "axios/-/axios-0.21.1.tgz",
+		Version: "0.21.1",
+	}})
+	if got != "pkg:npm/axios@0.21.1" {
+		t.Fatalf("purl = %q", got)
+	}
+}
+
+func TestBestPURLTargetScopedNPM(t *testing.T) {
+	got := bestPURLTarget([]artifactscan.Target{{
+		Format:  "npm",
+		Path:    "@scope/name/-/name-1.2.3.tgz",
+		Version: "1.2.3",
+	}})
+	if got != "pkg:npm/%40scope/name@1.2.3" {
+		t.Fatalf("purl = %q", got)
+	}
+}
+
+func TestBestPURLTargetSkipsNPMMetadata(t *testing.T) {
+	got := bestPURLTarget([]artifactscan.Target{{
+		Format: "npm",
+		Path:   "axios",
+	}})
+	if got != "" {
+		t.Fatalf("purl = %q, want empty", got)
+	}
+}

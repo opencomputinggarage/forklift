@@ -13,6 +13,7 @@ import (
 type Store interface {
 	EnqueueArtifactScan(ctx context.Context, id, blobSHA256, scanner, configHash string, now time.Time) (Job, error)
 	ClaimArtifactScanJob(ctx context.Context, workerID string, leaseUntil, now time.Time) (Job, error)
+	ArtifactScanTargets(ctx context.Context, blobSHA256 string) ([]Target, error)
 	HeartbeatArtifactScanJob(ctx context.Context, id, workerID string, leaseUntil, now time.Time) error
 	CompleteArtifactScanJob(ctx context.Context, id, workerID string, result Result, now time.Time) (int64, error)
 }
@@ -39,8 +40,9 @@ type ServiceConfig struct {
 
 // ClaimedJob is a job plus its short-lived worker capability token.
 type ClaimedJob struct {
-	Job   Job
-	Token string
+	Job     Job
+	Token   string
+	Targets []Target
 }
 
 // NewService builds a server-side artifact scan coordinator.
@@ -88,6 +90,10 @@ func (s *Service) Claim(ctx context.Context, workerID string) (ClaimedJob, error
 	if err != nil {
 		return ClaimedJob{}, err
 	}
+	targets, err := s.store.ArtifactScanTargets(ctx, job.BlobSHA256)
+	if err != nil {
+		return ClaimedJob{}, err
+	}
 	token, err := s.signer.Sign(TokenClaims{
 		JobID:      job.ID,
 		BlobSHA256: job.BlobSHA256,
@@ -97,7 +103,7 @@ func (s *Service) Claim(ctx context.Context, workerID string) (ClaimedJob, error
 	if err != nil {
 		return ClaimedJob{}, err
 	}
-	return ClaimedJob{Job: job, Token: token}, nil
+	return ClaimedJob{Job: job, Token: token, Targets: targets}, nil
 }
 
 // Heartbeat extends a running job lease after token validation.

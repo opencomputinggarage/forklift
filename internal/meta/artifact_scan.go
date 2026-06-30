@@ -44,6 +44,38 @@ func (s *Store) LatestArtifactScanJob(ctx context.Context, blobSHA256, scanner, 
 		blobSHA256, scanner, configHash))
 }
 
+// ArtifactScanTargets returns repository artifact context for a blob. A blob can
+// be referenced by multiple repository paths; scanner workers can use these
+// coordinates to prefer ecosystem-aware matching over raw byte scanning.
+func (s *Store) ArtifactScanTargets(ctx context.Context, blobSHA256 string) ([]artifactscan.Target, error) {
+	rows, err := s.h().QueryContext(ctx,
+		`SELECT r.id, r.name, r.format, r.type,
+                a.path, a.version, a.content_type, a.metadata_json, a.published_at
+           FROM artifacts a JOIN repositories r ON r.id = a.repo_id
+          WHERE a.blob_sha256 = ?
+          ORDER BY CASE WHEN a.version != '' THEN 0 ELSE 1 END, r.name, a.path`,
+		blobSHA256)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []artifactscan.Target
+	for rows.Next() {
+		var t artifactscan.Target
+		var published sql.NullString
+		if err := rows.Scan(&t.RepositoryID, &t.Repository, &t.Format, &t.Type,
+			&t.Path, &t.Version, &t.ContentType, &t.MetadataJSON, &published); err != nil {
+			return nil, err
+		}
+		if published.Valid && published.String != "" {
+			p := parseTime(published.String)
+			t.PublishedAt = &p
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
 // ClaimArtifactScanJob atomically claims the oldest due queued job for a worker.
 func (s *Store) ClaimArtifactScanJob(ctx context.Context, workerID string, leaseUntil, now time.Time) (artifactscan.Job, error) {
 	if now.IsZero() {

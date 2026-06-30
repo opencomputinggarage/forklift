@@ -53,7 +53,7 @@ func ValidateResult(r Result, expectedJobID, expectedBlobSHA256, expectedScanner
 	if limits.RequireDBMetadata && r.Status == StatusCompleted && r.DatabaseBuiltAt.IsZero() {
 		return errors.New("missing scanner database built time")
 	}
-	if err := validateString(r.ScannerVersion, "scanner_version", limits.MaxStringLength, true); err != nil {
+	if err := validateString(r.ScannerVersion, "scanner_version", limits.MaxStringLength, r.Status == StatusCompleted); err != nil {
 		return err
 	}
 	if err := validateString(r.DatabaseSchemaVersion, "database_schema_version", limits.MaxStringLength, false); err != nil {

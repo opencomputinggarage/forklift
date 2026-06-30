@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/younsl/o/box/kubernetes/forklift/internal/api"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/artifactscan"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/cluster"
@@ -68,6 +69,12 @@ func main() {
 		"age at which a license result becomes stale")
 	flag.IntVar(&cfg.License.Workers, "license-workers", cfg.License.Workers,
 		"number of concurrent license resolution workers draining the queue")
+	flag.BoolVar(&cfg.ArtifactScan.Enabled, "artifact-scan-enabled", cfg.ArtifactScan.Enabled,
+		"enable optional isolated artifact-byte scanning")
+	flag.StringVar(&cfg.ArtifactScan.Scanner, "artifact-scan-scanner", cfg.ArtifactScan.Scanner,
+		"artifact scanner name used for scan jobs")
+	flag.StringVar(&cfg.ArtifactScan.WorkerToken, "artifact-scan-worker-token", cfg.ArtifactScan.WorkerToken,
+		"bearer token required by scanner workers to claim jobs")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("forklift", version.String())
@@ -211,6 +218,29 @@ func run(cfg *config.Config) error {
 	if cfg.License.DepsDevURL != "" {
 		manager.SetLicenseResolver(license.NewDepsDev(cfg.License.DepsDevURL, nil))
 		log.Info("license resolution enabled", "deps_dev_url", cfg.License.DepsDevURL)
+	}
+	var artifactScanSvc *artifactscan.Service
+	if cfg.ArtifactScan.Enabled {
+		tokenKey := []byte(cfg.ArtifactScan.TokenKey)
+		if len(tokenKey) == 0 && cfg.Auth.SessionSecret != "" {
+			tokenKey = []byte(cfg.Auth.SessionSecret)
+		}
+		artifactScanSvc, err = artifactscan.NewService(store, artifactscan.ServiceConfig{
+			Scanner:           cfg.ArtifactScan.Scanner,
+			ScannerConfigHash: cfg.ArtifactScan.ScannerConfigHash,
+			LeaseTTL:          cfg.ArtifactScan.LeaseTTL,
+			TokenTTL:          cfg.ArtifactScan.TokenTTL,
+			TokenKey:          tokenKey,
+		})
+		if err != nil {
+			return fmt.Errorf("init artifact scanner service: %w", err)
+		}
+		manager.SetArtifactScanEnqueuer(func(blobSHA256 string) {
+			if _, err := artifactScanSvc.Enqueue(context.Background(), blobSHA256); err != nil {
+				log.Warn("artifact scan enqueue failed", "blob", blobSHA256, "err", err)
+			}
+		})
+		log.Info("artifact scanning enabled", "scanner", cfg.ArtifactScan.Scanner)
 	}
 
 	// Outbound approval alarms: when a package is quarantined pending approval,
@@ -394,6 +424,10 @@ func run(cfg *config.Config) error {
 		// forever). Every pod is Ready; the main Service instead selects the
 		// forklift.io/role=leader pod label patched on (de)promotion.
 		srv.SetReady(true)
+	}
+	if artifactScanSvc != nil {
+		scans := api.NewScanInternal(artifactScanSvc, blobs, cfg.ArtifactScan.WorkerToken, log)
+		srv.Router().Mount("/internal/scans", scans.Routes())
 	}
 
 	// labelRouting keeps every replica Ready and routes the Service to the leader

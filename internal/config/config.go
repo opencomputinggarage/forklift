@@ -63,6 +63,9 @@ type Config struct {
 	// disabled when DepsDevURL is empty; per-repository policy gates enforcement.
 	License LicenseConfig
 
+	// ArtifactScan configures optional isolated artifact-byte scanning.
+	ArtifactScan ArtifactScanConfig
+
 	// Notify configures outbound alarms (e.g. a Slack/Mattermost webhook fired
 	// when a package is quarantined pending approval).
 	Notify NotifyConfig
@@ -127,6 +130,17 @@ type LicenseConfig struct {
 	TTL time.Duration
 	// Workers is the number of concurrent goroutines draining the resolve queue.
 	Workers int
+}
+
+// ArtifactScanConfig configures optional worker-based artifact-byte scanning.
+type ArtifactScanConfig struct {
+	Enabled           bool
+	Scanner           string
+	ScannerConfigHash string
+	WorkerToken       string
+	TokenKey          string
+	LeaseTTL          time.Duration
+	TokenTTL          time.Duration
 }
 
 // NotifyConfig configures outbound alarms. The alarm channels (receivers) are
@@ -301,6 +315,15 @@ func Load() (*Config, error) {
 			TTL:            envDuration("FORKLIFT_LICENSE_TTL", 7*24*time.Hour),
 			Workers:        envInt("FORKLIFT_LICENSE_WORKERS", 6),
 		},
+		ArtifactScan: ArtifactScanConfig{
+			Enabled:           envBool("FORKLIFT_ARTIFACT_SCAN_ENABLED", false),
+			Scanner:           env("FORKLIFT_ARTIFACT_SCAN_SCANNER", "grype"),
+			ScannerConfigHash: env("FORKLIFT_ARTIFACT_SCAN_CONFIG_HASH", ""),
+			WorkerToken:       env("FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN", ""),
+			TokenKey:          env("FORKLIFT_ARTIFACT_SCAN_TOKEN_KEY", ""),
+			LeaseTTL:          envDuration("FORKLIFT_ARTIFACT_SCAN_LEASE_TTL", 10*time.Minute),
+			TokenTTL:          envDuration("FORKLIFT_ARTIFACT_SCAN_TOKEN_TTL", 10*time.Minute),
+		},
 		Notify: NotifyConfig{
 			WebhookTimeout: envDuration("FORKLIFT_NOTIFY_WEBHOOK_TIMEOUT", 5*time.Second),
 		},
@@ -359,6 +382,17 @@ func (c *Config) validate() error {
 		}
 		if c.Replication.Interval <= 0 {
 			return fmt.Errorf("replication interval must be positive")
+		}
+	}
+	if c.ArtifactScan.Enabled {
+		if c.ArtifactScan.WorkerToken == "" {
+			return fmt.Errorf("artifact scanning enabled but worker token is empty")
+		}
+		if c.ArtifactScan.Scanner == "" {
+			return fmt.Errorf("artifact scanning enabled but scanner is empty")
+		}
+		if c.ArtifactScan.LeaseTTL <= 0 || c.ArtifactScan.TokenTTL <= 0 {
+			return fmt.Errorf("artifact scan TTLs must be positive")
 		}
 	}
 	return nil

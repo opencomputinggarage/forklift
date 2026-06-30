@@ -111,6 +111,9 @@ type VulnConfig struct {
 	RescanInterval time.Duration
 	// TTL marks a scan result stale (eligible for re-scan) once older than this.
 	TTL time.Duration
+	// Workers is the number of concurrent goroutines draining the scan queue, so
+	// freshly cached/uploaded coordinates are scanned promptly under burst.
+	Workers int
 }
 
 // LicenseConfig configures deps.dev-based license resolution.
@@ -122,6 +125,8 @@ type LicenseConfig struct {
 	RescanInterval time.Duration
 	// TTL marks a result stale (eligible for re-resolution) once older than this.
 	TTL time.Duration
+	// Workers is the number of concurrent goroutines draining the resolve queue.
+	Workers int
 }
 
 // NotifyConfig configures outbound alarms. The alarm channels (receivers) are
@@ -288,11 +293,13 @@ func Load() (*Config, error) {
 			OSVURL:         env("FORKLIFT_OSV_URL", "https://api.osv.dev"),
 			RescanInterval: envDuration("FORKLIFT_VULN_RESCAN_INTERVAL", 6*time.Hour),
 			TTL:            envDuration("FORKLIFT_VULN_TTL", 24*time.Hour),
+			Workers:        envInt("FORKLIFT_VULN_WORKERS", 6),
 		},
 		License: LicenseConfig{
 			DepsDevURL:     env("FORKLIFT_DEPSDEV_URL", "https://api.deps.dev"),
 			RescanInterval: envDuration("FORKLIFT_LICENSE_RESCAN_INTERVAL", 24*time.Hour),
 			TTL:            envDuration("FORKLIFT_LICENSE_TTL", 7*24*time.Hour),
+			Workers:        envInt("FORKLIFT_LICENSE_WORKERS", 6),
 		},
 		Notify: NotifyConfig{
 			WebhookTimeout: envDuration("FORKLIFT_NOTIFY_WEBHOOK_TIMEOUT", 5*time.Second),

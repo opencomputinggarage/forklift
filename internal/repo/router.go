@@ -105,12 +105,20 @@ func NewManager(engine *Engine, store *meta.Store, authz *auth.Service, rec *aud
 			Namespace: "forklift", Name: "ip_blocked_total",
 			Help: "Requests refused by the per-repository source-IP access control list.",
 		}, []string{"repo"}),
-		scanQueue:    make(chan scanJob, 256),
-		resolveQueue: make(chan resolveJob, 256),
+		scanQueue:    make(chan scanJob, 1024),
+		resolveQueue: make(chan resolveJob, 1024),
 	}
 	if reg != nil {
 		reg.MustRegister(m.approvalBlocked, m.denyBlocked, m.ttlExpired, m.vulnBlocked, m.vulnScans,
 			m.licenseBlocked, m.licenseResolves, m.ipBlocked)
+	}
+	// Scan and resolve freshly cached proxy artifacts regardless of any
+	// per-repository policy: collection is gated only by whether a scanner is
+	// configured, so vulnerability/license data is populated even when no policy
+	// enforces it. Hosted uploads trigger this from their PUT handlers.
+	engine.onStore = func(repo meta.Repository, path string) {
+		m.scanStored(repo, path)
+		m.resolveStored(repo, path)
 	}
 	return m
 }

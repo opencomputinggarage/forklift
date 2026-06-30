@@ -305,9 +305,11 @@ explicitly disables the corresponding scanner (overriding the binary default).
 - --osv-url={{ .Values.vuln.osvUrl }}
 - --vuln-rescan-interval={{ .Values.vuln.rescanInterval }}
 - --vuln-ttl={{ .Values.vuln.ttl }}
+- --vuln-workers={{ .Values.vuln.workers }}
 - --deps-dev-url={{ .Values.license.depsDevUrl }}
 - --license-rescan-interval={{ .Values.license.rescanInterval }}
 - --license-ttl={{ .Values.license.ttl }}
+- --license-workers={{ .Values.license.workers }}
 {{- with .Values.extraArgs }}
 {{ toYaml . }}
 {{- end }}

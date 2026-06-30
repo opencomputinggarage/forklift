@@ -237,6 +237,44 @@ func TestHostedUploadTriggersScan(t *testing.T) {
 	}
 }
 
+// TestProxyFetchTriggersScan verifies that caching a proxied artifact enqueues a
+// scan even when no vulnerability policy is enabled: collection is decoupled
+// from enforcement and gated only by a configured scanner.
+func TestProxyFetchTriggersScan(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "tarball-bytes")
+	}))
+	defer upstream.Close()
+
+	m, _, store := newTestManager(t)
+	sc := &recordingScanner{}
+	m.SetVulnScanner(sc)
+	// repoconfig.Default() leaves the vuln policy disabled (no gating).
+	mkFormatRepo(t, store, "npmjs", meta.FormatNPM, meta.TypeProxy, upstream.URL, repoconfig.Default())
+	h := mux(m)
+	ctx := t.Context()
+
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/npm/npmjs/lodash/-/lodash-4.17.99.tgz", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("proxy fetch code=%d", w.Code)
+	}
+
+	// Drain the queue synchronously so the assertion doesn't race the worker.
+	for {
+		select {
+		case job := <-m.scanQueue:
+			m.runScan(ctx, job)
+			continue
+		default:
+		}
+		break
+	}
+	if len(sc.calls) != 1 || sc.calls[0] != [3]string{"npm", "lodash", "4.17.99"} {
+		t.Fatalf("proxy fetch scanned %v, want [[npm lodash 4.17.99]]", sc.calls)
+	}
+}
+
 func TestDisabledRepositoryRefusesServing(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "tarball-bytes")

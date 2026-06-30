@@ -254,10 +254,11 @@ audit:
   retention: 2160h # 90 days
 
 # Vulnerability scanning data source (OSV). Passed to the container as CLI flags
-# (--osv-url, --vuln-rescan-interval, --vuln-ttl). Enforcement is per-repository
-# (Settings > Vulnerability policy) and only happens for repositories that opt
-# in, so there is no global on/off here; this just points the scanner at an OSV
-# endpoint. For air-gapped clusters, set this to a self-hosted/mirrored OSV.
+# (--osv-url, --vuln-rescan-interval, --vuln-ttl, --vuln-workers). Scanning of
+# every cached/uploaded coordinate happens whenever osvUrl is set, regardless of
+# per-repository policy; the policy (Settings > Vulnerability policy) only gates
+# enforcement (block/warn). For air-gapped clusters, set this to a
+# self-hosted/mirrored OSV. Set osvUrl empty to disable scanning entirely.
 vuln:
   # -- (string) OSV API base URL used to scan requested versions. Empty disables scanning.
   osvUrl: https://api.osv.dev
@@ -265,11 +266,14 @@ vuln:
   rescanInterval: 6h
   # -- (string) Age at which a scan result is considered stale.
   ttl: 24h
+  # -- (int) Concurrent scan workers draining the queue, so freshly cached coordinates are scanned promptly under burst.
+  workers: 6
 
 # License scanning data source (deps.dev). Passed to the container as CLI flags
-# (--deps-dev-url, --license-rescan-interval, --license-ttl). Like vulnerability
-# scanning, enforcement is per-repository; this only points the resolver at a
-# deps.dev endpoint. Set depsDevUrl empty to disable license resolution.
+# (--deps-dev-url, --license-rescan-interval, --license-ttl, --license-workers).
+# Like vulnerability scanning, resolution of every cached/uploaded coordinate
+# happens whenever depsDevUrl is set; per-repository policy only gates
+# enforcement. Set depsDevUrl empty to disable license resolution.
 license:
   # -- (string) deps.dev API base URL used to resolve package licenses. Empty disables resolution.
   depsDevUrl: https://api.deps.dev
@@ -277,6 +281,8 @@ license:
   rescanInterval: 24h
   # -- (string) Age at which a license result is considered stale.
   ttl: 168h
+  # -- (int) Concurrent resolution workers draining the queue.
+  workers: 6
 
 # -- (string) Public base URL clients reach forklift at (e.g. https://forklift.example.com).
 # When set, generated index/metadata URLs use it instead of the inbound request

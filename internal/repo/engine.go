@@ -38,6 +38,10 @@ type Engine struct {
 	log       *slog.Logger
 	neg       *negCache
 	now       func() time.Time
+	// onStore, when set, is invoked after a proxy fetch caches an artifact, so
+	// the manager can enqueue vulnerability/license scanning for it. Best-effort
+	// and must not block the serving path; nil disables it.
+	onStore func(repo meta.Repository, path string)
 
 	cacheHits   *prometheus.CounterVec
 	cacheMiss   *prometheus.CounterVec
@@ -197,6 +201,9 @@ func (e *Engine) fetchAndServe(w http.ResponseWriter, r *http.Request, spec fetc
 		return
 	}
 	e.maybeEvict(ctx, spec)
+	if e.onStore != nil {
+		e.onStore(spec.repo, spec.path)
+	}
 	n := e.serveArtifact(w, r, art)
 	e.bytes.WithLabelValues("egress", spec.repo.Format).Add(float64(n))
 }

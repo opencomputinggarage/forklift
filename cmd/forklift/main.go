@@ -57,12 +57,16 @@ func main() {
 		"how often stale vulnerability scan results are re-queried")
 	flag.DurationVar(&cfg.Vuln.TTL, "vuln-ttl", cfg.Vuln.TTL,
 		"age at which a vulnerability scan result becomes stale")
+	flag.IntVar(&cfg.Vuln.Workers, "vuln-workers", cfg.Vuln.Workers,
+		"number of concurrent vulnerability scan workers draining the queue")
 	flag.StringVar(&cfg.License.DepsDevURL, "deps-dev-url", cfg.License.DepsDevURL,
 		"deps.dev API base URL for license scanning; empty disables it")
 	flag.DurationVar(&cfg.License.RescanInterval, "license-rescan-interval", cfg.License.RescanInterval,
 		"how often stale license results are re-queried")
 	flag.DurationVar(&cfg.License.TTL, "license-ttl", cfg.License.TTL,
 		"age at which a license result becomes stale")
+	flag.IntVar(&cfg.License.Workers, "license-workers", cfg.License.Workers,
+		"number of concurrent license resolution workers draining the queue")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("forklift", version.String())
@@ -447,14 +451,20 @@ func run(cfg *config.Config) error {
 		}
 		go engine.RunSweeper(leadCtx, 5*time.Minute)
 		go manager.RunIdleReaper(leadCtx, time.Hour)
-		// Vulnerability scan worker + backfill (scans already-stored artifacts) +
-		// periodic re-scanner (no-ops without a scanner).
-		go manager.RunVulnWorker(leadCtx)
+		// Vulnerability scan worker pool + backfill (scans already-stored
+		// artifacts) + periodic re-scanner (no-ops without a scanner). Multiple
+		// workers drain the queue concurrently so freshly cached coordinates are
+		// scanned promptly under burst.
+		for i := 0; i < max(1, cfg.Vuln.Workers); i++ {
+			go manager.RunVulnWorker(leadCtx)
+		}
 		go manager.RunVulnBackfill(leadCtx, cfg.Vuln.RescanInterval)
 		go manager.RunVulnRescanner(leadCtx, cfg.Vuln.RescanInterval, cfg.Vuln.TTL)
-		// License resolution worker + backfill + periodic re-resolver (no-ops
+		// License resolution worker pool + backfill + periodic re-resolver (no-ops
 		// without a resolver).
-		go manager.RunLicenseWorker(leadCtx)
+		for i := 0; i < max(1, cfg.License.Workers); i++ {
+			go manager.RunLicenseWorker(leadCtx)
+		}
 		go manager.RunLicenseBackfill(leadCtx, cfg.License.RescanInterval)
 		go manager.RunLicenseRescanner(leadCtx, cfg.License.RescanInterval, cfg.License.TTL)
 		if recorder != nil && cfg.Audit.Retention > 0 {

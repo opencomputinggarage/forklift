@@ -159,6 +159,7 @@ func (e *Engine) fetchAndServe(w http.ResponseWriter, r *http.Request, spec fetc
 		return
 	case resp.StatusCode < 200 || resp.StatusCode >= 300:
 		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
+		e.log.Error("upstream non-2xx", "repo", spec.repo.Name, "url", spec.upstreamURL, "status", resp.StatusCode)
 		http.Error(w, "upstream error", http.StatusBadGateway)
 		return
 	}

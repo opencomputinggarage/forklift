@@ -9,7 +9,6 @@ import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select } from "@/components/app-ui/select";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import {
@@ -1114,6 +1113,8 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
     return a.artifact_scan_status === status;
   });
   const allShownSelected = shownArtifacts.length > 0 && shownArtifacts.every((a) => selected.has(a.path));
+  const scanReadyVisible = shownArtifacts.filter((a) => a.artifact_scan_status !== "queued" && a.artifact_scan_status !== "running");
+  const rangeText = data ? `${data.count === 0 ? 0 : data.offset + 1}-${Math.min(data.offset + data.artifacts.length, data.count)} of ${data.count}` : "";
 
   const del = async (a: Artifact) => {
     setError("");
@@ -1155,6 +1156,21 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
     }
   };
 
+  const scanVisible = async () => {
+    const paths = scanReadyVisible.map((a) => a.path);
+    if (paths.length === 0) return;
+    setError("");
+    setScanningPath("(visible)");
+    try {
+      await api.scanArtifactsBatch(repoId, paths);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setScanningPath("");
+    }
+  };
+
   const openDetails = async (a: Artifact) => {
     setDetailPath(a.path);
     setDetail(null);
@@ -1179,68 +1195,84 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       <CardContent>
       <div className="mb-4 flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
         <h2 className="m-0 text-base font-semibold">{t("common.artifacts")}</h2>
-        {data && <span className="text-sm text-muted-foreground">{data.offset + 1}–{Math.min(data.offset + data.artifacts.length, data.count)} of {data.count} items · {humanSize(data.total_size)}</span>}
+        {data && <span className="text-sm text-muted-foreground">{rangeText} items · {humanSize(data.total_size)}</span>}
       </div>
       {data && <ArtifactScanSummary artifacts={data.artifacts} />}
-      <form className="mb-4 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch" onSubmit={(e) => { e.preventDefault(); setOffset(0); load(prefix, 0); }}>
-        <Input placeholder="Filter by path prefix (e.g. com/acme or @scope/pkg)"
+      <form className="mb-3 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch" onSubmit={(e) => { e.preventDefault(); setOffset(0); load(prefix, 0); }}>
+        <Input placeholder="Path prefix"
           value={prefix} onChange={(e) => setPrefix(e.target.value)} />
-        <Select value={String(limit)} onChange={(v) => { const n = Number(v); setLimit(n); setOffset(0); load(prefix, 0, n); }}
-          options={[50, 100, 250, 500].map((n) => ({ value: String(n), label: `${n} rows` }))} />
-        <Select value={status} onChange={setStatus}
-          options={["", "unscanned", "queued", "running", "completed", "failed"].map((s) => ({ value: s, label: s || "all statuses" }))} />
         <Button variant="outline" type="submit">{t("common.filter")}</Button>
+        <Button variant="outline" type="button" onClick={() => load()}>{t("common.refresh")}</Button>
       </form>
-      <div className="mb-4 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch">
-        {canDelete && <Button variant="outline" type="button" disabled={selected.size === 0 || scanningPath === "(selected)"} onClick={scanSelected}>Scan selected ({selected.size})</Button>}
+      <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-2 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+          <Select value={status} onChange={setStatus}
+            options={["", "unscanned", "queued", "running", "completed", "failed"].map((s) => ({ value: s, label: s || "all scan states" }))} />
+          <Select value={String(limit)} onChange={(v) => { const n = Number(v); setLimit(n); setOffset(0); load(prefix, 0, n); }}
+            options={[50, 100, 250, 500].map((n) => ({ value: String(n), label: `${n} rows` }))} />
+          {canDelete && <Button type="button" disabled={scanReadyVisible.length === 0 || scanningPath === "(visible)"} onClick={scanVisible}>Scan visible ({scanReadyVisible.length})</Button>}
+          {canDelete && selected.size > 0 && <Button variant="outline" type="button" disabled={scanningPath === "(selected)"} onClick={scanSelected}>Scan selected ({selected.size})</Button>}
+        </div>
+        <div className="flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch">
         <Button variant="outline" type="button" disabled={offset === 0} onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); load(prefix, next); }}>{t("common.newer")}</Button>
         <Button variant="outline" type="button" disabled={!data || offset + limit >= data.count} onClick={() => { const next = offset + limit; setOffset(next); load(prefix, next); }}>{t("common.older")}</Button>
+        </div>
       </div>
       {error && <Alert className="mb-4">{error}</Alert>}
-      <TableWrap>
-      <Table>
-        <TableHeader>
-          <TableRow>{canDelete && <TableHead className="w-10"><Checkbox checked={allShownSelected} onCheckedChange={(checked) => setSelected(new Set(checked ? shownArtifacts.map((a) => a.path) : []))} /></TableHead>}<TableHead>{t("common.path")}</TableHead><TableHead>{t("common.version")}</TableHead><TableHead>{t("common.vuln")}</TableHead><TableHead>Artifact scan</TableHead><TableHead>{t("common.license")}</TableHead><TableHead>{t("common.size")}</TableHead><TableHead>{t("common.type")}</TableHead><TableHead>{t("common.last-accessed")}</TableHead><TableHead></TableHead></TableRow>
-        </TableHeader>
-        <TableBody>
-          {shownArtifacts.map((a) => (
-            <TableRow key={a.path}>
-              {canDelete && <TableCell><Checkbox checked={selected.has(a.path)} onCheckedChange={(checked) => toggleSelected(a.path, !!checked)} /></TableCell>}
-              <TableCell className="break-all font-mono text-xs">{a.path}</TableCell>
-              <TableCell>{a.version || "—"}</TableCell>
-              <TableCell><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
-              <TableCell><ArtifactScanBadge artifact={a} /></TableCell>
-              <TableCell>
-                {a.licenses && a.licenses.length > 0 ? (
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    {a.licenses.map((licenseId) => <Badge key={licenseId} variant="outline">{licenseId}</Badge>)}
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </TableCell>
-              <TableCell className="text-muted-foreground">{humanSize(a.size)}</TableCell>
-              <TableCell className="text-muted-foreground">{a.content_type}</TableCell>
-              <TableCell className="text-muted-foreground">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</TableCell>
-              <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" type="button" onClick={() => openDetails(a)}>Details</Button>
-                    {canDelete && <>
-                    <Button variant="outline" onClick={() => scan(a)} disabled={scanningPath === a.path}>
-                      {a.artifact_scan_status ? "Rescan" : "Scan"}
-                    </Button>
-                    <Button variant="outline" onClick={() => setDeleting(a)}>{t("common.delete")}</Button>
-                    </>}
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,460px)]">
+        <TableWrap>
+        <Table>
+          <TableHeader>
+            <TableRow>{canDelete && <TableHead className="w-10"><Checkbox checked={allShownSelected} onCheckedChange={(checked) => setSelected(new Set(checked ? shownArtifacts.map((a) => a.path) : []))} /></TableHead>}<TableHead>Artifact</TableHead><TableHead>Scan result</TableHead><TableHead>{t("common.last-accessed")}</TableHead><TableHead></TableHead></TableRow>
+          </TableHeader>
+          <TableBody>
+            {shownArtifacts.map((a) => (
+              <TableRow
+                key={a.path}
+                className={cn("cursor-pointer", detailPath === a.path && "bg-muted/35")}
+                onClick={() => openDetails(a)}
+              >
+                {canDelete && <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(a.path)} onCheckedChange={(checked) => toggleSelected(a.path, !!checked)} /></TableCell>}
+                <TableCell>
+                  <div className="break-all font-mono text-xs">{a.path}</div>
+                  <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{a.version || "no version"}</span>
+                    <span>{humanSize(a.size)}</span>
+                    <span>{a.content_type}</span>
+                    {a.licenses?.slice(0, 3).map((licenseId) => <Badge key={licenseId} variant="outline">{licenseId}</Badge>)}
+                    {a.max_severity && <SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} />}
                   </div>
                 </TableCell>
-            </TableRow>
-          ))}
-          {data && shownArtifacts.length === 0 && (
-            <TableRow><TableCell colSpan={canDelete ? 10 : 9} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
-          )}
-        </TableBody>
-      </Table>
-      </TableWrap>
+                <TableCell>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ArtifactScanBadge artifact={a} />
+                  </div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</TableCell>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end gap-2">
+                      {canDelete && <>
+                      <Button variant="outline" onClick={() => scan(a)} disabled={scanningPath === a.path}>
+                        {a.artifact_scan_status ? "Rescan" : "Scan"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setDeleting(a)}>{t("common.delete")}</Button>
+                      </>}
+                    </div>
+                  </TableCell>
+              </TableRow>
+            ))}
+            {data && shownArtifacts.length === 0 && (
+              <TableRow><TableCell colSpan={canDelete ? 5 : 4} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+        </TableWrap>
+        <ArtifactScanDetailsPanel
+          path={detailPath}
+          result={detail}
+          error={detailError}
+        />
+      </div>
       <ConfirmModal
         open={deleting !== null}
         title="Delete artifact"
@@ -1252,26 +1284,20 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
         onConfirm={() => deleting && del(deleting)}
         onCancel={() => setDeleting(null)}
       />
-      <ArtifactScanDetailsModal
-        open={detailPath !== ""}
-        path={detailPath}
-        result={detail}
-        error={detailError}
-        onClose={() => { setDetailPath(""); setDetail(null); setDetailError(""); }}
-      />
       </CardContent>
     </Card>
   );
 }
 
-function ArtifactScanDetailsModal({ open, path, result, error, onClose }: { open: boolean; path: string; result: ArtifactScanResult | null; error: string; onClose: () => void }) {
+function ArtifactScanDetailsPanel({ path, result, error }: { path: string; result: ArtifactScanResult | null; error: string }) {
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle>Artifact scan details</DialogTitle>
-          <DialogDescription className="break-all font-mono text-xs">{path}</DialogDescription>
-        </DialogHeader>
+    <div className="min-h-[320px] min-w-0 rounded-[var(--radius)] border border-border bg-muted/20 p-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+      <div className="mb-3 flex min-w-0 flex-col gap-1">
+        <h3 className="m-0 text-sm font-semibold">Scan details</h3>
+        {path ? <span className="break-all font-mono text-xs text-muted-foreground">{path}</span> : <span className="text-sm text-muted-foreground">Click an artifact row to inspect scan findings.</span>}
+      </div>
+      {path && (
+        <>
         {error && <Alert>{error}</Alert>}
         {!error && !result && <div className="text-sm text-muted-foreground">{`Loading...`}</div>}
         {result && (
@@ -1307,8 +1333,9 @@ function ArtifactScanDetailsModal({ open, path, result, error, onClose }: { open
             )}
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    </div>
   );
 }
 

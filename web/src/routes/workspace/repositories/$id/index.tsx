@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { X } from "lucide-react";
-import { api, Artifact, ArtifactList, AuditLogList, humanSize, Me, Receiver, RepoConfig, RepoPermission, RepoToken, repoEndpoint, Repository } from "@/api";
+import { api, Artifact, ArtifactList, ArtifactScanResult, AuditLogList, humanSize, Me, Receiver, RepoConfig, RepoPermission, RepoToken, repoEndpoint, Repository } from "@/api";
 import { useAuth } from "@/authContext";
 import { UpstreamStatus } from "@/components/feedback/upstream-status";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
@@ -9,6 +9,7 @@ import { Alert } from "@/components/app-ui/alert";
 import { Badge } from "@/components/app-ui/badge";
 import { PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select } from "@/components/app-ui/select";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import {
@@ -1090,13 +1091,29 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
   const { t } = useTranslation();
   const [data, setData] = useState<ArtifactList | null>(null);
   const [prefix, setPrefix] = useState("");
+  const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
+  const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState<Artifact | null>(null);
   const [scanningPath, setScanningPath] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [detailPath, setDetailPath] = useState("");
+  const [detail, setDetail] = useState<ArtifactScanResult | null>(null);
+  const [detailError, setDetailError] = useState("");
 
-  const load = (p = prefix) =>
-    api.listArtifacts(repoId, p).then(setData).catch((e) => setError(e.message));
-  useEffect(() => { load(""); /* eslint-disable-next-line */ }, [repoId]);
+  const load = (p = prefix, nextOffset = offset, nextLimit = limit) =>
+    api.listArtifacts(repoId, p, nextLimit, nextOffset)
+      .then((next) => { setData(next); setSelected(new Set()); })
+      .catch((e) => setError(e.message));
+  useEffect(() => { load("", 0); /* eslint-disable-next-line */ }, [repoId]);
+
+  const shownArtifacts = (data?.artifacts ?? []).filter((a) => {
+    if (!status) return true;
+    if (status === "unscanned") return !a.artifact_scan_status;
+    return a.artifact_scan_status === status;
+  });
+  const allShownSelected = shownArtifacts.length > 0 && shownArtifacts.every((a) => selected.has(a.path));
 
   const del = async (a: Artifact) => {
     setError("");
@@ -1123,28 +1140,72 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
     }
   };
 
+  const scanSelected = async () => {
+    const paths = [...selected];
+    if (paths.length === 0) return;
+    setError("");
+    setScanningPath("(selected)");
+    try {
+      await api.scanArtifactsBatch(repoId, paths);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setScanningPath("");
+    }
+  };
+
+  const openDetails = async (a: Artifact) => {
+    setDetailPath(a.path);
+    setDetail(null);
+    setDetailError("");
+    try {
+      setDetail(await api.getArtifactScan(repoId, a.path));
+    } catch (e) {
+      setDetailError((e as Error).message);
+    }
+  };
+
+  const toggleSelected = (path: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(path); else next.delete(path);
+      return next;
+    });
+  };
+
   return (
     <Card size="sm" className="mb-4">
       <CardContent>
       <div className="mb-4 flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
         <h2 className="m-0 text-base font-semibold">{t("common.artifacts")}</h2>
-        {data && <span className="text-sm text-muted-foreground">{data.count} items · {humanSize(data.total_size)}</span>}
+        {data && <span className="text-sm text-muted-foreground">{data.offset + 1}–{Math.min(data.offset + data.artifacts.length, data.count)} of {data.count} items · {humanSize(data.total_size)}</span>}
       </div>
       {data && <ArtifactScanSummary artifacts={data.artifacts} />}
-      <form className="mb-4 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch" onSubmit={(e) => { e.preventDefault(); load(); }}>
+      <form className="mb-4 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch" onSubmit={(e) => { e.preventDefault(); setOffset(0); load(prefix, 0); }}>
         <Input placeholder="Filter by path prefix (e.g. com/acme or @scope/pkg)"
           value={prefix} onChange={(e) => setPrefix(e.target.value)} />
+        <Select value={String(limit)} onChange={(v) => { const n = Number(v); setLimit(n); setOffset(0); load(prefix, 0, n); }}
+          options={[50, 100, 250, 500].map((n) => ({ value: String(n), label: `${n} rows` }))} />
+        <Select value={status} onChange={setStatus}
+          options={["", "unscanned", "queued", "running", "completed", "failed"].map((s) => ({ value: s, label: s || "all statuses" }))} />
         <Button variant="outline" type="submit">{t("common.filter")}</Button>
       </form>
+      <div className="mb-4 flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+        {canDelete && <Button variant="outline" type="button" disabled={selected.size === 0 || scanningPath === "(selected)"} onClick={scanSelected}>Scan selected ({selected.size})</Button>}
+        <Button variant="outline" type="button" disabled={offset === 0} onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); load(prefix, next); }}>{t("common.newer")}</Button>
+        <Button variant="outline" type="button" disabled={!data || offset + limit >= data.count} onClick={() => { const next = offset + limit; setOffset(next); load(prefix, next); }}>{t("common.older")}</Button>
+      </div>
       {error && <Alert className="mb-4">{error}</Alert>}
       <TableWrap>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>{t("common.path")}</TableHead><TableHead>{t("common.version")}</TableHead><TableHead>{t("common.vuln")}</TableHead><TableHead>Artifact scan</TableHead><TableHead>{t("common.license")}</TableHead><TableHead>{t("common.size")}</TableHead><TableHead>{t("common.type")}</TableHead><TableHead>{t("common.last-accessed")}</TableHead>{canDelete && <TableHead></TableHead>}</TableRow>
+          <TableRow>{canDelete && <TableHead className="w-10"><Checkbox checked={allShownSelected} onCheckedChange={(checked) => setSelected(new Set(checked ? shownArtifacts.map((a) => a.path) : []))} /></TableHead>}<TableHead>{t("common.path")}</TableHead><TableHead>{t("common.version")}</TableHead><TableHead>{t("common.vuln")}</TableHead><TableHead>Artifact scan</TableHead><TableHead>{t("common.license")}</TableHead><TableHead>{t("common.size")}</TableHead><TableHead>{t("common.type")}</TableHead><TableHead>{t("common.last-accessed")}</TableHead><TableHead></TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {data?.artifacts.map((a) => (
+          {shownArtifacts.map((a) => (
             <TableRow key={a.path}>
+              {canDelete && <TableCell><Checkbox checked={selected.has(a.path)} onCheckedChange={(checked) => toggleSelected(a.path, !!checked)} /></TableCell>}
               <TableCell className="break-all font-mono text-xs">{a.path}</TableCell>
               <TableCell>{a.version || "—"}</TableCell>
               <TableCell><SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} /></TableCell>
@@ -1161,20 +1222,21 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               <TableCell className="text-muted-foreground">{humanSize(a.size)}</TableCell>
               <TableCell className="text-muted-foreground">{a.content_type}</TableCell>
               <TableCell className="text-muted-foreground">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</TableCell>
-              {canDelete && (
-                <TableCell className="text-right">
+              <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
+                    <Button variant="outline" type="button" onClick={() => openDetails(a)}>Details</Button>
+                    {canDelete && <>
                     <Button variant="outline" onClick={() => scan(a)} disabled={scanningPath === a.path}>
                       {a.artifact_scan_status ? "Rescan" : "Scan"}
                     </Button>
                     <Button variant="outline" onClick={() => setDeleting(a)}>{t("common.delete")}</Button>
+                    </>}
                   </div>
                 </TableCell>
-              )}
             </TableRow>
           ))}
-          {data && data.artifacts.length === 0 && (
-            <TableRow><TableCell colSpan={canDelete ? 9 : 8} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
+          {data && shownArtifacts.length === 0 && (
+            <TableRow><TableCell colSpan={canDelete ? 10 : 9} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
           )}
         </TableBody>
       </Table>
@@ -1190,8 +1252,63 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
         onConfirm={() => deleting && del(deleting)}
         onCancel={() => setDeleting(null)}
       />
+      <ArtifactScanDetailsModal
+        open={detailPath !== ""}
+        path={detailPath}
+        result={detail}
+        error={detailError}
+        onClose={() => { setDetailPath(""); setDetail(null); setDetailError(""); }}
+      />
       </CardContent>
     </Card>
+  );
+}
+
+function ArtifactScanDetailsModal({ open, path, result, error, onClose }: { open: boolean; path: string; result: ArtifactScanResult | null; error: string; onClose: () => void }) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Artifact scan details</DialogTitle>
+          <DialogDescription className="break-all font-mono text-xs">{path}</DialogDescription>
+        </DialogHeader>
+        {error && <Alert>{error}</Alert>}
+        {!error && !result && <div className="text-sm text-muted-foreground">{`Loading...`}</div>}
+        {result && (
+          <div className="space-y-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Badge variant={result.status === "completed" ? "success" : result.status === "failed" ? "destructive" : "outline"}>{result.status}</Badge>
+              {result.max_severity && <Badge variant={result.max_severity === "critical" || result.max_severity === "high" ? "destructive" : "outline"}>{result.max_severity}</Badge>}
+              <span className="text-sm text-muted-foreground">{[result.scanner, result.scanner_version, result.scanned_at?.slice(0, 19).replace("T", " "), result.database_schema_version].filter(Boolean).join(" · ")}</span>
+            </div>
+            {result.error && <Alert>{result.error}</Alert>}
+            {result.finding_count === 0 ? (
+              <div className="text-sm text-muted-foreground">No vulnerability findings were reported for this artifact.</div>
+            ) : (
+              <TableWrap>
+                <Table>
+                  <TableHeader>
+                    <TableRow><TableHead>Vulnerability</TableHead><TableHead>Severity</TableHead><TableHead>Package</TableHead><TableHead>Version</TableHead><TableHead>Fixed</TableHead><TableHead>Source</TableHead></TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(result.findings ?? []).map((f, idx) => (
+                      <TableRow key={`${f.vulnerability_id}-${f.package_name}-${idx}`}>
+                        <TableCell className="font-mono text-xs">{f.vulnerability_id}</TableCell>
+                        <TableCell><Badge variant={f.severity === "critical" || f.severity === "high" ? "destructive" : "outline"}>{f.severity || "unknown"}</Badge></TableCell>
+                        <TableCell className="break-all font-mono text-xs">{f.package_name || "unknown"}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{f.package_version || "—"}</TableCell>
+                        <TableCell className="break-all text-xs text-muted-foreground">{f.fixed_versions?.length ? f.fixed_versions.join(", ") : "—"}</TableCell>
+                        <TableCell className="break-all text-xs">{f.source_url ? <a href={f.source_url} target="_blank" rel="noreferrer">{f.source || f.source_url}</a> : (f.source || "—")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableWrap>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

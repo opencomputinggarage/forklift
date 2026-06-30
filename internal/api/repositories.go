@@ -542,6 +542,42 @@ type artifactScanJobDTO struct {
 	BlobSHA256 string `json:"blob_sha256"`
 }
 
+type artifactScanBatchReq struct {
+	Paths []string `json:"paths"`
+}
+
+type artifactScanBatchDTO struct {
+	Queued int                  `json:"queued"`
+	Jobs   []artifactScanJobDTO `json:"jobs"`
+}
+
+type artifactScanResultDTO struct {
+	Path                  string                   `json:"path"`
+	Status                string                   `json:"status"`
+	Scanner               string                   `json:"scanner,omitempty"`
+	ScannerVersion        string                   `json:"scanner_version,omitempty"`
+	DatabaseSchemaVersion string                   `json:"database_schema_version,omitempty"`
+	DatabaseBuiltAt       *time.Time               `json:"database_built_at,omitempty"`
+	MaxSeverity           string                   `json:"max_severity,omitempty"`
+	FindingCount          int                      `json:"finding_count"`
+	Error                 string                   `json:"error,omitempty"`
+	ScannedAt             *time.Time               `json:"scanned_at,omitempty"`
+	Findings              []artifactScanFindingDTO `json:"findings,omitempty"`
+}
+
+type artifactScanFindingDTO struct {
+	VulnerabilityID string   `json:"vulnerability_id"`
+	Severity        string   `json:"severity"`
+	PackageName     string   `json:"package_name"`
+	PackageVersion  string   `json:"package_version,omitempty"`
+	PackageType     string   `json:"package_type,omitempty"`
+	PackagePURL     string   `json:"package_purl,omitempty"`
+	FixedVersions   []string `json:"fixed_versions,omitempty"`
+	Source          string   `json:"source,omitempty"`
+	SourceURL       string   `json:"source_url,omitempty"`
+	MatchType       string   `json:"match_type,omitempty"`
+}
+
 // listArtifacts returns the artifacts stored (hosted or cached) in a repository,
 // powering the Nexus-style artifact browser in the UI.
 func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
@@ -558,12 +594,23 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	prefix := r.URL.Query().Get("prefix")
-	arts, err := h.store.ListRepoArtifacts(r.Context(), id, prefix, 500)
+	limit := queryInt(r, "limit", 100)
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	offset := queryInt(r, "offset", 0)
+	if offset < 0 {
+		offset = 0
+	}
+	arts, err := h.store.ListRepoArtifactsPage(r.Context(), id, prefix, limit, offset)
 	if err != nil {
 		mapError(w, err)
 		return
 	}
-	count, _ := h.store.CountArtifacts(r.Context(), id)
+	count, _ := h.store.CountRepoArtifacts(r.Context(), id, prefix)
 	size, _ := h.store.RepoSize(r.Context(), id)
 	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
 	artifactScanScanner := cfg.ArtifactScan.EffectiveScanner()
@@ -620,8 +667,86 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 		out = append(out, dto)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"count": count, "total_size": size, "artifacts": out,
+		"count": count, "total_size": size, "limit": limit, "offset": offset, "artifacts": out,
 	})
+}
+
+// getArtifactScan returns the latest artifact-byte scan details for one stored
+// artifact, including normalized findings when a completed result exists.
+func (h *Handler) getArtifactScan(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(r.Context(), id)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	if !h.canReadRepo(w, r, repo.Name) {
+		return
+	}
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "path required")
+		return
+	}
+	artifact, err := h.store.GetArtifact(r.Context(), id, path)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
+	scanner := cfg.ArtifactScan.EffectiveScanner()
+	configHash := cfg.ArtifactScan.ConfigHash
+
+	if job, jerr := h.store.LatestArtifactScanJob(r.Context(), artifact.BlobSHA256, scanner, configHash); jerr == nil &&
+		(job.Status == artifactscan.StatusQueued || job.Status == artifactscan.StatusRunning) {
+		writeJSON(w, http.StatusOK, artifactScanResultDTO{
+			Path:    artifact.Path,
+			Status:  string(job.Status),
+			Scanner: job.Scanner,
+		})
+		return
+	}
+	res, err := h.store.LatestArtifactScanResult(r.Context(), artifact.BlobSHA256, scanner, configHash)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	out := artifactScanResultDTO{
+		Path:                  artifact.Path,
+		Status:                string(res.Status),
+		Scanner:               res.Scanner,
+		ScannerVersion:        res.ScannerVersion,
+		DatabaseSchemaVersion: res.DatabaseSchemaVersion,
+		MaxSeverity:           string(res.MaxSeverity),
+		FindingCount:          len(res.Findings),
+		Error:                 res.Error,
+	}
+	if !res.DatabaseBuiltAt.IsZero() {
+		t := res.DatabaseBuiltAt
+		out.DatabaseBuiltAt = &t
+	}
+	if !res.ScannedAt.IsZero() {
+		t := res.ScannedAt
+		out.ScannedAt = &t
+	}
+	for _, f := range res.Findings {
+		out.Findings = append(out.Findings, artifactScanFindingDTO{
+			VulnerabilityID: stringOrUnknown(f.VulnerabilityID),
+			Severity:        string(f.Severity),
+			PackageName:     f.PackageName,
+			PackageVersion:  f.PackageVersion,
+			PackageType:     f.PackageType,
+			PackagePURL:     f.PackagePURL,
+			FixedVersions:   f.FixedVersions,
+			Source:          f.Source,
+			SourceURL:       f.SourceURL,
+			MatchType:       f.MatchType,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // scanArtifact enqueues a manual artifact-byte scan for one stored artifact.
@@ -665,6 +790,65 @@ func (h *Handler) scanArtifact(w http.ResponseWriter, r *http.Request) {
 		Scanner:    job.Scanner,
 		BlobSHA256: job.BlobSHA256,
 	})
+}
+
+func (h *Handler) scanArtifactsBatch(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(r.Context(), id)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	var req artifactScanBatchReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	if len(req.Paths) == 0 {
+		writeError(w, http.StatusBadRequest, "paths required")
+		return
+	}
+	if len(req.Paths) > 100 {
+		writeError(w, http.StatusBadRequest, "too many paths; select at most 100")
+		return
+	}
+	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
+	out := artifactScanBatchDTO{Jobs: make([]artifactScanJobDTO, 0, len(req.Paths))}
+	seen := map[string]bool{}
+	for _, rawPath := range req.Paths {
+		path := strings.TrimSpace(rawPath)
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		artifact, err := h.store.GetArtifact(r.Context(), id, path)
+		if err != nil {
+			mapError(w, err)
+			return
+		}
+		jobID, err := randomArtifactScanJobID()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		job, err := h.store.EnqueueArtifactScan(r.Context(), jobID, artifact.BlobSHA256,
+			cfg.ArtifactScan.EffectiveScanner(), cfg.ArtifactScan.ConfigHash, time.Now().UTC())
+		if err != nil {
+			mapError(w, err)
+			return
+		}
+		out.Queued++
+		out.Jobs = append(out.Jobs, artifactScanJobDTO{
+			JobID:      job.ID,
+			Status:     string(job.Status),
+			Scanner:    job.Scanner,
+			BlobSHA256: job.BlobSHA256,
+		})
+	}
+	writeJSON(w, http.StatusAccepted, out)
 }
 
 // deleteArtifact removes artifacts from a repository (admin only, via the
@@ -725,6 +909,25 @@ func randomArtifactScanJobID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b[:]), nil
+}
+
+func stringOrUnknown(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "unknown"
+	}
+	return s
+}
+
+func queryInt(r *http.Request, key string, def int) int {
+	raw := strings.TrimSpace(r.URL.Query().Get(key))
+	if raw == "" {
+		return def
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return def
+	}
+	return n
 }
 
 // upstreamHealthTimeout bounds the whole probe handler — the metadata read plus

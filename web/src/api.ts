@@ -183,7 +183,36 @@ export interface Artifact {
 export interface ArtifactList {
   count: number;
   total_size: number;
+  limit: number;
+  offset: number;
   artifacts: Artifact[];
+}
+
+export interface ArtifactScanFinding {
+  vulnerability_id: string;
+  severity: string;
+  package_name: string;
+  package_version?: string;
+  package_type?: string;
+  package_purl?: string;
+  fixed_versions?: string[];
+  source?: string;
+  source_url?: string;
+  match_type?: string;
+}
+
+export interface ArtifactScanResult {
+  path: string;
+  status: string;
+  scanner?: string;
+  scanner_version?: string;
+  database_schema_version?: string;
+  database_built_at?: string | null;
+  max_severity?: string;
+  finding_count: number;
+  error?: string;
+  scanned_at?: string | null;
+  findings?: ArtifactScanFinding[];
 }
 
 export interface ArtifactScanJob {
@@ -429,10 +458,14 @@ export const api = {
   setRepositoryDisabled: (id: number, disabled: boolean) =>
     req<Repository>("POST", `/repositories/${id}/disabled`, { disabled }),
 
-  listArtifacts: (id: number, prefix = "") =>
-    req<ArtifactList>("GET", `/repositories/${id}/artifacts?prefix=${encodeURIComponent(prefix)}`),
+  listArtifacts: (id: number, prefix = "", limit = 100, offset = 0) =>
+    req<ArtifactList>("GET", `/repositories/${id}/artifacts?prefix=${encodeURIComponent(prefix)}&limit=${limit}&offset=${offset}`),
+  getArtifactScan: (id: number, path: string) =>
+    req<ArtifactScanResult>("GET", `/repositories/${id}/artifacts/scan?path=${encodeURIComponent(path)}`),
   scanArtifact: (id: number, path: string) =>
     req<ArtifactScanJob>("POST", `/repositories/${id}/artifacts/scan?path=${encodeURIComponent(path)}`),
+  scanArtifactsBatch: (id: number, paths: string[]) =>
+    req<{ queued: number; jobs: ArtifactScanJob[] }>("POST", `/repositories/${id}/artifacts/scan-batch`, { paths }),
   deleteArtifact: (id: number, path: string) =>
     req<void>("DELETE", `/repositories/${id}/artifacts?path=${encodeURIComponent(path)}`),
   purgeArtifacts: (id: number) =>

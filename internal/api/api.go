@@ -101,6 +101,7 @@ func (h *Handler) Routes() chi.Router {
 		r.Get("/repositories", h.listRepositories)
 		r.Get("/repositories/{id}", h.getRepository)
 		r.Get("/repositories/{id}/artifacts", h.listArtifacts)
+		r.Get("/repositories/{id}/artifacts/scan", h.getArtifactScan)
 	})
 
 	// Package approvals: administrators plus principals holding the approve
@@ -161,6 +162,7 @@ func (h *Handler) Routes() chi.Router {
 		r.Put("/repositories/{id}", h.updateRepository)
 		r.Post("/repositories/{id}/disabled", h.setRepositoryDisabled)
 		r.Post("/repositories/{id}/artifacts/scan", h.scanArtifact)
+		r.Post("/repositories/{id}/artifacts/scan-batch", h.scanArtifactsBatch)
 		r.Delete("/repositories/{id}", h.deleteRepository)
 		r.Delete("/repositories/{id}/artifacts", h.deleteArtifact)
 		r.Post("/users", h.createUser)

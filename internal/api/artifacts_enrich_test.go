@@ -192,3 +192,93 @@ func TestScanArtifactEnqueuesJob(t *testing.T) {
 		t.Fatalf("manual scan status not visible: %+v", listed.Artifacts)
 	}
 }
+
+func TestArtifactScanDetailsAndBatch(t *testing.T) {
+	srv, store, _ := newConsoleServer(t)
+	ctx := context.Background()
+	id := mkProxyRepo(t, srv.URL, "npm-scan-details")
+
+	paths := []string{"pkg/-/pkg-1.0.0.tgz", "other/-/other-1.0.0.tgz"}
+	for _, p := range paths {
+		if _, err := store.PutArtifact(ctx, meta.Artifact{
+			RepoID: id, Path: p, Version: "1.0.0", BlobSHA256: p + "-sha", Size: 10,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now().UTC()
+	job, err := store.EnqueueArtifactScan(ctx, "scan-detail-job", paths[0]+"-sha", "grype", "", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.ClaimArtifactScanJob(ctx, "worker", now.Add(time.Minute), now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.CompleteArtifactScanJob(ctx, job.ID, "worker", artifactscan.Result{
+		JobID:           job.ID,
+		BlobSHA256:      paths[0] + "-sha",
+		Scanner:         "grype",
+		ScannerVersion:  "1.0.0",
+		DatabaseBuiltAt: now,
+		Status:          artifactscan.StatusCompleted,
+		MaxSeverity:     artifactscan.SeverityHigh,
+		ScannedAt:       now,
+		Findings: []artifactscan.Finding{{
+			VulnerabilityID: "CVE-2026-DETAIL",
+			Severity:        artifactscan.SeverityHigh,
+			PackageName:     "pkg",
+			PackageVersion:  "1.0.0",
+			FixedVersions:   []string{"1.0.1"},
+		}},
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+
+	resp := adminDo(t, http.MethodGet,
+		srv.URL+"/repositories/"+itoa(id)+"/artifacts/scan?path="+url.QueryEscape(paths[0]), "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("scan details status=%d", resp.StatusCode)
+	}
+	var detail struct {
+		Status       string `json:"status"`
+		FindingCount int    `json:"finding_count"`
+		Findings     []struct {
+			VulnerabilityID string `json:"vulnerability_id"`
+			PackageName     string `json:"package_name"`
+		} `json:"findings"`
+	}
+	json.NewDecoder(resp.Body).Decode(&detail)
+	resp.Body.Close()
+	if detail.Status != "completed" || detail.FindingCount != 1 || len(detail.Findings) != 1 || detail.Findings[0].VulnerabilityID != "CVE-2026-DETAIL" {
+		t.Fatalf("detail = %+v", detail)
+	}
+
+	body := `{"paths":["` + paths[0] + `","` + paths[1] + `"]}`
+	resp = adminDo(t, http.MethodPost, srv.URL+"/repositories/"+itoa(id)+"/artifacts/scan-batch", body)
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("batch status=%d", resp.StatusCode)
+	}
+	var batch struct {
+		Queued int `json:"queued"`
+	}
+	json.NewDecoder(resp.Body).Decode(&batch)
+	resp.Body.Close()
+	if batch.Queued != 2 {
+		t.Fatalf("queued = %d, want 2", batch.Queued)
+	}
+
+	resp = adminDo(t, http.MethodGet, srv.URL+"/repositories/"+itoa(id)+"/artifacts?limit=1&offset=1", "")
+	var listed struct {
+		Count     int `json:"count"`
+		Limit     int `json:"limit"`
+		Offset    int `json:"offset"`
+		Artifacts []struct {
+			Path string `json:"path"`
+		} `json:"artifacts"`
+	}
+	json.NewDecoder(resp.Body).Decode(&listed)
+	resp.Body.Close()
+	if listed.Count != 2 || listed.Limit != 1 || listed.Offset != 1 || len(listed.Artifacts) != 1 {
+		t.Fatalf("paged list = %+v", listed)
+	}
+}

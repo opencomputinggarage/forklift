@@ -138,13 +138,22 @@ func (s *Store) ListArtifacts(ctx context.Context, repoID int64, prefix string) 
 // prefix, most-recently-accessed first, capped by limit. It powers the artifact
 // browser in the UI.
 func (s *Store) ListRepoArtifacts(ctx context.Context, repoID int64, prefix string, limit int) ([]Artifact, error) {
+	return s.ListRepoArtifactsPage(ctx, repoID, prefix, limit, 0)
+}
+
+// ListRepoArtifactsPage returns a page of repository artifacts whose path
+// begins with prefix, most-recently-accessed first.
+func (s *Store) ListRepoArtifactsPage(ctx context.Context, repoID int64, prefix string, limit, offset int) ([]Artifact, error) {
 	if limit <= 0 {
 		limit = 500
 	}
+	if offset < 0 {
+		offset = 0
+	}
 	rows, err := s.h().QueryContext(ctx,
 		`SELECT id, repo_id, path, version, blob_sha256, size, content_type, metadata_json, published_at, cached_at, last_accessed_at, updated_at
-         FROM artifacts WHERE repo_id = ? AND path LIKE ? ORDER BY last_accessed_at DESC LIMIT ?`,
-		repoID, prefix+"%", limit)
+         FROM artifacts WHERE repo_id = ? AND path LIKE ? ORDER BY last_accessed_at DESC LIMIT ? OFFSET ?`,
+		repoID, prefix+"%", limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +167,15 @@ func (s *Store) ListRepoArtifacts(ctx context.Context, repoID int64, prefix stri
 		out = append(out, a)
 	}
 	return out, rows.Err()
+}
+
+// CountRepoArtifacts returns the number of artifacts in a repository matching a
+// path prefix.
+func (s *Store) CountRepoArtifacts(ctx context.Context, repoID int64, prefix string) (int64, error) {
+	var n int64
+	err := s.h().QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM artifacts WHERE repo_id = ? AND path LIKE ?`, repoID, prefix+"%").Scan(&n)
+	return n, err
 }
 
 // CountArtifacts returns the number of artifacts in a repository.

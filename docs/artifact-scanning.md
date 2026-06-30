@@ -155,7 +155,20 @@ expired lease can be reclaimed by another worker.
 - `artifact_scan_scanned_at`
 - `artifact_scan_finding_count`
 
-The UI renders these fields in the repository artifact table.
+When a result does not exist yet but a job was already created, the API returns
+the latest job status (`queued`, `running`, `dead`, etc.) as
+`artifact_scan_status`, so operators can distinguish "not scanned yet" from
+"waiting for worker".
+
+The UI exposes artifact scanning in two places:
+
+- **Security tab.** A repository-level Artifact scan policy card controls
+  enablement, scanner name, config hash, severity threshold, action, and whether
+  unscanned blobs are blocked under block posture. The policy flow diagram also
+  shows the artifact scan gate.
+- **Artifacts tab.** The artifact browser shows an Artifact scan column plus a
+  status summary for the current artifact page: queued, running, completed,
+  findings, failed, and unscanned counts.
 
 ## Limits
 

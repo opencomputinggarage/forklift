@@ -33,6 +33,17 @@ func (s *Store) GetArtifactScanJob(ctx context.Context, id string) (artifactscan
            FROM artifact_scan_jobs WHERE id = ?`, id))
 }
 
+// LatestArtifactScanJob returns the newest job for a blob/scanner/config.
+func (s *Store) LatestArtifactScanJob(ctx context.Context, blobSHA256, scanner, configHash string) (artifactscan.Job, error) {
+	return scanArtifactScanJobRow(s.h().QueryRowContext(ctx,
+		`SELECT id, blob_sha256, scanner, scanner_config_hash, status, worker_id, attempts,
+                lease_until, next_run_at, last_heartbeat_at, error, created_at, started_at, finished_at
+           FROM artifact_scan_jobs
+          WHERE blob_sha256 = ? AND scanner = ? AND scanner_config_hash = ?
+          ORDER BY created_at DESC LIMIT 1`,
+		blobSHA256, scanner, configHash))
+}
+
 // ClaimArtifactScanJob atomically claims the oldest due queued job for a worker.
 func (s *Store) ClaimArtifactScanJob(ctx context.Context, workerID string, leaseUntil, now time.Time) (artifactscan.Job, error) {
 	if now.IsZero() {

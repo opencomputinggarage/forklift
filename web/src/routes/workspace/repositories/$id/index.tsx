@@ -249,16 +249,18 @@ function LinesInput({ value, onChange, rows = 3, placeholder }: {
 // PolicyFlow draws every gate left to right in the order a proxy request is
 // evaluated, so an admin sees the whole pipeline at a glance. The order mirrors
 // the serving path: the source-IP allow list runs first, then package approval
-// and the vulnerability and license gates, then the age policy. All gates are
-// always shown; a disabled one is dimmed in place. An enabled node's colour
-// encodes whether it can refuse the request (block/enforce) or merely logs
-// (warn/audit). Every gate is configured by a panel on this same tab.
+// and the vulnerability and license gates, then age and stored-blob artifact
+// scanning. All gates are always shown; a disabled one is dimmed in place. An
+// enabled node's colour encodes whether it can refuse the request
+// (block/enforce) or merely logs (warn/audit). Every gate is configured by a
+// panel on this same tab.
 function PolicyFlow({ config }: { config: RepoConfig }) {
   const { t } = useTranslation();
   const ipacl = config.ip_acl;
   const approval = config.approval;
   const vuln = config.vuln;
   const license = config.license;
+  const artifactScan = config.artifact_scan;
   const age = config.age_policy;
 
   type Sev = "block" | "warn" | "audit";
@@ -301,6 +303,13 @@ function PolicyFlow({ config }: { config: RepoConfig }) {
       enabled: !!age?.enabled,
       severity: age?.action === "warn" ? "warn" : "block",
       action: `${age?.action || "block"}${age?.min_age && age.min_age !== "0s" ? ` · <${age.min_age}` : ""}`,
+    },
+    {
+      name: "Artifact scan",
+      label: "Artifact scan",
+      enabled: !!artifactScan?.enabled,
+      severity: sev(artifactScan?.action),
+      action: `${artifactScan?.action || "audit"} · ≥${artifactScan?.threshold || "high"}`,
     },
   ];
 
@@ -543,7 +552,8 @@ function Settings({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
 // Security collects everything that governs who may reach the repository and
 // what is allowed to pass: the source-IP allow list (every repo type) and, for
 // a proxy, the supply-chain gates (age, package approval, vulnerability and
-// license policy). Saving writes the whole repo config, same as Settings.
+// license policy), plus artifact-byte scan gating for stored blobs. Saving
+// writes the whole repo config, same as Settings.
 function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: Repository) => void; canWrite: boolean }) {
   const { t } = useTranslation();
   const [error, setError] = useState("");
@@ -590,6 +600,7 @@ function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
   const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
   const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
+  const artifactScan = repo.config.artifact_scan ?? { enabled: false, scanner: "grype", action: "audit", threshold: "high" };
   // Source-IP ACL applies to every repository type (including group entry).
   const ipacl = repo.config.ip_acl ?? { enabled: false, allow: [] };
   // Approval-notification receivers selected for this repository.
@@ -894,6 +905,53 @@ function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
         </Card>
       )}
 
+      {repo.type !== "group" && (
+        <Card size="sm" className="mb-4">
+          <CardContent>
+          <h2 className="m-0 mb-4 text-base font-semibold">Artifact scan policy <span className="text-xs font-normal text-muted-foreground">stored blob gate</span></h2>
+          <label className="mb-4 flex items-center gap-2 text-sm">
+            <Checkbox checked={artifactScan.enabled}
+              onCheckedChange={(checked) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, enabled: !!checked } } })} />
+            <span>Gate downloads by the latest isolated scanner result</span>
+          </label>
+          <FieldGroup className="grid gap-4 md:grid-cols-2">
+            <Field><FieldLabel>Scanner</FieldLabel>
+              <Input value={artifactScan.scanner || "grype"}
+                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, scanner: e.target.value.trim() || "grype" } } })} /></Field>
+            <Field><FieldLabel>Config hash</FieldLabel>
+              <Input value={artifactScan.config_hash || ""}
+                placeholder="default"
+                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, config_hash: e.target.value.trim() } } })} /></Field>
+            <Field><FieldLabel>{t("common.threshold")}</FieldLabel>
+              <Select value={artifactScan.threshold || "high"}
+                onChange={(v) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, threshold: v } } })}
+                options={[
+                  { value: "critical", label: "critical" },
+                  { value: "high", label: "high" },
+                  { value: "medium", label: "medium" },
+                  { value: "low", label: "low" },
+                ]} /></Field>
+            <Field><FieldLabel>{t("common.action")}</FieldLabel>
+              <Select value={artifactScan.action || "audit"}
+                onChange={(v) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, action: v } } })}
+                options={[
+                  { value: "block", label: "block (refuse to serve)" },
+                  { value: "warn", label: "warn (serve, log)" },
+                  { value: "audit", label: "audit (serve, log)" },
+                ]} /></Field>
+          </FieldGroup>
+          <label className="mt-3 flex items-center gap-2 text-sm">
+            <Checkbox checked={!!artifactScan.block_unscanned}
+              onCheckedChange={(checked) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, block_unscanned: !!checked } } })} />
+            <span>Block artifacts with no completed scan result when action is block</span>
+          </label>
+          <p className="mb-0 mt-4 text-sm text-muted-foreground">
+            The server only checks stored results here. Scanner execution stays in the isolated worker; changing scanner config should also change the config hash.
+          </p>
+          </CardContent>
+        </Card>
+      )}
+
       </fieldset>
 
       {error && <Alert className="mb-4">{error}</Alert>}
@@ -1058,6 +1116,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
         <h2 className="m-0 text-base font-semibold">{t("common.artifacts")}</h2>
         {data && <span className="text-sm text-muted-foreground">{data.count} items · {humanSize(data.total_size)}</span>}
       </div>
+      {data && <ArtifactScanSummary artifacts={data.artifacts} />}
       <form className="mb-4 flex items-center gap-2 max-sm:flex-col max-sm:items-stretch" onSubmit={(e) => { e.preventDefault(); load(); }}>
         <Input placeholder="Filter by path prefix (e.g. com/acme or @scope/pkg)"
           value={prefix} onChange={(e) => setPrefix(e.target.value)} />
@@ -1114,6 +1173,35 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       />
       </CardContent>
     </Card>
+  );
+}
+
+function ArtifactScanSummary({ artifacts }: { artifacts: Artifact[] }) {
+  const counts = artifacts.reduce((acc, artifact) => {
+    const status = artifact.artifact_scan_status || "unscanned";
+    acc.total += 1;
+    acc[status] = (acc[status] || 0) + 1;
+    const findingCount = artifact.artifact_scan_finding_count ?? 0;
+    if (status === "completed" && findingCount > 0) acc.findings += 1;
+    return acc;
+  }, { total: 0, queued: 0, running: 0, completed: 0, failed: 0, dead: 0, unscanned: 0, findings: 0 } as Record<string, number>);
+
+  const items = [
+    { label: "queued", value: counts.queued, variant: "outline" as const },
+    { label: "running", value: counts.running, variant: "warning" as const },
+    { label: "completed", value: counts.completed, variant: "success" as const },
+    { label: "findings", value: counts.findings, variant: counts.findings > 0 ? "destructive" as const : "outline" as const },
+    { label: "failed", value: (counts.failed || 0) + (counts.dead || 0), variant: "destructive" as const },
+    { label: "unscanned", value: counts.unscanned, variant: "outline" as const },
+  ];
+
+  return (
+    <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 rounded-[var(--radius)] border border-border bg-muted/30 px-3 py-2">
+      <span className="mr-1 text-sm font-medium">Artifact scan</span>
+      {items.map((item) => (
+        <Badge key={item.label} variant={item.variant}>{item.label} {item.value}</Badge>
+      ))}
+    </div>
   );
 }
 

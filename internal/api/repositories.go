@@ -599,6 +599,9 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 				scannedAt := res.ScannedAt
 				dto.ArtifactScanScannedAt = &scannedAt
 			}
+		} else if job, jerr := h.store.LatestArtifactScanJob(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); jerr == nil {
+			dto.ArtifactScanStatus = string(job.Status)
+			dto.ArtifactScanScanner = job.Scanner
 		}
 		out = append(out, dto)
 	}

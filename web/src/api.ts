@@ -38,6 +38,14 @@ export interface RepoConfig {
     allow?: string[];
     block_unresolved?: boolean;
   };
+  artifact_scan?: {
+    enabled: boolean;
+    scanner?: string;
+    config_hash?: string;
+    threshold?: string;
+    action?: string;
+    block_unscanned?: boolean;
+  };
   group: {
     members?: string[];
   };

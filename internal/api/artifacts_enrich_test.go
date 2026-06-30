@@ -104,3 +104,39 @@ func TestListArtifactsEnriched(t *testing.T) {
 		t.Fatalf("prefix filter returned %d, want 0", len(out.Artifacts))
 	}
 }
+
+func TestListArtifactsShowsPendingArtifactScanJob(t *testing.T) {
+	srv, store, _ := newConsoleServer(t)
+	ctx := context.Background()
+	id := mkProxyRepo(t, srv.URL, "npm-pending")
+
+	const artPath = "pkg/-/pkg-1.0.0.tgz"
+	if _, err := store.PutArtifact(ctx, meta.Artifact{
+		RepoID: id, Path: artPath, Version: "1.0.0", BlobSHA256: "queued-sha", Size: 10,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.EnqueueArtifactScan(ctx, "scan-job-queued", "queued-sha", "grype", "", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	resp := adminDo(t, http.MethodGet, srv.URL+"/repositories/"+itoa(id)+"/artifacts", "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("list artifacts status=%d", resp.StatusCode)
+	}
+	var out struct {
+		Artifacts []struct {
+			Path                string `json:"path"`
+			ArtifactScanStatus  string `json:"artifact_scan_status"`
+			ArtifactScanScanner string `json:"artifact_scan_scanner"`
+		} `json:"artifacts"`
+	}
+	json.NewDecoder(resp.Body).Decode(&out)
+	resp.Body.Close()
+	if len(out.Artifacts) != 1 {
+		t.Fatalf("artifact count=%d, want 1", len(out.Artifacts))
+	}
+	if out.Artifacts[0].ArtifactScanStatus != "queued" || out.Artifacts[0].ArtifactScanScanner != "grype" {
+		t.Fatalf("pending scan status not attached: %+v", out.Artifacts[0])
+	}
+}

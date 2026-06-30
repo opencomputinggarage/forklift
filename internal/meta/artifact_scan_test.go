@@ -25,6 +25,13 @@ func TestArtifactScanJobLifecycle(t *testing.T) {
 	if job.Status != artifactscan.StatusQueued {
 		t.Fatalf("status = %s", job.Status)
 	}
+	latestJob, err := s.LatestArtifactScanJob(ctx, art.BlobSHA256, "grype", "cfg")
+	if err != nil {
+		t.Fatalf("latest job: %v", err)
+	}
+	if latestJob.ID != job.ID || latestJob.Status != artifactscan.StatusQueued {
+		t.Fatalf("latest job = %+v", latestJob)
+	}
 	claimed, err := s.ClaimArtifactScanJob(ctx, "worker-1", now.Add(time.Minute), now)
 	if err != nil {
 		t.Fatalf("claim: %v", err)

@@ -99,40 +99,42 @@ Build the worker image with the Docker target:
 docker build --target scanner-runtime -t ghcr.io/example/forklift-scanner:dev .
 ```
 
-## Local end-to-end test
+## Local development test
 
 Use this flow to verify the feature without installing Grype on the host. It
-requires Docker and `jq`. The server runs locally, while the scanner runs in the
+requires Docker. The server runs locally, while the scanner runs in the
 `scanner-runtime` container that already contains Grype.
 
-1. Build the server and scanner images:
+Start the local server with artifact scanning enabled:
+
+```bash
+make artifact-scan-dev
+```
+
+The target runs forklift on `127.0.0.1:18080`, disables OSV/deps.dev so the
+test only exercises artifact-byte scanning, and prints the worker token and
+Docker worker command. Override defaults with environment variables, for
+example:
+
+```bash
+FORKLIFT_SCAN_DEV_PORT=19080 FORKLIFT_SCAN_DEV_DATA_DIR=/tmp/forklift-scan-dev make artifact-scan-dev
+```
+
+Then use another terminal for the remaining steps.
+
+1. Build the scanner image:
 
    ```bash
-   go build -o /tmp/forklift ./cmd/forklift
    docker build --target scanner-runtime -t forklift-scanner:dev .
    ```
 
-2. Start a clean local server with artifact scanning enabled. OSV/deps.dev are
-   disabled here so the test only exercises artifact-byte scanning:
-
-   ```bash
-   rm -rf /tmp/forklift-scan-e2e
-   FORKLIFT_DATA_DIR=/tmp/forklift-scan-e2e \
-   FORKLIFT_BOOTSTRAP_ADMIN_PASSWORD=adminpw \
-   /tmp/forklift \
-     --osv-url= \
-     --deps-dev-url= \
-     --artifact-scan-enabled \
-     --artifact-scan-worker-token=dev-scan-token
-   ```
-
-3. Log in and create a hosted Maven repository with artifact scan policy enabled:
+2. Log in and create a hosted Maven repository with artifact scan policy enabled:
 
    ```bash
    curl -fsS -c /tmp/forklift.cookies \
      -H 'Content-Type: application/json' \
      -d '{"username":"admin","password":"adminpw"}' \
-     http://127.0.0.1:8080/api/v1/login
+     http://127.0.0.1:18080/api/v1/login
 
    curl -fsS -b /tmp/forklift.cookies \
      -H 'Content-Type: application/json' \
@@ -149,10 +151,10 @@ requires Docker and `jq`. The server runs locally, while the scanner runs in the
          }
        }
      }' \
-     http://127.0.0.1:8080/api/v1/repositories
+     http://127.0.0.1:18080/api/v1/repositories
    ```
 
-4. Upload a small artifact. This creates a blob and enqueues an artifact scan
+3. Upload a small artifact. This creates a blob and enqueues an artifact scan
    job:
 
    ```bash
@@ -160,23 +162,23 @@ requires Docker and `jq`. The server runs locally, while the scanner runs in the
 
    curl -fsS -u admin:adminpw -X PUT \
      --data-binary @/tmp/forklift-sample.jar \
-     http://127.0.0.1:8080/maven/maven-local-scan/com/acme/demo/1.0.0/demo-1.0.0.jar
+     http://127.0.0.1:18080/maven/maven-local-scan/com/acme/demo/1.0.0/demo-1.0.0.jar
    ```
 
-5. Confirm the UI/API sees the pending scan:
+4. Confirm the UI/API sees the pending scan:
 
    ```bash
-   repo_id=$(curl -fsS -b /tmp/forklift.cookies http://127.0.0.1:8080/api/v1/repositories \
+   repo_id=$(curl -fsS -b /tmp/forklift.cookies http://127.0.0.1:18080/api/v1/repositories \
      | jq -r '.[] | select(.name=="maven-local-scan") | .id')
 
    curl -fsS -b /tmp/forklift.cookies \
-     "http://127.0.0.1:8080/api/v1/repositories/${repo_id}/artifacts" \
+     "http://127.0.0.1:18080/api/v1/repositories/${repo_id}/artifacts" \
      | jq '.artifacts[] | {path, artifact_scan_status, artifact_scan_scanner}'
    ```
 
    Expected before the worker runs: `artifact_scan_status` is `queued`.
 
-6. Run the scanner container once. On Docker Desktop for macOS/Windows,
+5. Run the scanner container once. On Docker Desktop for macOS/Windows,
    `host.docker.internal` reaches the host server:
 
    ```bash
@@ -184,20 +186,20 @@ requires Docker and `jq`. The server runs locally, while the scanner runs in the
      -e GRYPE_DB_AUTO_UPDATE=false \
      -e GRYPE_CHECK_FOR_APP_UPDATE=false \
      forklift-scanner:dev \
-       --server=http://host.docker.internal:8080 \
+      --server=http://host.docker.internal:18080 \
        --worker-id=local-docker-worker \
        --worker-token=dev-scan-token \
        --work-dir=/work \
        --once
    ```
 
-   On Linux, use `--network=host` and `--server=http://127.0.0.1:8080` instead.
+   On Linux, use `--network=host` and `--server=http://127.0.0.1:18080` instead.
 
-7. Query the artifact list again:
+6. Query the artifact list again:
 
    ```bash
    curl -fsS -b /tmp/forklift.cookies \
-     "http://127.0.0.1:8080/api/v1/repositories/${repo_id}/artifacts" \
+     "http://127.0.0.1:18080/api/v1/repositories/${repo_id}/artifacts" \
      | jq '.artifacts[] | {
        path,
        artifact_scan_status,

@@ -11,7 +11,7 @@ COVER_MIN   ?= 73
 PLATFORMS   ?= linux/amd64,linux/arm64
 DATA_DIR    ?= ./.data
 
-.PHONY: all build run dev test coverage fmt lint vet tidy clean web-dev web-build docker-build docker-push helm-lint helm-template creds
+.PHONY: all build run dev test coverage fmt lint vet tidy clean web-dev web-build artifact-scan-dev docker-build docker-push helm-lint helm-template creds
 
 all: fmt vet lint test build
 
@@ -62,6 +62,26 @@ tidy:
 ## web-build: build the React UI into internal/webui/dist (embedded into the binary)
 web-build:
 	cd web && mise exec -- pnpm install --frozen-lockfile && mise exec -- pnpm run build
+
+## artifact-scan-dev: run a local server with artifact scanning enabled on port 18080
+artifact-scan-dev:
+	@echo "artifact scan dev server: http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-18080}"
+	@echo "login: $${FORKLIFT_SCAN_DEV_ADMIN_USER:-admin} / $${FORKLIFT_SCAN_DEV_ADMIN_PASS:-adminpw}"
+	@echo "worker token: $${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}"
+	@echo "worker image build: docker build --target scanner-runtime -t forklift-scanner:dev ."
+	@echo "worker run (Docker Desktop): docker run --rm forklift-scanner:dev --server=http://host.docker.internal:$${FORKLIFT_SCAN_DEV_PORT:-18080} --worker-id=local-worker --worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} --once"
+	FORKLIFT_DATA_DIR=$${FORKLIFT_SCAN_DEV_DATA_DIR:-/tmp/forklift-scan-dev} \
+	FORKLIFT_HTTP_ADDR=:$${FORKLIFT_SCAN_DEV_PORT:-18080} \
+	FORKLIFT_METRICS_ADDR=:$${FORKLIFT_SCAN_DEV_METRICS_PORT:-18081} \
+	FORKLIFT_LOG_FORMAT=text \
+	FORKLIFT_LOG_LEVEL=debug \
+	FORKLIFT_BOOTSTRAP_ADMIN_USER=$${FORKLIFT_SCAN_DEV_ADMIN_USER:-admin} \
+	FORKLIFT_BOOTSTRAP_ADMIN_PASSWORD=$${FORKLIFT_SCAN_DEV_ADMIN_PASS:-adminpw} \
+	go run $(PKG) \
+		--osv-url= \
+		--deps-dev-url= \
+		--artifact-scan-enabled \
+		--artifact-scan-worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}
 
 ## creds: list local users and password hashes from the local DB (plaintext is bcrypt-hashed and unrecoverable; the generated admin password is only printed once in bootstrap logs)
 creds:

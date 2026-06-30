@@ -33,6 +33,23 @@ func (c *negCache) has(key string) bool {
 	return true
 }
 
+// remaining returns the time left before key expires, and whether key is still
+// live. Used by the upstream cooldown to set a Retry-After hint for clients.
+func (c *negCache) remaining(key string) (time.Duration, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	exp, ok := c.entries[key]
+	if !ok {
+		return 0, false
+	}
+	d := exp.Sub(c.now())
+	if d <= 0 {
+		delete(c.entries, key)
+		return 0, false
+	}
+	return d, true
+}
+
 func (c *negCache) set(key string, ttl time.Duration) {
 	if ttl <= 0 {
 		return

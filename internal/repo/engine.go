@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,6 +18,17 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/storage"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/version"
+)
+
+const (
+	// defaultUpstreamCooldown is how long an upstream coordinate is shielded from
+	// re-fetching after a 429/503 with no usable Retry-After, so client retries
+	// are answered locally instead of forwarded into a rate-limit storm.
+	defaultUpstreamCooldown = 15 * time.Second
+	// maxUpstreamCooldown caps a Retry-After-derived cooldown so a hostile or
+	// buggy upstream cannot park a coordinate for an unbounded time.
+	maxUpstreamCooldown = 5 * time.Minute
 )
 
 // kind classifies a request target, which selects the cache freshness policy.
@@ -37,6 +49,14 @@ type Engine struct {
 	extClient *http.Client
 	log       *slog.Logger
 	neg       *negCache
+	// cool shields a coordinate from re-fetching for a short window after the
+	// upstream returned 429/503, keyed like neg by repo-relative path.
+	cool *negCache
+	// flight collapses concurrent identical proxy fetches into one upstream
+	// round-trip so a cold cache cannot fan a burst of identical requests out
+	// into a matching burst of upstream requests.
+	flight    *flight
+	userAgent string
 	now       func() time.Time
 	// onStore, when set, is invoked after a proxy fetch caches an artifact, so
 	// the manager can enqueue vulnerability/license scanning for it. Best-effort
@@ -59,6 +79,9 @@ func NewEngine(store *meta.Store, blobs storage.BlobStore, log *slog.Logger, reg
 		extClient: newPublicOnlyClient(60 * time.Second),
 		log:       log,
 		neg:       newNegCache(),
+		cool:      newNegCache(),
+		flight:    newFlight(),
+		userAgent: "forklift/" + version.Version,
 		now:       time.Now,
 		cacheHits: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: "forklift", Name: "cache_hits_total", Help: "Proxy cache hits.",
@@ -136,18 +159,130 @@ func (e *Engine) serve(w http.ResponseWriter, r *http.Request, spec fetchSpec) {
 	e.fetchAndServe(w, r, spec, key)
 }
 
+// fetchKind classifies the result of a coalesced upstream fetch so each waiting
+// caller can render its own response.
+type fetchKind int
+
+const (
+	fetchStored     fetchKind = iota // artifact is now cached; serve it from the store
+	fetchNotFound                    // upstream 404 (negative-cached)
+	fetchAgeBlocked                  // age policy blocked the artifact
+	fetchRetry                       // upstream 429/503; cooled down, ask client to retry
+	fetchError                       // any other failure
+)
+
+// fetchOutcome is the shared result of one coalesced fetch.
+type fetchOutcome struct {
+	kind       fetchKind
+	status     int    // for fetchRetry: 429 or 503 to relay to clients
+	retryAfter string // for fetchRetry: seconds, set as the Retry-After header
+}
+
 func (e *Engine) fetchAndServe(w http.ResponseWriter, r *http.Request, spec fetchSpec, key string) {
-	ctx := r.Context()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, spec.upstreamURL, nil)
-	if err != nil {
-		http.Error(w, "bad upstream url", http.StatusBadGateway)
+	// Recently rate-limited: answer locally so client retries do not re-enter the
+	// upstream storm. Relay a Retry-After so the build tool backs off correctly.
+	if d, ok := e.cool.remaining(key); ok {
+		e.writeRetry(w, http.StatusServiceUnavailable, retryAfterSeconds(d))
 		return
 	}
-	client := e.client
-	if spec.untrustedURL {
-		client = e.extClient
+
+	// Pass-through repositories stream the body straight to the client and cannot
+	// be coalesced (each caller needs its own stream), so they take a direct path.
+	if !spec.cfg.Cache.Enabled {
+		e.fetchPassthrough(w, r, spec, key)
+		return
 	}
-	resp, err := client.Do(req)
+
+	// Collapse concurrent identical fetches into one upstream round-trip. The
+	// shared fetch is detached from any single client's cancellation so a waiter
+	// disconnecting cannot abort the fetch the others depend on.
+	outcome := e.flight.do(key, func() fetchOutcome {
+		return e.fetchAndStore(context.WithoutCancel(r.Context()), spec, key)
+	})
+
+	switch outcome.kind {
+	case fetchStored:
+		art, err := e.store.GetArtifact(r.Context(), spec.repo.ID, spec.path)
+		if err != nil {
+			http.Error(w, "cache read failed", http.StatusInternalServerError)
+			return
+		}
+		n := e.serveArtifact(w, r, art)
+		e.bytes.WithLabelValues("egress", spec.repo.Format).Add(float64(n))
+	case fetchNotFound:
+		http.NotFound(w, r)
+	case fetchAgeBlocked:
+		http.Error(w, "blocked by age policy", http.StatusNotFound)
+	case fetchRetry:
+		e.writeRetry(w, outcome.status, outcome.retryAfter)
+	default:
+		http.Error(w, "upstream error", http.StatusBadGateway)
+	}
+}
+
+// fetchAndStore performs the upstream GET and caches the result. It writes no
+// HTTP response; it records side effects (cached artifact, negative entry, or
+// cooldown) and returns an outcome each caller renders independently. ctx must
+// be detached from individual client cancellation.
+func (e *Engine) fetchAndStore(ctx context.Context, spec fetchSpec, key string) fetchOutcome {
+	// A concurrent caller we were coalesced behind may have just populated the
+	// cache; serve that instead of re-fetching.
+	if art, err := e.store.GetArtifact(ctx, spec.repo.ID, spec.path); err == nil && e.fresh(art, spec.cfg, spec.kind) {
+		return fetchOutcome{kind: fetchStored}
+	}
+
+	resp, err := e.upstreamGet(ctx, spec)
+	if err != nil {
+		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
+		e.log.Error("upstream fetch failed", "repo", spec.repo.Name, "url", spec.upstreamURL, "err", err)
+		return fetchOutcome{kind: fetchError}
+	}
+	defer resp.Body.Close()
+
+	switch {
+	case resp.StatusCode == http.StatusNotFound:
+		e.neg.set(key, spec.cfg.Cache.NegativeTTL.D())
+		return fetchOutcome{kind: fetchNotFound}
+	case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusServiceUnavailable:
+		d := parseRetryAfter(resp.Header.Get("Retry-After"), e.now())
+		e.cool.set(key, d)
+		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
+		e.log.Warn("upstream rate-limited; cooling down",
+			"repo", spec.repo.Name, "url", spec.upstreamURL, "status", resp.StatusCode, "cooldown", d.String())
+		return fetchOutcome{kind: fetchRetry, status: resp.StatusCode, retryAfter: retryAfterSeconds(d)}
+	case resp.StatusCode < 200 || resp.StatusCode >= 300:
+		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
+		e.log.Error("upstream non-2xx", "repo", spec.repo.Name, "url", spec.upstreamURL, "status", resp.StatusCode)
+		return fetchOutcome{kind: fetchError}
+	}
+
+	var published *time.Time
+	if spec.extractPublished != nil {
+		published = spec.extractPublished(resp)
+	}
+	if blocked := e.evalAge(spec, published); blocked {
+		return fetchOutcome{kind: fetchAgeBlocked}
+	}
+
+	contentType := spec.contentType
+	if contentType == "" {
+		contentType = resp.Header.Get("Content-Type")
+	}
+	if _, err := e.storeArtifact(ctx, spec, resp.Body, contentType, published); err != nil {
+		e.log.Error("cache write failed", "repo", spec.repo.Name, "path", spec.path, "err", err)
+		return fetchOutcome{kind: fetchError}
+	}
+	e.maybeEvict(ctx, spec)
+	if e.onStore != nil {
+		e.onStore(spec.repo, spec.path)
+	}
+	return fetchOutcome{kind: fetchStored}
+}
+
+// fetchPassthrough serves a cache-disabled proxy repository, streaming the
+// upstream body straight to the client without persisting it.
+func (e *Engine) fetchPassthrough(w http.ResponseWriter, r *http.Request, spec fetchSpec, key string) {
+	resp, err := e.upstreamGet(r.Context(), spec)
 	if err != nil {
 		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
 		e.log.Error("upstream fetch failed", "repo", spec.repo.Name, "url", spec.upstreamURL, "err", err)
@@ -158,8 +293,15 @@ func (e *Engine) fetchAndServe(w http.ResponseWriter, r *http.Request, spec fetc
 
 	switch {
 	case resp.StatusCode == http.StatusNotFound:
-		e.neg.set(key, spec.cfg.Cache.NegativeTTL.D())
 		http.NotFound(w, r)
+		return
+	case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusServiceUnavailable:
+		d := parseRetryAfter(resp.Header.Get("Retry-After"), e.now())
+		e.cool.set(key, d)
+		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
+		e.log.Warn("upstream rate-limited; cooling down",
+			"repo", spec.repo.Name, "url", spec.upstreamURL, "status", resp.StatusCode, "cooldown", d.String())
+		e.writeRetry(w, resp.StatusCode, retryAfterSeconds(d))
 		return
 	case resp.StatusCode < 200 || resp.StatusCode >= 300:
 		e.upstreamErr.WithLabelValues(spec.repo.Name).Inc()
@@ -175,37 +317,95 @@ func (e *Engine) fetchAndServe(w http.ResponseWriter, r *http.Request, spec fetc
 	if e.ageGate(w, spec, published) {
 		return
 	}
-
 	contentType := spec.contentType
 	if contentType == "" {
 		contentType = resp.Header.Get("Content-Type")
 	}
-
-	if !spec.cfg.Cache.Enabled {
-		// Pass-through without persisting.
-		if contentType != "" {
-			w.Header().Set("Content-Type", contentType)
-		}
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		n, _ := io.Copy(w, resp.Body)
-		e.bytes.WithLabelValues("egress", spec.repo.Format).Add(float64(n))
+	if contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
-
-	art, err := e.storeArtifact(ctx, spec, resp.Body, contentType, published)
-	if err != nil {
-		http.Error(w, "cache write failed", http.StatusInternalServerError)
-		return
-	}
-	e.maybeEvict(ctx, spec)
-	if e.onStore != nil {
-		e.onStore(spec.repo, spec.path)
-	}
-	n := e.serveArtifact(w, r, art)
+	n, _ := io.Copy(w, resp.Body)
 	e.bytes.WithLabelValues("egress", spec.repo.Format).Add(float64(n))
+}
+
+// upstreamGet issues the upstream GET with a descriptive User-Agent. Public
+// registries (notably Maven Central) throttle the default Go user-agent harder,
+// so identifying forklift materially reduces 429s.
+func (e *Engine) upstreamGet(ctx context.Context, spec fetchSpec) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, spec.upstreamURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", e.userAgent)
+	client := e.client
+	if spec.untrustedURL {
+		client = e.extClient
+	}
+	return client.Do(req)
+}
+
+// evalAge applies the age policy without writing a response, returning true when
+// the artifact must be blocked. Counters and logs mirror ageGate.
+func (e *Engine) evalAge(spec fetchSpec, published *time.Time) bool {
+	decision, reason := evaluateAge(spec.cfg.AgePolicy, published, e.now())
+	switch decision {
+	case ageBlock:
+		e.ageBlocks.WithLabelValues(spec.repo.Name, "block").Inc()
+		e.log.Warn("age policy blocked artifact", "repo", spec.repo.Name, "path", spec.path, "reason", reason)
+		return true
+	case ageWarn:
+		e.ageBlocks.WithLabelValues(spec.repo.Name, "warn").Inc()
+		e.log.Warn("age policy warning", "repo", spec.repo.Name, "path", spec.path, "reason", reason)
+		return false
+	default:
+		return false
+	}
+}
+
+// writeRetry tells the client to back off, relaying the upstream's status
+// (429/503) and a Retry-After hint so build tools wait instead of hammering.
+func (e *Engine) writeRetry(w http.ResponseWriter, status int, retryAfter string) {
+	if status != http.StatusTooManyRequests && status != http.StatusServiceUnavailable {
+		status = http.StatusServiceUnavailable
+	}
+	if retryAfter != "" {
+		w.Header().Set("Retry-After", retryAfter)
+	}
+	http.Error(w, "upstream rate-limited, retry later", status)
+}
+
+// parseRetryAfter interprets an HTTP Retry-After header (delta-seconds or an
+// HTTP date), clamped to [defaultUpstreamCooldown, maxUpstreamCooldown]. A
+// missing or unparseable value falls back to the default cooldown.
+func parseRetryAfter(h string, now time.Time) time.Duration {
+	d := defaultUpstreamCooldown
+	if h != "" {
+		if secs, err := strconv.Atoi(h); err == nil {
+			d = time.Duration(secs) * time.Second
+		} else if t, err := http.ParseTime(h); err == nil {
+			d = t.Sub(now)
+		}
+	}
+	if d < defaultUpstreamCooldown {
+		d = defaultUpstreamCooldown
+	}
+	if d > maxUpstreamCooldown {
+		d = maxUpstreamCooldown
+	}
+	return d
+}
+
+// retryAfterSeconds renders a cooldown as a whole-seconds Retry-After value.
+func retryAfterSeconds(d time.Duration) string {
+	secs := int(d.Round(time.Second) / time.Second)
+	if secs < 1 {
+		secs = 1
+	}
+	return strconv.Itoa(secs)
 }
 
 // storeArtifact streams body into the blob store and records the artifact.

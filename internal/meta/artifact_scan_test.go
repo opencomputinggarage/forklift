@@ -83,3 +83,31 @@ func TestClaimArtifactScanJobEmpty(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
+
+func TestClaimArtifactScanJobReclaimsExpiredRunning(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, _ := s.CreateRepository(ctx, Repository{Name: "r", Format: FormatNPM, Type: TypeHosted})
+	art, err := s.PutArtifact(ctx, Artifact{RepoID: repo.ID, Path: "a.tgz", BlobSHA256: "abc", Size: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 7, 1, 1, 2, 3, 0, time.UTC)
+	job, err := s.EnqueueArtifactScan(ctx, "job-expired", art.BlobSHA256, "grype", "cfg", now)
+	if err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	if _, err := s.ClaimArtifactScanJob(ctx, "worker-1", now.Add(time.Minute), now); err != nil {
+		t.Fatalf("first claim: %v", err)
+	}
+	if _, err := s.ClaimArtifactScanJob(ctx, "worker-2", now.Add(2*time.Minute), now.Add(30*time.Second)); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("non-expired claim err = %v, want ErrNotFound", err)
+	}
+	reclaimed, err := s.ClaimArtifactScanJob(ctx, "worker-2", now.Add(3*time.Minute), now.Add(2*time.Minute))
+	if err != nil {
+		t.Fatalf("reclaim: %v", err)
+	}
+	if reclaimed.ID != job.ID || reclaimed.WorkerID != "worker-2" || reclaimed.Attempts != 2 {
+		t.Fatalf("reclaimed = %+v", reclaimed)
+	}
+}

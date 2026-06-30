@@ -41,3 +41,20 @@ func TestNormalize(t *testing.T) {
 		t.Fatalf("findings = %+v", got.Findings)
 	}
 }
+
+func TestParseDBStatus(t *testing.T) {
+	got, err := parseDBStatus([]byte(`{
+	  "schemaVersion": "v6.1.7",
+	  "built": "2026-06-30T07:34:46Z",
+	  "valid": true
+	}`))
+	if err != nil {
+		t.Fatalf("parse db status: %v", err)
+	}
+	if got.SchemaVersion != "v6.1.7" {
+		t.Fatalf("schema version = %q", got.SchemaVersion)
+	}
+	if got.Built.IsZero() {
+		t.Fatal("built time is zero")
+	}
+}

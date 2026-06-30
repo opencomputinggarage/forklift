@@ -49,6 +49,21 @@ func (d Driver) Version(ctx context.Context) (string, error) {
 	return doc.Version, nil
 }
 
+// DBStatus returns local Grype vulnerability database metadata.
+func (d Driver) DBStatus(ctx context.Context) (dbStatusDoc, error) {
+	cmd := exec.CommandContext(ctx, d.binary(), "db", "status", "-o", "json")
+	cmd.Env = append(os.Environ(),
+		"GRYPE_DB_AUTO_UPDATE=false",
+		"GRYPE_CHECK_FOR_APP_UPDATE=false",
+	)
+	cmd.Env = append(cmd.Env, d.Env...)
+	out, err := cmd.Output()
+	if err != nil {
+		return dbStatusDoc{}, err
+	}
+	return parseDBStatus(out)
+}
+
 // Scan runs grype against the prepared artifact input directory.
 func (d Driver) Scan(ctx context.Context, artifact scannerworker.PreparedArtifact) (artifactscan.Result, error) {
 	outPath := filepath.Join(artifact.OutputDir, "grype.json")
@@ -76,6 +91,18 @@ func (d Driver) Scan(ctx context.Context, artifact scannerworker.PreparedArtifac
 	result, err := Normalize(out)
 	if err != nil {
 		return artifactscan.Result{}, err
+	}
+	if result.DatabaseBuiltAt.IsZero() || result.DatabaseSchemaVersion == "" {
+		status, err := d.DBStatus(ctx)
+		if err != nil {
+			return artifactscan.Result{}, fmt.Errorf("read grype db status: %w", err)
+		}
+		if result.DatabaseBuiltAt.IsZero() {
+			result.DatabaseBuiltAt = status.Built
+		}
+		if result.DatabaseSchemaVersion == "" {
+			result.DatabaseSchemaVersion = status.SchemaVersion
+		}
 	}
 	result.BlobSHA256 = artifact.BlobSHA256
 	result.Scanner = d.Name()

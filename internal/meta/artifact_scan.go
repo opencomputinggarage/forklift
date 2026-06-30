@@ -57,9 +57,12 @@ func (s *Store) ClaimArtifactScanJob(ctx context.Context, workerID string, lease
 
 	row := tx.QueryRowContext(ctx,
 		`SELECT id FROM artifact_scan_jobs
-          WHERE status = ? AND next_run_at <= ?
-          ORDER BY created_at ASC LIMIT 1`,
-		artifactscan.StatusQueued, formatTime(now))
+          WHERE (status = ? AND next_run_at <= ?)
+             OR (status = ? AND lease_until IS NOT NULL AND lease_until <= ?)
+          ORDER BY CASE WHEN status = ? THEN 0 ELSE 1 END, created_at ASC LIMIT 1`,
+		artifactscan.StatusQueued, formatTime(now),
+		artifactscan.StatusRunning, formatTime(now),
+		artifactscan.StatusQueued)
 	var id string
 	if err := row.Scan(&id); errors.Is(err, sql.ErrNoRows) {
 		return artifactscan.Job{}, ErrNotFound
@@ -70,8 +73,10 @@ func (s *Store) ClaimArtifactScanJob(ctx context.Context, workerID string, lease
 		`UPDATE artifact_scan_jobs
             SET status = ?, worker_id = ?, attempts = attempts + 1,
                 lease_until = ?, last_heartbeat_at = ?, started_at = COALESCE(started_at, ?), error = ''
-          WHERE id = ? AND status = ?`,
-		artifactscan.StatusRunning, workerID, formatTime(leaseUntil), formatTime(now), formatTime(now), id, artifactscan.StatusQueued)
+          WHERE id = ?
+            AND (status = ? OR (status = ? AND lease_until IS NOT NULL AND lease_until <= ?))`,
+		artifactscan.StatusRunning, workerID, formatTime(leaseUntil), formatTime(now), formatTime(now), id,
+		artifactscan.StatusQueued, artifactscan.StatusRunning, formatTime(now))
 	if err != nil {
 		return artifactscan.Job{}, err
 	}

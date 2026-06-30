@@ -98,7 +98,12 @@ func (c Client) SubmitResult(ctx context.Context, job ClaimedJob, result artifac
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("submit scan result: status %d", resp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		msg := strings.TrimSpace(string(body))
+		if msg == "" {
+			return fmt.Errorf("submit scan result: status %d", resp.StatusCode)
+		}
+		return fmt.Errorf("submit scan result: status %d: %s", resp.StatusCode, msg)
 	}
 	return nil
 }

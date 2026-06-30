@@ -25,6 +25,11 @@ type document struct {
 	Matches []matchDoc `json:"matches"`
 }
 
+type dbStatusDoc struct {
+	SchemaVersion string    `json:"schemaVersion"`
+	Built         time.Time `json:"built"`
+}
+
 type matchDoc struct {
 	Vulnerability struct {
 		ID         string   `json:"id"`
@@ -88,6 +93,14 @@ func Normalize(raw []byte) (artifactscan.Result, error) {
 	}
 	res.RecomputeSummary()
 	return res, nil
+}
+
+func parseDBStatus(raw []byte) (dbStatusDoc, error) {
+	var doc dbStatusDoc
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return dbStatusDoc{}, err
+	}
+	return doc, nil
 }
 
 func firstURL(urls []string) string {

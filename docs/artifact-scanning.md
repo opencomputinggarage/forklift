@@ -101,9 +101,10 @@ docker build --target scanner-runtime -t ghcr.io/example/forklift-scanner:dev .
 
 ## Local development test
 
-Use this flow to verify the feature without installing Grype on the host. It
-requires Docker. The server runs locally, while the scanner runs in the
-`scanner-runtime` container that already contains Grype.
+Use this flow to verify the feature locally. The fastest loop runs the server
+and scanner with `go run`; that path requires `grype` on the host `PATH`.
+When you do not want host tools, run the scanner through the `scanner-runtime`
+container instead.
 
 Start the local server with artifact scanning enabled:
 
@@ -113,7 +114,7 @@ make artifact-scan-dev
 
 The target runs forklift on `127.0.0.1:18080`, disables OSV/deps.dev so the
 test only exercises artifact-byte scanning, and prints the worker token and
-Docker worker command. Override defaults with environment variables, for
+worker commands. Override defaults with environment variables, for
 example:
 
 ```bash
@@ -122,7 +123,26 @@ FORKLIFT_SCAN_DEV_PORT=19080 FORKLIFT_SCAN_DEV_DATA_DIR=/tmp/forklift-scan-dev m
 
 Then use another terminal for the remaining steps.
 
-1. Build the scanner image:
+1. Choose a worker execution mode.
+
+   Fast path, no Docker image build, requires local Grype:
+
+   ```bash
+   make artifact-scan-worker-dev
+   ```
+
+   The target checks the local Grype vulnerability database and runs
+   `grype db update` first when the DB is missing or invalid. Scanner execution
+   itself still runs with Grype auto-update disabled, matching the worker's
+   production behavior.
+
+   To keep the local worker polling instead of processing one job and exiting:
+
+   ```bash
+   FORKLIFT_SCAN_WORKER_LOOP=true make artifact-scan-worker-dev
+   ```
+
+   Container path, no host Grype install:
 
    ```bash
    docker build --target scanner-runtime -t forklift-scanner:dev .
@@ -178,8 +198,9 @@ Then use another terminal for the remaining steps.
 
    Expected before the worker runs: `artifact_scan_status` is `queued`.
 
-5. Run the scanner container once. On Docker Desktop for macOS/Windows,
-   `host.docker.internal` reaches the host server:
+5. If you did not already run `make artifact-scan-worker-dev`, run the scanner
+   container once. On Docker Desktop for macOS/Windows, `host.docker.internal`
+   reaches the host server:
 
    ```bash
    docker run --rm \

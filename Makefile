@@ -11,7 +11,7 @@ COVER_MIN   ?= 73
 PLATFORMS   ?= linux/amd64,linux/arm64
 DATA_DIR    ?= ./.data
 
-.PHONY: all build run dev test coverage fmt lint vet tidy clean web-dev web-build artifact-scan-dev docker-build docker-push helm-lint helm-template creds
+.PHONY: all build run dev test coverage fmt lint vet tidy clean web-dev web-build artifact-scan-dev artifact-scan-worker-dev docker-build docker-push helm-lint helm-template creds
 
 all: fmt vet lint test build
 
@@ -68,8 +68,8 @@ artifact-scan-dev:
 	@echo "artifact scan dev server: http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-18080}"
 	@echo "login: $${FORKLIFT_SCAN_DEV_ADMIN_USER:-admin} / $${FORKLIFT_SCAN_DEV_ADMIN_PASS:-adminpw}"
 	@echo "worker token: $${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}"
-	@echo "worker image build: docker build --target scanner-runtime -t forklift-scanner:dev ."
-	@echo "worker run (Docker Desktop): docker run --rm forklift-scanner:dev --server=http://host.docker.internal:$${FORKLIFT_SCAN_DEV_PORT:-18080} --worker-id=local-worker --worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} --once"
+	@echo "worker run, no image build: make artifact-scan-worker-dev"
+	@echo "worker run, container: docker run --rm forklift-scanner:dev --server=http://host.docker.internal:$${FORKLIFT_SCAN_DEV_PORT:-18080} --worker-id=local-worker --worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} --once"
 	FORKLIFT_DATA_DIR=$${FORKLIFT_SCAN_DEV_DATA_DIR:-/tmp/forklift-scan-dev} \
 	FORKLIFT_HTTP_ADDR=:$${FORKLIFT_SCAN_DEV_PORT:-18080} \
 	FORKLIFT_METRICS_ADDR=:$${FORKLIFT_SCAN_DEV_METRICS_PORT:-18081} \
@@ -82,6 +82,20 @@ artifact-scan-dev:
 		--deps-dev-url= \
 		--artifact-scan-enabled \
 		--artifact-scan-worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}
+
+## artifact-scan-worker-dev: run one local scanner worker with go run (requires grype on PATH)
+artifact-scan-worker-dev:
+	@command -v grype >/dev/null || { echo "grype is required for no-image worker dev. Install it or use the scanner-runtime Docker image."; exit 1; }
+	@grype db status 2>&1 | grep -Eq "Status:[[:space:]]+valid$$" || { echo "updating local grype vulnerability DB..."; grype db update; }
+	@once_flag="--once"; \
+	if [ "$${FORKLIFT_SCAN_WORKER_LOOP:-false}" = "true" ]; then once_flag=""; fi; \
+	FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} \
+	go run ./cmd/forklift-scanner \
+		--server=http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-18080} \
+		--worker-id=$${FORKLIFT_SCAN_WORKER_ID:-local-go-worker} \
+		--worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token} \
+		--work-dir=$${FORKLIFT_SCAN_WORKER_DIR:-/tmp/forklift-scan-worker} \
+		$$once_flag
 
 ## creds: list local users and password hashes from the local DB (plaintext is bcrypt-hashed and unrecoverable; the generated admin password is only printed once in bootstrap logs)
 creds:

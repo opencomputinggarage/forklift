@@ -22,7 +22,12 @@ func TestPackageExtractors(t *testing.T) {
 		{npmPackage, "lodash/-/lodash-4.17.21.tgz", "lodash"},
 		{npmPackage, "@scope/name", "@scope/name"},
 		{npmPackage, "@scope/name/-/name-1.0.0.tgz", "@scope/name"},
-		{npmPackage, "@scope%2fname", "@scope/name"},
+		{npmPackage, "@scope%2fname", "@scope/name"},   // npm publish: lowercase %2f
+		{npmPackage, "@scope%2Fname", "@scope/name"},   // pnpm/others: uppercase %2F
+		{npmPackage, "%40scope%2fname", "@scope/name"}, // encoded @ + slash (e.g. @openai%2fcodex form)
+		{npmPackage, "@Scope%2FName", "@scope/name"},   // case-folded to canonical lowercase
+		{npmPackage, "@scope%2fname/-/name-1.0.0.tgz", "@scope/name"},
+		{npmVersion, "@scope%2fname/-/name-1.0.0.tgz", "1.0.0"}, // version resolves through encoded scope
 		{pypiPackageFromFilename, "requests-2.31.0-py3-none-any.whl", "requests"},
 		{pypiPackageFromFilename, "typing_extensions-4.8.0.tar.gz", "typing-extensions"},
 		{pypiPackageFromFilename, "Foo.Bar-1.0.zip", "foo-bar"},

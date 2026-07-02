@@ -2,7 +2,6 @@ package repo
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -93,15 +92,14 @@ func (m *Manager) pypiSimple(w http.ResponseWriter, r *http.Request, res resolve
 
 	art, err := e.store.GetArtifact(ctx, res.repo.ID, key)
 	if err == nil && e.fresh(art, res.cfg, kindMetadata) {
-		// The cache holds the upstream's original index; URLs are rewritten per
-		// request so cached bodies stay host-agnostic (a client cannot poison
-		// the cache for others via Host/X-Forwarded-* headers).
-		if body, berr := readBlob(ctx, e, art); berr == nil {
-			if out, _, rerr := rewriteSimpleIndex(body, m.externalBase(r), res.repo.Name, res.cfg.AgePolicy, e.now()); rerr == nil {
-				_ = e.store.Touch(ctx, res.repo.ID, key)
-				writeSimple(w, r, out, project)
-				return
-			}
+		// HEAD needs no body, so skip the decode/rewrite work entirely.
+		if r.Method == http.MethodHead {
+			_ = e.store.Touch(ctx, res.repo.ID, key)
+			writeSimple(w, r, nil, project)
+			return
+		}
+		if m.pypiServeCachedSimple(w, r, res, project, key, art) {
+			return
 		}
 	} else if err != nil && !errors.Is(err, meta.ErrNotFound) {
 		http.Error(w, "metadata error", http.StatusInternalServerError)
@@ -134,6 +132,13 @@ func (m *Manager) pypiSimple(w http.ResponseWriter, r *http.Request, res resolve
 		http.Error(w, "upstream error", http.StatusBadGateway)
 		return
 	}
+	// The raw body must be kept for caching, so the miss path pays one buffer
+	// plus the parsed document; the rewrite gate bounds how many requests hold
+	// that at once (a cold-cache install burst otherwise multiplies it).
+	if !e.acquireRewrite(ctx) {
+		return
+	}
+	defer e.releaseRewrite()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
 	if err != nil {
 		http.Error(w, "read upstream", http.StatusBadGateway)
@@ -162,6 +167,39 @@ func (m *Manager) pypiSimple(w http.ResponseWriter, r *http.Request, res resolve
 		return
 	}
 	writeSimple(w, r, out, project)
+}
+
+// pypiServeCachedSimple serves a fresh cached simple index, reporting whether
+// the request was handled (false falls the caller through to an upstream
+// re-fetch). The cache holds the upstream's original index; URLs are rewritten
+// per request so cached bodies stay host-agnostic (a client cannot poison the
+// cache for others via Host/X-Forwarded-* headers). Decoding straight off the
+// blob reader avoids holding the raw JSON and the parsed document in memory at
+// once, and the rewrite gate bounds how many of these decodes run concurrently.
+func (m *Manager) pypiServeCachedSimple(w http.ResponseWriter, r *http.Request, res resolved, project, key string, art meta.Artifact) bool {
+	e := m.engine
+	ctx := r.Context()
+	if !e.acquireRewrite(ctx) {
+		return true // client gone; nothing left to serve
+	}
+	defer e.releaseRewrite()
+	rc, _, err := e.blobs.Open(ctx, art.BlobSHA256)
+	if err != nil {
+		return false
+	}
+	var doc map[string]any
+	derr := json.NewDecoder(io.LimitReader(rc, 64<<20)).Decode(&doc)
+	rc.Close()
+	if derr != nil {
+		return false
+	}
+	out, _, rerr := rewriteSimpleIndexDoc(doc, m.externalBase(r), res.repo.Name, res.cfg.AgePolicy, e.now())
+	if rerr != nil {
+		return false
+	}
+	_ = e.store.Touch(ctx, res.repo.ID, key)
+	writeSimple(w, r, out, project)
+	return true
 }
 
 // pypiLocalSimple builds a PEP 691 index for a hosted repository from its stored
@@ -259,27 +297,89 @@ func (m *Manager) pypiFile(w http.ResponseWriter, r *http.Request, res resolved)
 	m.engine.serve(w, r, spec)
 }
 
+// maxPyPIUploadBytes caps a single uploaded distribution file (parity with the
+// previous in-memory multipart limit).
+const maxPyPIUploadBytes = 256 << 20
+
 // pypiUpload handles the twine legacy upload API: a multipart form with name,
-// version and content fields POSTed to the repository root.
+// version and content fields POSTed to the repository root. Parts are consumed
+// as a stream — the distribution file is hashed straight into the blob store
+// the moment its part arrives and the artifact record is attached once the
+// remaining fields are known (temp-blob-then-attach, as in Nexus), so an
+// upload never holds the file in memory. ParseMultipartForm is unusable here:
+// it either buffers the file in RAM or spills to /tmp, which is read-only in
+// the container.
 func (m *Manager) pypiUpload(w http.ResponseWriter, r *http.Request, res resolved) {
-	if err := r.ParseMultipartForm(256 << 20); err != nil {
+	mr, err := r.MultipartReader()
+	if err != nil {
 		http.Error(w, "invalid multipart form", http.StatusBadRequest)
 		return
 	}
-	name := normalizePyPI(r.FormValue("name"))
-	file, header, err := r.FormFile("content")
-	if name == "" || err != nil {
+	ctx := r.Context()
+	var (
+		fields      = map[string]string{}
+		filename    string
+		digest      string
+		size        int64
+		haveContent bool
+	)
+	for {
+		part, perr := mr.NextPart()
+		if errors.Is(perr, io.EOF) {
+			break
+		}
+		if perr != nil {
+			http.Error(w, "invalid multipart form", http.StatusBadRequest)
+			return
+		}
+		if part.FormName() == "content" {
+			if haveContent {
+				part.Close()
+				http.Error(w, "duplicate content field", http.StatusBadRequest)
+				return
+			}
+			filename = path.Base(part.FileName())
+			digest, size, err = m.engine.blobs.Put(ctx, io.LimitReader(part, maxPyPIUploadBytes+1))
+			part.Close()
+			if err != nil {
+				http.Error(w, "store failed", http.StatusInternalServerError)
+				return
+			}
+			haveContent = true
+			if size > maxPyPIUploadBytes {
+				m.engine.abandonBlob(ctx, digest, size)
+				http.Error(w, "file too large", http.StatusRequestEntityTooLarge)
+				return
+			}
+			continue
+		}
+		// Metadata fields are small; twine repeats some (classifiers), where the
+		// first value wins to match FormValue's behavior.
+		val, verr := io.ReadAll(io.LimitReader(part, 1<<20))
+		part.Close()
+		if verr != nil {
+			http.Error(w, "invalid multipart form", http.StatusBadRequest)
+			return
+		}
+		if _, dup := fields[part.FormName()]; !dup {
+			fields[part.FormName()] = string(val)
+		}
+	}
+	name := normalizePyPI(fields["name"])
+	if name == "" || !haveContent {
+		if haveContent {
+			m.engine.abandonBlob(ctx, digest, size)
+		}
 		http.Error(w, "missing name or content field", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
-	filename := path.Base(header.Filename)
 	if filename == "" || filename == "." || filename == "/" {
+		m.engine.abandonBlob(ctx, digest, size)
 		http.Error(w, "invalid filename", http.StatusBadRequest)
 		return
 	}
 	p := "packages/" + name + "/" + filename
-	if err := m.engine.put(r.Context(), res.repo, p, r.FormValue("version"), "application/octet-stream", nil, file); err != nil {
+	if err := m.engine.recordUpload(ctx, res.repo, p, fields["version"], "application/octet-stream", digest, size); err != nil {
 		http.Error(w, "store failed", http.StatusInternalServerError)
 		return
 	}
@@ -288,14 +388,22 @@ func (m *Manager) pypiUpload(w http.ResponseWriter, r *http.Request, res resolve
 	w.WriteHeader(http.StatusCreated)
 }
 
-// rewriteSimpleIndex rewrites a PEP 691 index: file URLs are pointed back at
-// forklift and files whose PEP 700 upload-time violates a blocking age policy
-// are removed. It returns the transformed JSON and the number of files removed.
+// rewriteSimpleIndex parses a raw PEP 691 index and applies
+// rewriteSimpleIndexDoc.
 func rewriteSimpleIndex(body []byte, base, repoName string, age repoconfig.AgePolicyConfig, now time.Time) ([]byte, int, error) {
 	var doc map[string]any
 	if err := json.Unmarshal(body, &doc); err != nil {
 		return nil, 0, err
 	}
+	return rewriteSimpleIndexDoc(doc, base, repoName, age, now)
+}
+
+// rewriteSimpleIndexDoc rewrites a PEP 691 index: file URLs are pointed back at
+// forklift and files whose PEP 700 upload-time violates a blocking age policy
+// are removed. It returns the transformed JSON and the number of files removed.
+// Taking the decoded document lets callers stream-decode instead of buffering
+// the raw body.
+func rewriteSimpleIndexDoc(doc map[string]any, base, repoName string, age repoconfig.AgePolicyConfig, now time.Time) ([]byte, int, error) {
 	files, _ := doc["files"].([]any)
 	kept := make([]any, 0, len(files))
 	removed := 0
@@ -383,16 +491,6 @@ func simpleHTML(jsonBody []byte, project string) []byte {
 	}
 	b.WriteString("</body>\n</html>\n")
 	return []byte(b.String())
-}
-
-// readBlob loads an artifact's blob fully into memory (index documents only).
-func readBlob(ctx context.Context, e *Engine, art meta.Artifact) ([]byte, error) {
-	rc, _, err := e.blobs.Open(ctx, art.BlobSHA256)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-	return io.ReadAll(rc)
 }
 
 // sameHost reports whether u points at the same host as the repository's

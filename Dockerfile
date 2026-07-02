@@ -1,3 +1,4 @@
+# Release retrigger: 2026-07-02 (0.2.1 memory-usage fixes)
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 WORKDIR /web
 ENV CI=true

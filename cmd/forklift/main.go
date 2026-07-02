@@ -26,6 +26,7 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/cluster"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/config"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/license"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/memlimit"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/metrics"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/notify"
@@ -82,6 +83,10 @@ func main() {
 func run(cfg *config.Config) error {
 	log := newLogger(cfg)
 	log.Info("starting forklift", "version", version.String(), "data_dir", cfg.DataDir)
+
+	// Keep the GC ahead of the container memory limit so request bursts degrade
+	// into extra GC work instead of an OOMKill.
+	memlimit.Apply(log)
 
 	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
 		return fmt.Errorf("create data dir: %w", err)

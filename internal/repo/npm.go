@@ -104,17 +104,11 @@ func (m *Manager) npmTarballPublished(ctx context.Context, res resolved, version
 	if i := strings.Index(res.path, "/-/"); i >= 0 {
 		pkgPath = res.path[:i]
 	}
-	body, ok := m.npmPackumentBody(ctx, res, pkgPath)
+	times, ok := m.npmPackumentTimes(ctx, res, pkgPath)
 	if !ok {
 		return nil
 	}
-	var doc struct {
-		Time map[string]string `json:"time"`
-	}
-	if err := json.Unmarshal(body, &doc); err != nil {
-		return nil
-	}
-	ts, ok := doc.Time[version]
+	ts, ok := times[version]
 	if !ok {
 		return nil
 	}
@@ -125,15 +119,24 @@ func (m *Manager) npmTarballPublished(ctx context.Context, res resolved, version
 	return &t
 }
 
-// npmPackumentBody returns the raw packument JSON for pkgPath, preferring the
-// cached copy and otherwise fetching it from upstream. The upstream fetch is
-// best-effort (no caching): a nil/false result simply drops the caller back to
-// the Last-Modified header.
-func (m *Manager) npmPackumentBody(ctx context.Context, res resolved, pkgPath string) ([]byte, bool) {
+// npmPackumentTimes returns the packument `time` map for pkgPath, preferring
+// the cached copy and otherwise fetching it from upstream (best-effort, no
+// caching). The document is decoded as a stream so only the `time` map is
+// materialized; a multi-megabyte packument is never buffered here. This runs
+// once per tarball fetch, so under an install burst of hundreds of packages
+// buffering whole packuments would multiply into an OOM.
+func (m *Manager) npmPackumentTimes(ctx context.Context, res resolved, pkgPath string) (map[string]string, bool) {
+	var doc struct {
+		Time map[string]string `json:"time"`
+	}
 	e := m.engine
 	if art, err := e.store.GetArtifact(ctx, res.repo.ID, pkgPath); err == nil {
-		if body, berr := readBlob(ctx, e, art); berr == nil {
-			return body, true
+		if rc, _, berr := e.blobs.Open(ctx, art.BlobSHA256); berr == nil {
+			derr := json.NewDecoder(io.LimitReader(rc, 64<<20)).Decode(&doc)
+			rc.Close()
+			if derr == nil {
+				return doc.Time, true
+			}
 		}
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, joinUpstream(res.repo.UpstreamURL, pkgPath), nil)
@@ -148,11 +151,10 @@ func (m *Manager) npmPackumentBody(ctx context.Context, res resolved, pkgPath st
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, false
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
-	if err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<20)).Decode(&doc); err != nil {
 		return nil, false
 	}
-	return body, true
+	return doc.Time, true
 }
 
 func (m *Manager) npmPackument(w http.ResponseWriter, r *http.Request, res resolved) {
@@ -171,15 +173,40 @@ func (m *Manager) npmPackument(w http.ResponseWriter, r *http.Request, res resol
 			e.serveArtifact(w, r, art)
 			return
 		}
+		// HEAD needs no body, so skip the decode/rewrite work entirely.
+		if r.Method == http.MethodHead {
+			writePackument(w, r, nil)
+			return
+		}
 		// The cache holds the upstream's original packument; tarball URLs are
 		// rewritten per request so cached bodies stay host-agnostic (a client
 		// cannot poison the cache for others via Host/X-Forwarded-* headers).
-		body, berr := readBlob(ctx, e, art)
+		// Decoding straight off the blob reader avoids holding the raw JSON and
+		// the parsed document in memory at the same time, and the rewrite gate
+		// bounds how many of these decodes run at once.
+		if !e.acquireRewrite(ctx) {
+			return
+		}
+		defer e.releaseRewrite()
+		rc, _, berr := e.blobs.Open(ctx, art.BlobSHA256)
 		if berr != nil {
 			http.Error(w, "blob missing", http.StatusInternalServerError)
 			return
 		}
-		transformed, _ := rewritePackument(body, m.externalBase(r), res.repo.Name, res.path, res.cfg.AgePolicy, e.now())
+		var doc map[string]any
+		derr := json.NewDecoder(io.LimitReader(rc, 64<<20)).Decode(&doc)
+		rc.Close()
+		if derr != nil {
+			// A cached body that is not JSON passes through untouched (streamed),
+			// matching the rewrite fallback used when it was first fetched.
+			e.serveArtifact(w, r, art)
+			return
+		}
+		transformed, _ := rewritePackumentDoc(doc, m.externalBase(r), res.repo.Name, res.path, res.cfg.AgePolicy, e.now())
+		if transformed == nil {
+			e.serveArtifact(w, r, art)
+			return
+		}
 		writePackument(w, r, transformed)
 		return
 	}
@@ -214,6 +241,13 @@ func (m *Manager) npmPackument(w http.ResponseWriter, r *http.Request, res resol
 		http.Error(w, "upstream error", http.StatusBadGateway)
 		return
 	}
+	// The raw body must be kept for caching, so the miss path pays one buffer
+	// plus the parsed document; the rewrite gate bounds how many requests hold
+	// that at once (a cold-cache install burst otherwise multiplies it).
+	if !e.acquireRewrite(ctx) {
+		return
+	}
+	defer e.releaseRewrite()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
 	if err != nil {
 		http.Error(w, "read upstream", http.StatusBadGateway)
@@ -255,17 +289,19 @@ func writePackument(w http.ResponseWriter, r *http.Request, body []byte) {
 // tarball blob and the packument (minus attachments) is stored as the index.
 func (m *Manager) npmPublish(w http.ResponseWriter, r *http.Request, res resolved) {
 	defer r.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(r.Body, 256<<20))
-	if err != nil {
-		http.Error(w, "read body", http.StatusBadRequest)
+	ctx := r.Context()
+	// A publish document embeds whole tarballs as base64, so parsing it is the
+	// most memory-expensive request the npm handler serves; the rewrite gate
+	// bounds how many are in flight.
+	if !m.engine.acquireRewrite(ctx) {
 		return
 	}
+	defer m.engine.releaseRewrite()
 	var doc map[string]any
-	if err := json.Unmarshal(raw, &doc); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 256<<20)).Decode(&doc); err != nil {
 		http.Error(w, "invalid publish document", http.StatusBadRequest)
 		return
 	}
-	ctx := r.Context()
 	if atts, ok := doc["_attachments"].(map[string]any); ok {
 		for name, v := range atts {
 			att, ok := v.(map[string]any)
@@ -273,13 +309,15 @@ func (m *Manager) npmPublish(w http.ResponseWriter, r *http.Request, res resolve
 				continue
 			}
 			data, _ := att["data"].(string)
-			decoded, err := base64.StdEncoding.DecodeString(data)
-			if err != nil {
-				http.Error(w, "invalid attachment encoding", http.StatusBadRequest)
-				return
-			}
 			tarballPath := res.path + "/-/" + path.Base(name)
-			if err := m.engine.put(ctx, res.repo, tarballPath, npmVersion(tarballPath), "application/octet-stream", nil, bytes.NewReader(decoded)); err != nil {
+			// Decode the tarball as a stream into the blob store instead of
+			// materializing a second full copy of the attachment.
+			decoded := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data))
+			if err := m.engine.put(ctx, res.repo, tarballPath, npmVersion(tarballPath), "application/octet-stream", nil, decoded); err != nil {
+				if _, ok := errors.AsType[base64.CorruptInputError](err); ok {
+					http.Error(w, "invalid attachment encoding", http.StatusBadRequest)
+					return
+				}
 				http.Error(w, "store tarball failed", http.StatusInternalServerError)
 				return
 			}
@@ -367,14 +405,26 @@ func npmVersion(p string) string {
 	return v
 }
 
-// rewritePackument rewrites dist.tarball URLs to forklift and removes versions
-// whose upstream publish time violates a blocking age policy. It returns the
-// transformed JSON and the number of versions removed.
+// rewritePackument parses a raw packument and applies rewritePackumentDoc. An
+// unparseable body passes through unchanged (never block on unknown).
 func rewritePackument(body []byte, base, repoName, pkg string, age repoconfig.AgePolicyConfig, now time.Time) ([]byte, int) {
 	var doc map[string]any
 	if err := json.Unmarshal(body, &doc); err != nil {
 		return body, 0
 	}
+	out, removed := rewritePackumentDoc(doc, base, repoName, pkg, age, now)
+	if out == nil {
+		return body, removed
+	}
+	return out, removed
+}
+
+// rewritePackumentDoc rewrites dist.tarball URLs to forklift and removes
+// versions whose upstream publish time violates a blocking age policy. It
+// returns the transformed JSON (nil if the document cannot be re-encoded) and
+// the number of versions removed. Taking the decoded document lets callers
+// stream-decode instead of buffering the raw body.
+func rewritePackumentDoc(doc map[string]any, base, repoName, pkg string, age repoconfig.AgePolicyConfig, now time.Time) ([]byte, int) {
 	times, _ := doc["time"].(map[string]any)
 	versions, _ := doc["versions"].(map[string]any)
 
@@ -425,7 +475,7 @@ func rewritePackument(body []byte, base, repoName, pkg string, age repoconfig.Ag
 	}
 	out, err := json.Marshal(doc)
 	if err != nil {
-		return body, removed
+		return nil, removed
 	}
 	return out, removed
 }

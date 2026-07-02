@@ -215,6 +215,66 @@ func TestPyPILocalUploadAndIndex(t *testing.T) {
 	}
 }
 
+// The streaming upload parser must not depend on field order: some clients put
+// the content part before the metadata fields.
+func TestPyPIUploadContentFieldFirst(t *testing.T) {
+	m, _, store := newTestManager(t)
+	mkFormatRepo(t, store, "internal", meta.FormatPyPI, meta.TypeHosted, "", repoconfig.Default())
+	h := mux(m)
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, _ := mw.CreateFormFile("content", "pkg-0.1.0.tar.gz")
+	io.WriteString(fw, "SDIST-BYTES")
+	mw.WriteField("name", "pkg")
+	mw.WriteField("version", "0.1.0")
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/pypi/internal", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("upload = %d %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/pypi/internal/packages/pkg/pkg-0.1.0.tar.gz", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "SDIST-BYTES" {
+		t.Fatalf("download = %d %q", rec.Code, rec.Body.String())
+	}
+}
+
+// An upload that streamed its file but then fails validation must leave the
+// stored blob sweepable (zero-reference record) rather than leaking it.
+func TestPyPIUploadMissingNameAbandonsBlob(t *testing.T) {
+	m, _, store := newTestManager(t)
+	mkFormatRepo(t, store, "internal", meta.FormatPyPI, meta.TypeHosted, "", repoconfig.Default())
+	h := mux(m)
+
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, _ := mw.CreateFormFile("content", "orphan-1.0.0.tar.gz")
+	io.WriteString(fw, "ORPHAN-BYTES")
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/pypi/internal", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("upload without name = %d, want 400", rec.Code)
+	}
+
+	shas, err := store.ListUnreferencedBlobs(t.Context(), 16)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(shas) != 1 {
+		t.Fatalf("unreferenced blobs = %d, want 1 (abandoned upload must be sweepable)", len(shas))
+	}
+}
+
 func TestPyPIHelpers(t *testing.T) {
 	norm := map[string]string{
 		"My_Package":        "my-package",

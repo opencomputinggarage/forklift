@@ -89,6 +89,18 @@ func (s *Store) PutArtifact(ctx context.Context, a Artifact) (Artifact, error) {
 	return s.GetArtifact(ctx, a.RepoID, a.Path)
 }
 
+// EnsureBlob records a blob that exists in the blob store but is not (yet)
+// referenced by any artifact, so the sweeper can reclaim it if no reference
+// ever appears. Streaming upload handlers use this to hand an abandoned upload
+// (blob stored, but the request later failed validation) to the sweeper. A
+// blob already recorded keeps its current reference count.
+func (s *Store) EnsureBlob(ctx context.Context, sha256 string, size int64) error {
+	_, err := s.h().ExecContext(ctx,
+		`INSERT INTO blobs(sha256, size, ref_count, created_at) VALUES(?, ?, 0, ?)
+         ON CONFLICT(sha256) DO NOTHING`, sha256, size, nowRFC3339())
+	return wrap("ensure blob", err)
+}
+
 func adjustRef(ctx context.Context, tx *sql.Tx, sha string, delta int) error {
 	_, err := tx.ExecContext(ctx, `UPDATE blobs SET ref_count = ref_count + ? WHERE sha256 = ?`, delta, sha)
 	return err

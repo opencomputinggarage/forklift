@@ -29,6 +29,12 @@ const (
 	// maxUpstreamCooldown caps a Retry-After-derived cooldown so a hostile or
 	// buggy upstream cannot park a coordinate for an unbounded time.
 	maxUpstreamCooldown = 5 * time.Minute
+	// maxConcurrentRewrites bounds how many metadata parse/rewrite operations
+	// (packument and simple-index documents decoded into generic maps) run at
+	// once. Decoding a large index into map[string]any costs several times the
+	// document size, so an install burst of hundreds of packages must queue here
+	// instead of multiplying that cost by the request count and OOMing the pod.
+	maxConcurrentRewrites = 4
 )
 
 // kind classifies a request target, which selects the cache freshness policy.
@@ -55,9 +61,12 @@ type Engine struct {
 	// flight collapses concurrent identical proxy fetches into one upstream
 	// round-trip so a cold cache cannot fan a burst of identical requests out
 	// into a matching burst of upstream requests.
-	flight    *flight
-	userAgent string
-	now       func() time.Time
+	flight *flight
+	// rewriteGate is a counting semaphore (see maxConcurrentRewrites) acquired
+	// around memory-heavy metadata rewrites.
+	rewriteGate chan struct{}
+	userAgent   string
+	now         func() time.Time
 	// onStore, when set, is invoked after a proxy fetch caches an artifact, so
 	// the manager can enqueue vulnerability/license scanning for it. Best-effort
 	// and must not block the serving path; nil disables it.
@@ -73,16 +82,17 @@ type Engine struct {
 // NewEngine builds an Engine and registers its metrics.
 func NewEngine(store *meta.Store, blobs storage.BlobStore, log *slog.Logger, reg prometheus.Registerer) *Engine {
 	e := &Engine{
-		store:     store,
-		blobs:     blobs,
-		client:    &http.Client{Timeout: 60 * time.Second},
-		extClient: newPublicOnlyClient(60 * time.Second),
-		log:       log,
-		neg:       newNegCache(),
-		cool:      newNegCache(),
-		flight:    newFlight(),
-		userAgent: "forklift/" + version.Version,
-		now:       time.Now,
+		store:       store,
+		blobs:       blobs,
+		client:      &http.Client{Timeout: 60 * time.Second},
+		extClient:   newPublicOnlyClient(60 * time.Second),
+		log:         log,
+		neg:         newNegCache(),
+		cool:        newNegCache(),
+		flight:      newFlight(),
+		rewriteGate: make(chan struct{}, maxConcurrentRewrites),
+		userAgent:   "forklift/" + version.Version,
+		now:         time.Now,
 		cacheHits: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: "forklift", Name: "cache_hits_total", Help: "Proxy cache hits.",
 		}, []string{"repo"}),
@@ -426,6 +436,55 @@ func (e *Engine) storeArtifact(ctx context.Context, spec fetchSpec, body io.Read
 		CachedAt:       now,
 		LastAccessedAt: now,
 	})
+}
+
+// acquireRewrite takes a slot on the rewrite semaphore, waiting until one is
+// free or the request is cancelled. Returns false when ctx ended first (the
+// caller should just give up; the client is gone).
+func (e *Engine) acquireRewrite(ctx context.Context) bool {
+	select {
+	case e.rewriteGate <- struct{}{}:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// releaseRewrite returns a slot taken by acquireRewrite.
+func (e *Engine) releaseRewrite() { <-e.rewriteGate }
+
+// recordUpload registers an already-stored blob as a hosted artifact. Streaming
+// upload handlers use it to store the blob the moment its multipart part
+// arrives and attach the metadata once the remaining form fields have been
+// read (the temp-blob-then-attach pattern).
+func (e *Engine) recordUpload(ctx context.Context, repo meta.Repository, path, version, contentType, digest string, size int64) error {
+	now := e.now()
+	_, err := e.store.PutArtifact(ctx, meta.Artifact{
+		RepoID:         repo.ID,
+		Path:           path,
+		Version:        version,
+		BlobSHA256:     digest,
+		Size:           size,
+		ContentType:    contentType,
+		CachedAt:       now,
+		LastAccessedAt: now,
+	})
+	if err != nil {
+		return err
+	}
+	e.neg.clear(repo.Name + "/" + path)
+	e.bytes.WithLabelValues("ingress", repo.Format).Add(float64(size))
+	return nil
+}
+
+// abandonBlob hands a streamed-but-never-recorded blob to the sweeper by
+// ensuring a zero-reference blob record exists for it. Deleting the bytes
+// directly would be wrong: the store is content-addressed, so an identical
+// blob may already be referenced by other artifacts.
+func (e *Engine) abandonBlob(ctx context.Context, digest string, size int64) {
+	if err := e.store.EnsureBlob(ctx, digest, size); err != nil {
+		e.log.Warn("record abandoned upload blob failed", "sha", digest, "err", err)
+	}
 }
 
 // put stores an uploaded artifact for a hosted repository.

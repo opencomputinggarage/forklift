@@ -23,6 +23,10 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath \
     -ldflags="-s -w -X github.com/younsl/o/box/kubernetes/forklift/internal/version.Version=${VERSION} -X github.com/younsl/o/box/kubernetes/forklift/internal/version.Commit=${COMMIT}" \
     -o /out/forklift ./cmd/forklift
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath \
+    -ldflags="-s -w -X github.com/younsl/o/box/kubernetes/forklift/internal/version.Version=${VERSION} -X github.com/younsl/o/box/kubernetes/forklift/internal/version.Commit=${COMMIT}" \
+    -o /out/forklift-scanner ./cmd/forklift-scanner
 
 FROM alpine:3.23 AS certs
 RUN apk add --no-cache ca-certificates
@@ -42,3 +46,8 @@ COPY --from=builder /out/forklift /app/forklift
 EXPOSE 8080 8081
 USER 65532:65532
 ENTRYPOINT ["/app/forklift"]
+
+FROM anchore/grype:latest AS scanner-runtime
+COPY --from=builder /out/forklift-scanner /app/forklift-scanner
+USER 65532:65532
+ENTRYPOINT ["/app/forklift-scanner"]

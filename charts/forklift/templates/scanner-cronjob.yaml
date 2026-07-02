@@ -1,0 +1,79 @@
+{{- if and .Values.artifactScanning.enabled .Values.artifactScanning.worker.enabled (eq .Values.artifactScanning.worker.mode "job") }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "forklift.fullname" . }}-scanner
+  labels:
+    {{- include "forklift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scanner
+spec:
+  schedule: {{ .Values.artifactScanning.worker.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "forklift.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: scanner
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          {{- with .Values.artifactScanning.worker.runtimeClassName }}
+          runtimeClassName: {{ . | quote }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: scanner
+              image: "{{ include "forklift.scannerImage" . }}"
+              imagePullPolicy: {{ .Values.artifactScanning.worker.image.pullPolicy }}
+              args:
+                - --server=http://{{ include "forklift.fullname" . }}:{{ .Values.service.port }}
+                - --worker-id=$(POD_NAME)
+                - --worker-token=$(FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN)
+                - --work-dir=/work
+                - --max-artifact-bytes={{ .Values.artifactScanning.worker.maxArtifactBytes }}
+                - --once
+              env:
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "forklift.fullname" . }}
+                      key: artifact-scan-worker-token
+                - name: GRYPE_DB_AUTO_UPDATE
+                  value: "false"
+                - name: GRYPE_CHECK_FOR_APP_UPDATE
+                  value: "false"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              resources:
+                {{- toYaml .Values.artifactScanning.worker.resources | nindent 16 }}
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+          volumes:
+            - name: work
+              emptyDir:
+                sizeLimit: {{ .Values.artifactScanning.worker.workspace.sizeLimit | quote }}
+{{- end }}

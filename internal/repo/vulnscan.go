@@ -2,33 +2,21 @@ package repo
 
 import (
 	"context"
-	"path"
 	"time"
 
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/packagecoord"
 )
 
 // VulnCoordinate returns the OSV ecosystem and package name for an artifact path
 // of the given format, for joining stored scan results to listed artifacts.
 // Returns empty strings when the format has no scannable coordinate.
 func VulnCoordinate(format, artifactPath string) (ecosystem, pkg string) {
-	eco := osvEcosystem(format)
-	if eco == "" {
+	c := packagecoord.FromArtifact(format, artifactPath, "")
+	if c.Ecosystem == "" || c.PackageName == "" {
 		return "", ""
 	}
-	switch format {
-	case meta.FormatMaven:
-		return eco, mavenPackage(artifactPath)
-	case meta.FormatNPM:
-		return eco, npmPackage(artifactPath)
-	case meta.FormatCargo:
-		return eco, cargoPackage(artifactPath)
-	case meta.FormatGo:
-		return eco, goPackage(artifactPath)
-	case meta.FormatPyPI:
-		return eco, pypiPackageFromFilename(path.Base(artifactPath))
-	}
-	return "", ""
+	return c.Ecosystem, c.PackageName
 }
 
 // scanStored enqueues an immediate vulnerability scan for a freshly stored
@@ -55,19 +43,7 @@ func (m *Manager) scanStored(repo meta.Repository, artifactPath string) {
 // per-format rules, mirroring how the format handlers derive it. Returns "" when
 // the path carries no version (metadata/index paths).
 func versionForPath(format, artifactPath string) string {
-	switch format {
-	case meta.FormatMaven:
-		return mavenVersion(artifactPath)
-	case meta.FormatNPM:
-		return npmVersion(artifactPath)
-	case meta.FormatCargo:
-		return cargoVersion(artifactPath)
-	case meta.FormatGo:
-		return goVersion(artifactPath)
-	case meta.FormatPyPI:
-		return pypiVersion(path.Base(artifactPath))
-	}
-	return ""
+	return packagecoord.FromArtifact(format, artifactPath, "").Version
 }
 
 // scanJob is a queued vulnerability scan for one package coordinate.
@@ -85,20 +61,7 @@ func OSVEcosystem(format string) string { return osvEcosystem(format) }
 // osvEcosystem maps a forklift repository format to its OSV ecosystem name.
 // Returns "" for formats OSV does not cover (the gate then no-ops).
 func osvEcosystem(format string) string {
-	switch format {
-	case meta.FormatMaven:
-		return "Maven"
-	case meta.FormatNPM:
-		return "npm"
-	case meta.FormatCargo:
-		return "crates.io"
-	case meta.FormatGo:
-		return "Go"
-	case meta.FormatPyPI:
-		return "PyPI"
-	default:
-		return ""
-	}
+	return packagecoord.OSVEcosystem(format)
 }
 
 // enqueueScan schedules an async scan for a coordinate, deduplicated within the

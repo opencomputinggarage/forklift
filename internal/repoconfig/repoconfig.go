@@ -15,15 +15,16 @@ import (
 
 // Config is the per-repository config payload.
 type Config struct {
-	Cache     CacheConfig         `json:"cache"`
-	AgePolicy AgePolicyConfig     `json:"age_policy"`
-	Approval  ApprovalConfig      `json:"approval"`
-	Retention RetentionConfig     `json:"retention"`
-	Vuln      VulnPolicyConfig    `json:"vuln"`
-	License   LicensePolicyConfig `json:"license"`
-	Group     GroupConfig         `json:"group"`
-	IPACL     IPACLConfig         `json:"ip_acl"`
-	Notify    NotifyConfig        `json:"notify"`
+	Cache        CacheConfig              `json:"cache"`
+	AgePolicy    AgePolicyConfig          `json:"age_policy"`
+	Approval     ApprovalConfig           `json:"approval"`
+	Retention    RetentionConfig          `json:"retention"`
+	Vuln         VulnPolicyConfig         `json:"vuln"`
+	License      LicensePolicyConfig      `json:"license"`
+	ArtifactScan ArtifactScanPolicyConfig `json:"artifact_scan"`
+	Group        GroupConfig              `json:"group"`
+	IPACL        IPACLConfig              `json:"ip_acl"`
+	Notify       NotifyConfig             `json:"notify"`
 }
 
 // NotifyConfig selects which notification receivers (named alarm channels
@@ -127,6 +128,38 @@ type LicensePolicyConfig struct {
 	Deny            []string `json:"deny,omitempty"`
 	Allow           []string `json:"allow,omitempty"`
 	BlockUnresolved bool     `json:"block_unresolved,omitempty"`
+}
+
+// ArtifactScanPolicyConfig gates stored artifacts by worker-based byte scan
+// verdicts. ScannerProfile selects a server-owned scanner profile; repositories
+// do not configure raw scanner names or hashes directly.
+type ArtifactScanPolicyConfig struct {
+	Enabled        bool   `json:"enabled"`
+	ScannerProfile string `json:"scanner_profile,omitempty"`
+	Threshold      string `json:"threshold,omitempty"` // critical|high|medium|low (default high)
+	Action         string `json:"action,omitempty"`    // block|warn|audit (default audit)
+	BlockUnscanned bool   `json:"block_unscanned,omitempty"`
+}
+
+func (a ArtifactScanPolicyConfig) EffectiveScannerProfile() string {
+	if a.ScannerProfile == "" {
+		return "grype-default"
+	}
+	return a.ScannerProfile
+}
+
+func (a ArtifactScanPolicyConfig) EffectiveAction() string {
+	if a.Action == "" {
+		return VulnActionAudit
+	}
+	return a.Action
+}
+
+func (a ArtifactScanPolicyConfig) EffectiveThreshold() string {
+	if a.Threshold == "" {
+		return SeverityHigh
+	}
+	return a.Threshold
 }
 
 // EffectiveAction returns Action with the audit default applied.
@@ -290,6 +323,16 @@ func (c Config) Validate() error {
 	case "", VulnActionBlock, VulnActionWarn, VulnActionAudit:
 	default:
 		return fmt.Errorf("unsupported license action %q", c.License.Action)
+	}
+	switch c.ArtifactScan.Action {
+	case "", VulnActionBlock, VulnActionWarn, VulnActionAudit:
+	default:
+		return fmt.Errorf("unsupported artifact scan action %q", c.ArtifactScan.Action)
+	}
+	switch c.ArtifactScan.Threshold {
+	case "", SeverityCritical, SeverityHigh, SeverityMedium, SeverityLow:
+	default:
+		return fmt.Errorf("unsupported artifact scan threshold %q", c.ArtifactScan.Threshold)
 	}
 	for _, entry := range c.IPACL.Allow {
 		entry = strings.TrimSpace(entry)

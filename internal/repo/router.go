@@ -53,6 +53,10 @@ type Manager struct {
 	// pending approval, so an outbound alarm can be dispatched to the repository's
 	// selected receivers. Best-effort and must not block; nil disables it.
 	onApproval func(repo, pkg, version, requestedBy string, receivers []string)
+
+	// artifactScanEnqueue, when set, is invoked after a stored artifact is
+	// available as a blob. It must not block the serving path.
+	artifactScanEnqueue func(blobSHA256, scannerProfile string)
 }
 
 // SetApprovalNotifier registers a callback invoked when a package is newly
@@ -61,6 +65,13 @@ type Manager struct {
 // must not block the serving path.
 func (m *Manager) SetApprovalNotifier(fn func(repo, pkg, version, requestedBy string, receivers []string)) {
 	m.onApproval = fn
+}
+
+// SetArtifactScanEnqueuer registers the optional artifact-byte scan enqueue
+// hook. The hook receives the content-addressed blob digest and the resolved
+// scanner profile from repository policy.
+func (m *Manager) SetArtifactScanEnqueuer(fn func(blobSHA256, scannerProfile string)) {
+	m.artifactScanEnqueue = fn
 }
 
 // NewManager creates a Manager. authz may be nil to disable authorization
@@ -119,6 +130,7 @@ func NewManager(engine *Engine, store *meta.Store, authz *auth.Service, rec *aud
 	engine.onStore = func(repo meta.Repository, path string) {
 		m.scanStored(repo, path)
 		m.resolveStored(repo, path)
+		m.enqueueArtifactStored(repo, path)
 	}
 	return m
 }

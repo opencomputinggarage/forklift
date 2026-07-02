@@ -38,6 +38,13 @@ export interface RepoConfig {
     allow?: string[];
     block_unresolved?: boolean;
   };
+  artifact_scan?: {
+    enabled: boolean;
+    scanner_profile?: string;
+    threshold?: string;
+    action?: string;
+    block_unscanned?: boolean;
+  };
   group: {
     members?: string[];
   };
@@ -157,6 +164,10 @@ export interface Artifact {
   published_at: string | null;
   cached_at: string;
   last_accessed_at: string;
+  package_name?: string;
+  ecosystem?: string;
+  depsdev_system?: string;
+  package_purl?: string;
   max_severity?: string;
   vuln_ids?: string[];
   vuln_counts?: Record<string, number>;
@@ -165,12 +176,93 @@ export interface Artifact {
   licenses?: string[];
   license_source?: string;
   license_resolved_at?: string | null;
+  artifact_scan_status?: string;
+  artifact_scan_max_severity?: string;
+  artifact_scan_scanner?: string;
+  artifact_scan_scanned_at?: string | null;
+  artifact_scan_finding_count?: number;
 }
 
 export interface ArtifactList {
   count: number;
   total_size: number;
+  limit: number;
+  offset: number;
   artifacts: Artifact[];
+}
+
+export interface ArtifactScanFinding {
+  vulnerability_id: string;
+  severity: string;
+  package_name: string;
+  package_version?: string;
+  package_type?: string;
+  package_purl?: string;
+  fixed_versions?: string[];
+  source?: string;
+  source_url?: string;
+  match_type?: string;
+}
+
+export interface ArtifactScanResult {
+  path: string;
+  package_name?: string;
+  ecosystem?: string;
+  depsdev_system?: string;
+  package_purl?: string;
+  status: string;
+  scanner?: string;
+  scanner_version?: string;
+  database_schema_version?: string;
+  database_built_at?: string | null;
+  max_severity?: string;
+  finding_count: number;
+  error?: string;
+  scanned_at?: string | null;
+  findings?: ArtifactScanFinding[];
+  sbom?: ArtifactScanSBOM;
+}
+
+export interface ArtifactScanSBOM {
+  id: number;
+  format: string;
+  generator: string;
+  generator_version?: string;
+  content_digest: string;
+  created_at?: string | null;
+}
+
+export interface ArtifactScanJob {
+  job_id: string;
+  status: string;
+  scanner_profile?: string;
+  scanner: string;
+  blob_sha256: string;
+}
+
+export interface ArtifactScanVerdict {
+  repository_id: number;
+  blob_sha256: string;
+  scanner_profile: string;
+  status: string;
+  max_severity?: string;
+  reason?: string;
+}
+
+export interface ArtifactScanOpsResponse {
+  queued?: number;
+  recomputed?: number;
+  skipped?: number;
+  jobs?: ArtifactScanJob[];
+  verdicts?: ArtifactScanVerdict[];
+}
+
+export interface ArtifactSBOMExport {
+  id: number;
+  sbom_id: number;
+  destination: string;
+  status: string;
+  next_run_at: string;
 }
 
 export interface RoleRef {
@@ -409,8 +501,22 @@ export const api = {
   setRepositoryDisabled: (id: number, disabled: boolean) =>
     req<Repository>("POST", `/repositories/${id}/disabled`, { disabled }),
 
-  listArtifacts: (id: number, prefix = "") =>
-    req<ArtifactList>("GET", `/repositories/${id}/artifacts?prefix=${encodeURIComponent(prefix)}`),
+  listArtifacts: (id: number, prefix = "", limit = 100, offset = 0) =>
+    req<ArtifactList>("GET", `/repositories/${id}/artifacts?prefix=${encodeURIComponent(prefix)}&limit=${limit}&offset=${offset}`),
+  getArtifactScan: (id: number, path: string) =>
+    req<ArtifactScanResult>("GET", `/repositories/${id}/artifacts/scan?path=${encodeURIComponent(path)}`),
+  getArtifactSBOM: (id: number, path: string) =>
+    req<Record<string, unknown>>("GET", `/repositories/${id}/artifacts/sbom?path=${encodeURIComponent(path)}`),
+  scanArtifact: (id: number, path: string) =>
+    req<ArtifactScanJob>("POST", `/repositories/${id}/artifacts/scan?path=${encodeURIComponent(path)}`),
+  scanArtifactsBatch: (id: number, paths: string[]) =>
+    req<{ queued: number; jobs: ArtifactScanJob[] }>("POST", `/repositories/${id}/artifacts/scan-batch`, { paths }),
+  scanAllArtifacts: (body: { repository_id?: number; scanner_profile?: string; limit?: number }) =>
+    req<ArtifactScanOpsResponse>("POST", "/artifact-scans/scan-all", body),
+  recomputeArtifactScanVerdicts: (body: { repository_id?: number; blob_sha256?: string; scanner_profile?: string; limit?: number }) =>
+    req<ArtifactScanOpsResponse>("POST", "/artifact-scans/verdicts/recompute", body),
+  exportArtifactSBOM: (body: { repository_id?: number; path?: string; blob_sha256?: string; scanner_profile?: string; destination: string }) =>
+    req<ArtifactSBOMExport>("POST", "/artifact-scans/sboms/export", body),
   deleteArtifact: (id: number, path: string) =>
     req<void>("DELETE", `/repositories/${id}/artifacts?path=${encodeURIComponent(path)}`),
   purgeArtifacts: (id: number) =>

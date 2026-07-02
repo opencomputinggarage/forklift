@@ -3,7 +3,7 @@
 // OpenAPI: forklift API 0.1.0
 
 import { queryOptions } from "@tanstack/react-query";
-import type { Approval, ApprovalList, ArtifactList, AuditLogList, HAStatus, Me, Receiver, RepoPermission, RepoToken, Repository, RepositoryName, Role, Token, UpstreamHealth, User, Version, VersionDenyList } from "@/api";
+import type { Approval, ApprovalList, ArtifactList, ArtifactScanResult, AuditLogList, HAStatus, Me, Receiver, RepoPermission, RepoToken, Repository, RepositoryName, Role, Token, UpstreamHealth, User, Version, VersionDenyList } from "@/api";
 
 type PathValue = string | number | boolean;
 type QueryValue = PathValue | null | undefined;
@@ -64,7 +64,9 @@ export const openApiQueryKeys = {
   getRepository: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}", params),
   listRepositoryAuditLogs: (params: { path: { id: number }; query?: { event?: string; limit?: number; offset?: number } }) => key("GET", "/api/v1/repositories/{id}/audit-logs", params),
   listRepositoryNames: () => key("GET", "/api/v1/repository-names"),
-  listRepositoryArtifacts: (params: { path: { id: number }; query?: { prefix?: string } }) => key("GET", "/api/v1/repositories/{id}/artifacts", params),
+  listRepositoryArtifacts: (params: { path: { id: number }; query?: { prefix?: string; limit?: number; offset?: number } }) => key("GET", "/api/v1/repositories/{id}/artifacts", params),
+  getRepositoryArtifactsScan: (params: { path: { id: number }; query?: { path: string } }) => key("GET", "/api/v1/repositories/{id}/artifacts/scan", params),
+  getRepositoryArtifactsSbom: (params: { path: { id: number }; query?: { path: string } }) => key("GET", "/api/v1/repositories/{id}/artifacts/sbom", params),
   getRepositoryUpstreamHealth: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/upstream-health", params),
   listRepositoryPermissions: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/permissions", params),
   listRepositoryTokens: (params: { path: { id: number } }) => key("GET", "/api/v1/repositories/{id}/tokens", params),
@@ -137,12 +139,30 @@ export const openApiQueryOptions = {
           undefined,
         ),
     }),
-  listRepositoryArtifacts: (params: { path: { id: number }; query?: { prefix?: string } }) =>
+  listRepositoryArtifacts: (params: { path: { id: number }; query?: { prefix?: string; limit?: number; offset?: number } }) =>
     queryOptions({
       queryKey: openApiQueryKeys.listRepositoryArtifacts(params),
       queryFn: () =>
         requestJson<ArtifactList>(
           buildPath("/api/v1/repositories/{id}/artifacts", params.path),
+          params?.query,
+        ),
+    }),
+  getRepositoryArtifactsScan: (params: { path: { id: number }; query?: { path: string } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.getRepositoryArtifactsScan(params),
+      queryFn: () =>
+        requestJson<ArtifactScanResult>(
+          buildPath("/api/v1/repositories/{id}/artifacts/scan", params.path),
+          params?.query,
+        ),
+    }),
+  getRepositoryArtifactsSbom: (params: { path: { id: number }; query?: { path: string } }) =>
+    queryOptions({
+      queryKey: openApiQueryKeys.getRepositoryArtifactsSbom(params),
+      queryFn: () =>
+        requestJson<unknown>(
+          buildPath("/api/v1/repositories/{id}/artifacts/sbom", params.path),
           params?.query,
         ),
     }),

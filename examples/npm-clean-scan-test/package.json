@@ -1,0 +1,17 @@
+{
+  "name": "npm-clean-scan-test",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Current npm dependencies for forklift artifact scan clean-path testing.",
+  "scripts": {
+    "cache:proxy": "npm install --cache ./.npm-cache --prefer-online --package-lock=false",
+    "print:deps": "node -e \"for (const p of ['axios','next','react','react-dom']) console.log(p, require(p + '/package.json').version)\"",
+    "test": "npm run print:deps"
+  },
+  "dependencies": {
+    "axios": "1.7.9",
+    "next": "15.1.6",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  }
+}

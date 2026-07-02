@@ -350,6 +350,188 @@ func TestNpmPublishAndInstall(t *testing.T) {
 	}
 }
 
+// TestNpmScopedPublishInstallEncoding guards the scope-slash decoding fix: npm
+// publish PUTs a scoped package with a lowercase %2f, while pnpm fetches it with
+// an uppercase %2F (or a literal slash). All spellings must resolve to the one
+// artifact. Before the fix the raw request path was the storage key, so publish
+// and fetch missed each other on encoding alone and hosted GETs 404'd.
+func TestNpmScopedPublishInstallEncoding(t *testing.T) {
+	m, _, store := newTestManager(t)
+	mkFormatRepo(t, store, "local", meta.FormatNPM, meta.TypeHosted, "", repoconfig.Default())
+	h := mux(m)
+
+	tarball := base64.StdEncoding.EncodeToString([]byte("SCOPEDTGZ"))
+	publishDoc := `{
+		"name":"@scope/name",
+		"versions":{"1.0.0":{"dist":{"tarball":"http://x/@scope/name/-/name-1.0.0.tgz"}}},
+		"_attachments":{"name-1.0.0.tgz":{"data":"` + tarball + `"}}
+	}`
+	// npm publish encodes the scope separator as lowercase %2f.
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPut, "/npm/local/@scope%2fname", strings.NewReader(publishDoc)))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("publish = %d", rec.Code)
+	}
+
+	// The packument resolves via every scope spelling clients send: lowercase
+	// %2f (npm), uppercase %2F (pnpm), a literal slash, and a fully-encoded @.
+	for _, p := range []string{"@scope%2fname", "@scope%2Fname", "@scope/name", "%40scope%2fname"} {
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/npm/local/"+p, nil))
+		if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "_attachments") {
+			t.Fatalf("packument %q = %d body=%q", p, rec.Code, rec.Body.String())
+		}
+	}
+
+	// HEAD resolves the same way (npm/pnpm probe with it before download).
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodHead, "/npm/local/@scope%2Fname", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("HEAD packument = %d", rec.Code)
+	}
+
+	// The tarball resolves whether the scope slash is literal or encoded.
+	for _, p := range []string{"@scope/name/-/name-1.0.0.tgz", "@scope%2fname/-/name-1.0.0.tgz"} {
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/npm/local/"+p, nil))
+		if rec.Code != http.StatusOK || rec.Body.String() != "SCOPEDTGZ" {
+			t.Fatalf("tarball %q = %d %q", p, rec.Code, rec.Body.String())
+		}
+	}
+
+	// Both are stored under the decoded canonical key, not the encoded path.
+	repo, err := store.GetRepositoryByName(t.Context(), "local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetArtifact(t.Context(), repo.ID, "@scope/name"); err != nil {
+		t.Fatalf("packument not stored under decoded key: %v", err)
+	}
+	if _, err := store.GetArtifact(t.Context(), repo.ID, "@scope/name/-/name-1.0.0.tgz"); err != nil {
+		t.Fatalf("tarball not stored under decoded key: %v", err)
+	}
+}
+
+// TestNpmEncodedTraversalRejected verifies the decoded-path traversal recheck:
+// a percent-encoded "../" (%2e%2e%2f) slips past resolve's raw-path check but
+// must be rejected once decoded, on both fetch and publish.
+func TestNpmEncodedTraversalRejected(t *testing.T) {
+	m, _, store := newTestManager(t)
+	mkFormatRepo(t, store, "local", meta.FormatNPM, meta.TypeHosted, "", repoconfig.Default())
+	h := mux(m)
+
+	for _, tc := range []struct {
+		method, target string
+	}{
+		{http.MethodGet, "/npm/local/%2e%2e%2fetc%2fpasswd"},
+		{http.MethodGet, "/npm/local/@scope%2f%2e%2e%2f%2e%2e"},
+		{http.MethodPut, "/npm/local/%2e%2e%2fevil"},
+	} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.target, strings.NewReader("{}")))
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s %s = %d, want 400", tc.method, tc.target, rec.Code)
+		}
+	}
+}
+
+// TestNpmProxyScopedEncoded verifies a scoped package installed through a proxy
+// repo: pnpm requests it with an encoded scope slash, and the cache keys on the
+// decoded identity so the second request is a hit rather than a duplicate fetch.
+func TestNpmProxyScopedEncoded(t *testing.T) {
+	var hits int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		io.WriteString(w, `{"name":"@scope/name","versions":{"1.0.0":{"dist":{"tarball":"http://up/@scope/name/-/name-1.0.0.tgz"}}},"time":{"1.0.0":"2020-01-01T00:00:00Z"}}`)
+	}))
+	defer upstream.Close()
+
+	m, _, store := newTestManager(t)
+	mkFormatRepo(t, store, "np", meta.FormatNPM, meta.TypeProxy, upstream.URL, repoconfig.Default())
+	h := mux(m)
+
+	// First request (encoded) misses and fetches upstream; second (uppercase
+	// encoding) must be served from the cache under the same decoded key.
+	for i, p := range []string{"@scope%2fname", "@scope%2Fname"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/npm/np/"+p, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("iter %d (%q) = %d", i, p, rec.Code)
+		}
+	}
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Fatalf("upstream packument hits = %d, want 1 (cached under decoded key)", got)
+	}
+
+	repo, err := store.GetRepositoryByName(t.Context(), "np")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetArtifact(t.Context(), repo.ID, "@scope/name"); err != nil {
+		t.Fatalf("proxy packument not cached under decoded key: %v", err)
+	}
+}
+
+// TestNpmGroupRewritesHostedTarballURL guards the hosted-packument rewrite: a
+// scoped package published to a hosted member carries an absolute dist.tarball
+// pointing at the publish registry, sometimes with a malformed scoped filename
+// (as npm/pnpm emit). Served through a group, that URL must be rewritten to the
+// group's own path with a filename derived from the stored tarball, so a client
+// with only the group's credential can install it in one hop.
+func TestNpmGroupRewritesHostedTarballURL(t *testing.T) {
+	m, _, store := newTestManager(t)
+	mkFormatRepo(t, store, "npm-hosted", meta.FormatNPM, meta.TypeHosted, "", repoconfig.Default())
+	groupCfg := repoconfig.Default()
+	groupCfg.Group.Members = []string{"npm-hosted"}
+	mkFormatRepo(t, store, "npm-public", meta.FormatNPM, meta.TypeGroup, "", groupCfg)
+	h := mux(m)
+
+	tarball := base64.StdEncoding.EncodeToString([]byte("SCOPEDTGZ"))
+	// The publish doc mirrors pnpm: an absolute tarball URL at the hosted
+	// registry, with the scope duplicated into the filename.
+	publishDoc := `{
+		"name":"@scope/name",
+		"versions":{"1.0.0":{"dist":{"tarball":"http://localhost:8080/npm/npm-hosted/@scope/name/-/@scope/name-1.0.0.tgz"}}},
+		"_attachments":{"name-1.0.0.tgz":{"data":"` + tarball + `"}}
+	}`
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPut, "/npm/npm-hosted/@scope%2fname", strings.NewReader(publishDoc)))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("publish = %d", rec.Code)
+	}
+
+	// Fetch the packument through the group and read back the rewritten tarball.
+	rec = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/npm/npm-public/@scope%2Fname", nil)
+	req.Host = "reg.example"
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("group packument = %d", rec.Code)
+	}
+	var doc struct {
+		Versions map[string]struct {
+			Dist struct {
+				Tarball string `json:"tarball"`
+			} `json:"dist"`
+		} `json:"versions"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("packument json: %v", err)
+	}
+	got := doc.Versions["1.0.0"].Dist.Tarball
+	want := "http://reg.example/npm/npm-public/@scope/name/-/name-1.0.0.tgz"
+	if got != want {
+		t.Fatalf("rewritten tarball = %q, want %q", got, want)
+	}
+
+	// That rewritten URL must actually serve the tarball through the group.
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/npm/npm-public/@scope/name/-/name-1.0.0.tgz", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "SCOPEDTGZ" {
+		t.Fatalf("group tarball = %d %q", rec.Code, rec.Body.String())
+	}
+}
+
 // upstreamURL reconstructs the test server base from a request.
 func upstreamURL(r *http.Request) string {
 	return "http://" + r.Host

@@ -19,6 +19,25 @@ type viaGroupCtxKey int
 
 const viaGroupKey viaGroupCtxKey = 0
 
+// groupNameCtxKey carries the group repository's own name through fan-out so a
+// member handler can build client-facing URLs (e.g. npm tarball links) that
+// point back at the group the client is actually talking to, not the member.
+type groupNameCtxKey int
+
+const groupNameKey groupNameCtxKey = 0
+
+// servingRepoName returns the group name a request is being served under during
+// group fan-out, falling back to the member's own name for direct requests.
+// Client-facing URLs use this so a package installed through a group links its
+// tarballs back to the group — a single entry point and credential, matching
+// Nexus/Artifactory group semantics.
+func servingRepoName(ctx context.Context, fallback string) string {
+	if name, ok := ctx.Value(groupNameKey).(string); ok && name != "" {
+		return name
+	}
+	return fallback
+}
+
 // grouped intercepts requests to group repositories and fans them out to the
 // member repositories in order, serving the first hit. It is format-agnostic:
 // member attempts re-enter the wrapped format handler with the {repo} URL
@@ -54,6 +73,7 @@ func (m *Manager) grouped(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), viaGroupKey, true)
+		ctx = context.WithValue(ctx, groupNameKey, name)
 		for _, member := range cfg.Group.Members {
 			// Deleted members are skipped: the inner handler 404s and the
 			// groupWriter treats that as a miss.

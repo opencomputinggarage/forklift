@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -22,13 +23,26 @@ import (
 //	<package>            packument (version index)  (metadata)
 //	<package>/-/<file>   tarball                    (artifact)
 //
-// Scoped packages (@scope/name) arrive with the slash intact. For proxy repos
-// the packument's dist.tarball URLs are rewritten to point back at forklift so
-// tarball fetches are cached and age-gated here, and versions newer than the
-// age-policy cooldown are filtered out of the packument entirely.
+// Scoped packages (@scope/name) reach us with the scope separator
+// percent-encoded, and the exact form varies by client and method (npm publish
+// sends %2f, pnpm %2F, others a literal /). handleNpm decodes the path once into
+// a single canonical identity so a PUT and a later GET address the same
+// artifact, and the decoded form is what we store, look up and fetch upstream
+// (npmjs accepts the literal-slash form for scoped names).
+// For proxy repos the packument's dist.tarball URLs are rewritten to point back
+// at forklift so tarball fetches are cached and age-gated here, and versions
+// newer than the age-policy cooldown are filtered out of the packument entirely.
 func (m *Manager) handleNpm(w http.ResponseWriter, r *http.Request) {
 	res, ok := m.resolve(w, r, meta.FormatNPM)
 	if !ok {
+		return
+	}
+	// Percent-decode into the canonical package identity used for every storage
+	// and lookup key. Re-check for traversal on the decoded form so a client
+	// cannot smuggle ".." past resolve's raw-path check via %2e%2e.
+	res.path = decodeNpmPath(res.path)
+	if strings.Contains(res.path, "..") {
+		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
 	if !m.authorize(w, r, res.repo.Name, actionForMethod(r.Method)) {
@@ -169,18 +183,19 @@ func (m *Manager) npmPackument(w http.ResponseWriter, r *http.Request, res resol
 	}
 	if cached && (res.repo.Type == meta.TypeHosted || e.fresh(art, res.cfg, kindMetadata)) {
 		_ = e.store.Touch(ctx, res.repo.ID, res.path)
-		if res.repo.Type == meta.TypeHosted {
-			e.serveArtifact(w, r, art)
-			return
-		}
+		// Both hosted and proxy packuments are rewritten per request so tarball
+		// URLs point at the repo the client is talking to (the group during
+		// fan-out) with a filename derived from the stored bytes. This keeps
+		// cached proxy bodies host-agnostic (a client cannot poison the cache for
+		// others via Host/X-Forwarded-* headers), and stops a hosted publish's
+		// original dist.tarball — which encodes the publish registry and may
+		// carry a malformed scoped filename — from leaking to installers.
+		//
 		// HEAD needs no body, so skip the decode/rewrite work entirely.
 		if r.Method == http.MethodHead {
 			writePackument(w, r, nil)
 			return
 		}
-		// The cache holds the upstream's original packument; tarball URLs are
-		// rewritten per request so cached bodies stay host-agnostic (a client
-		// cannot poison the cache for others via Host/X-Forwarded-* headers).
 		// Decoding straight off the blob reader avoids holding the raw JSON and
 		// the parsed document in memory at the same time, and the rewrite gate
 		// bounds how many of these decodes run at once.
@@ -202,7 +217,7 @@ func (m *Manager) npmPackument(w http.ResponseWriter, r *http.Request, res resol
 			e.serveArtifact(w, r, art)
 			return
 		}
-		transformed, _ := rewritePackumentDoc(doc, m.externalBase(r), res.repo.Name, res.path, res.cfg.AgePolicy, e.now())
+		transformed, _ := rewritePackumentDoc(doc, m.externalBase(r), servingRepoName(ctx, res.repo.Name), res.path, res.cfg.AgePolicy, e.now())
 		if transformed == nil {
 			e.serveArtifact(w, r, art)
 			return
@@ -253,7 +268,7 @@ func (m *Manager) npmPackument(w http.ResponseWriter, r *http.Request, res resol
 		http.Error(w, "read upstream", http.StatusBadGateway)
 		return
 	}
-	transformed, removed := rewritePackument(body, m.externalBase(r), res.repo.Name, res.path, res.cfg.AgePolicy, e.now())
+	transformed, removed := rewritePackument(body, m.externalBase(r), servingRepoName(ctx, res.repo.Name), res.path, res.cfg.AgePolicy, e.now())
 	if removed > 0 {
 		e.ageBlocks.WithLabelValues(res.repo.Name, res.cfg.AgePolicy.Action).Add(float64(removed))
 		e.log.Warn("age policy quarantined package versions",
@@ -373,16 +388,28 @@ func parseSemver(v string) ([3]int, bool) {
 	return out, true
 }
 
+// decodeNpmPath percent-decodes the repo-relative npm request path so a scoped
+// package's identity is canonical regardless of how the client encoded the
+// scope separator (npm publish sends %2f, pnpm %2F, others a literal /). The
+// decoded form is the single key used for storage and lookup, so a PUT and a
+// later GET address the same artifact. Falls back to the raw path when it is not
+// valid percent-encoding rather than rejecting the request.
+func decodeNpmPath(p string) string {
+	if dec, err := url.PathUnescape(p); err == nil {
+		return dec
+	}
+	return p
+}
+
 // npmPackage extracts the package name from an npm protocol path: the whole
-// path for packuments, the part before /-/ for tarballs. Scoped names may
-// arrive with the scope slash percent-encoded by some clients.
+// path for packuments, the part before /-/ for tarballs. handleNpm decodes the
+// path before use, but npmPackage also decodes so it is correct when called
+// standalone (e.g. from tests or gates) on a still-encoded scope separator.
 func npmPackage(p string) string {
 	if i := strings.Index(p, "/-/"); i >= 0 {
 		p = p[:i]
 	}
-	p = strings.ReplaceAll(p, "%2f", "/")
-	p = strings.ReplaceAll(p, "%2F", "/")
-	return strings.ToLower(strings.Trim(p, "/"))
+	return strings.ToLower(strings.Trim(decodeNpmPath(p), "/"))
 }
 
 // npmVersion extracts the version from an npm tarball path

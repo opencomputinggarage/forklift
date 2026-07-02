@@ -291,10 +291,8 @@ license:
 artifactScanning:
   # -- (bool) Enable server-side artifact scan job APIs and enqueue hooks.
   enabled: false
-  # -- (string) Scanner name used in job records and repository policy lookup.
-  scanner: grype
-  # -- (string) Scanner config hash/profile identifier. Keep empty for the default profile.
-  configHash: ""
+  # -- (string) Default scanner profile name used when repositories do not select one.
+  defaultProfile: grype-default
   # -- (string) Worker claim token. Empty generates and preserves a random token in the chart Secret.
   workerToken: ""
   # -- (string) HMAC key for per-job scan tokens. Empty reuses the session secret.
@@ -303,11 +301,17 @@ artifactScanning:
   leaseTTL: 10m
   # -- (string) Per-job scan token lifetime.
   tokenTTL: 10m
+  # -- (int) Maximum failed/expired worker attempts before a scan job is marked dead.
+  maxAttempts: 3
+  # -- (bool) Store SBOM inventory for the default scanner profile.
+  storeSBOM: false
   worker:
     # -- (bool) Run the bundled scanner worker Deployment. Requires artifactScanning.enabled.
     enabled: false
-    # -- (string) Execution mode. The chart currently renders "deployment"; "job" is reserved for a later controller.
+    # -- (string) Execution mode. "deployment" runs long-lived workers; "job" renders a CronJob that starts one-shot scanner Jobs.
     mode: deployment
+    # -- (string) Schedule used when mode is "job".
+    schedule: "*/1 * * * *"
     # -- (int) Worker replicas.
     replicas: 1
     # -- (string) Optional RuntimeClass, e.g. "gvisor" or "kata".

@@ -19,6 +19,16 @@ type WorkspaceLimits struct {
 	MaxArtifactBytes int64
 }
 
+// ErrArtifactTooLarge reports an artifact that exceeded the configured download
+// limit before scanner execution.
+type ErrArtifactTooLarge struct {
+	MaxBytes int64
+}
+
+func (e ErrArtifactTooLarge) Error() string {
+	return fmt.Sprintf("artifact exceeds max size %d", e.MaxBytes)
+}
+
 // PreparedArtifact is the local filesystem view passed to scanner drivers.
 type PreparedArtifact struct {
 	Root       string
@@ -70,7 +80,7 @@ func PrepareArtifact(ctx context.Context, root string, blob io.Reader, expectedS
 		return PreparedArtifact{}, fmt.Errorf("write input artifact: %w", err)
 	}
 	if n > limits.MaxArtifactBytes {
-		return PreparedArtifact{}, fmt.Errorf("artifact exceeds max size %d", limits.MaxArtifactBytes)
+		return PreparedArtifact{}, ErrArtifactTooLarge{MaxBytes: limits.MaxArtifactBytes}
 	}
 	digest := hex.EncodeToString(h.Sum(nil))
 	if digest != expectedSHA256 {

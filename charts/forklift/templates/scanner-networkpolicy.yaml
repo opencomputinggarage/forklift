@@ -19,5 +19,5 @@ spec:
               {{- include "forklift.selectorLabels" . | nindent 14 }}
       ports:
         - protocol: TCP
-          port: 8080
+          port: {{ .Values.service.port }}
 {{- end }}

@@ -131,22 +131,21 @@ type LicensePolicyConfig struct {
 }
 
 // ArtifactScanPolicyConfig gates stored artifacts by worker-based byte scan
-// results. Scanner defaults to "grype"; ConfigHash selects the scanner profile.
-// BlockUnscanned only blocks under block posture.
+// verdicts. ScannerProfile selects a server-owned scanner profile; repositories
+// do not configure raw scanner names or hashes directly.
 type ArtifactScanPolicyConfig struct {
 	Enabled        bool   `json:"enabled"`
-	Scanner        string `json:"scanner,omitempty"`
-	ConfigHash     string `json:"config_hash,omitempty"`
+	ScannerProfile string `json:"scanner_profile,omitempty"`
 	Threshold      string `json:"threshold,omitempty"` // critical|high|medium|low (default high)
 	Action         string `json:"action,omitempty"`    // block|warn|audit (default audit)
 	BlockUnscanned bool   `json:"block_unscanned,omitempty"`
 }
 
-func (a ArtifactScanPolicyConfig) EffectiveScanner() string {
-	if a.Scanner == "" {
-		return "grype"
+func (a ArtifactScanPolicyConfig) EffectiveScannerProfile() string {
+	if a.ScannerProfile == "" {
+		return "grype-default"
 	}
-	return a.Scanner
+	return a.ScannerProfile
 }
 
 func (a ArtifactScanPolicyConfig) EffectiveAction() string {

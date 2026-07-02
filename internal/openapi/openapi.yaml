@@ -176,6 +176,8 @@ paths:
       security: [{ basicAuth: [] }, { bearerAuth: [] }]
       parameters:
         - { name: prefix, in: query, schema: { type: string }, description: Filter by artifact path prefix. }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 500 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
       responses:
         "200":
           description: Artifacts with aggregate count and total size
@@ -202,6 +204,118 @@ paths:
                 properties:
                   deleted: { type: integer }
         "204": { description: Single artifact deleted }
+        "404": { description: Not found }
+  /api/v1/repositories/{id}/artifacts/scan:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+      - { name: path, in: query, required: true, schema: { type: string }, description: Artifact path to inspect or enqueue for scanning. }
+    get:
+      tags: [repositories]
+      summary: Get the latest artifact-byte scan details for one artifact
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "200":
+          description: Latest scan status, package coordinate, and normalized findings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactScanResult" }
+        "400": { description: path is required }
+        "404": { description: Not found }
+    post:
+      tags: [repositories]
+      summary: Queue a manual artifact-byte scan for one artifact
+      description: >
+        Enqueues work only. Scanner tools run in an external scanner worker
+        that claims jobs through the internal scan API.
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      responses:
+        "202":
+          description: Scan job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactScanJob" }
+        "400": { description: path is required }
+        "404": { description: Not found }
+  /api/v1/repositories/{id}/artifacts/scan-batch:
+    post:
+      tags: [repositories]
+      summary: Queue manual artifact-byte scans for multiple artifacts
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArtifactScanBatchRequest" }
+      responses:
+        "202":
+          description: Scan jobs queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactScanBatchResponse" }
+  /api/v1/repositories/{id}/artifacts/sbom:
+    get:
+      tags: [repositories]
+      summary: Get the latest stored SBOM JSON for one artifact
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: path, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Stored SBOM document
+          content:
+            application/json:
+              schema: { type: object }
+        "404": { description: Not found }
+  /api/v1/artifact-scans/scan-all:
+    post:
+      tags: [artifact-scans]
+      summary: Queue artifact-byte scans for a repository or all repositories
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArtifactScanAllRequest" }
+      responses:
+        "202":
+          description: Scan jobs queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactScanOpsResponse" }
+  /api/v1/artifact-scans/verdicts/recompute:
+    post:
+      tags: [artifact-scans]
+      summary: Recompute artifact scan verdicts without rescanning bytes
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArtifactScanRecomputeRequest" }
+      responses:
+        "200":
+          description: Verdicts recomputed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactScanOpsResponse" }
+  /api/v1/artifact-scans/sboms/export:
+    post:
+      tags: [artifact-scans]
+      summary: Request export of a stored SBOM to an external destination
+      security: [{ basicAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ArtifactSBOMExportRequest" }
+      responses:
+        "202":
+          description: Export request recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ArtifactSBOMExport" }
+        "400": { description: Invalid request body, no paths, or more than 100 paths. }
         "404": { description: Not found }
   /api/v1/repositories/{id}/disabled:
     post:
@@ -1020,6 +1134,10 @@ components:
         published_at: { type: [string, "null"], format: date-time }
         cached_at: { type: string, format: date-time }
         last_accessed_at: { type: string, format: date-time }
+        package_name: { type: string, description: Package name derived from the repository artifact path. }
+        ecosystem: { type: string, description: OSV ecosystem for the derived package coordinate. }
+        depsdev_system: { type: string, description: deps.dev system for the derived package coordinate. }
+        package_purl: { type: string, description: Package URL for the derived package coordinate, when available. }
         max_severity: { type: string, description: Highest vulnerability severity from the stored scan, if any. }
         vuln_ids: { type: array, items: { type: string } }
         vuln_counts: { type: object, additionalProperties: { type: integer }, description: Vulnerability count per severity. }
@@ -1030,7 +1148,7 @@ components:
         license_resolved_at: { type: [string, "null"], format: date-time }
         artifact_scan_status: { type: string, description: Latest artifact-byte scan status for this blob/scanner profile. }
         artifact_scan_max_severity: { type: string, description: Highest severity reported by the artifact-byte scanner. }
-        artifact_scan_scanner: { type: string, description: Artifact-byte scanner name, e.g. grype. }
+        artifact_scan_scanner: { type: string, description: Artifact-byte scanner or profile display name. }
         artifact_scan_scanned_at: { type: [string, "null"], format: date-time }
         artifact_scan_finding_count: { type: integer, description: Number of normalized artifact-byte scanner findings. }
     ArtifactList:
@@ -1041,6 +1159,126 @@ components:
         artifacts:
           type: array
           items: { $ref: "#/components/schemas/Artifact" }
+    ArtifactScanResult:
+      type: object
+      properties:
+        path: { type: string }
+        package_name: { type: string, description: Package name derived from the repository artifact path. }
+        ecosystem: { type: string, description: OSV ecosystem for the derived package coordinate. }
+        depsdev_system: { type: string, description: deps.dev system for the derived package coordinate. }
+        package_purl: { type: string, description: Package URL for the derived package coordinate, when available. }
+        status: { type: string }
+        scanner_profile: { type: string }
+        scanner: { type: string }
+        scanner_version: { type: string }
+        database_schema_version: { type: string }
+        database_built_at: { type: [string, "null"], format: date-time }
+        max_severity: { type: string }
+        finding_count: { type: integer }
+        error: { type: string }
+        scanned_at: { type: [string, "null"], format: date-time }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/ArtifactScanFinding" }
+        sbom:
+          $ref: "#/components/schemas/ArtifactScanSBOM"
+    ArtifactScanSBOM:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        format: { type: string }
+        generator: { type: string }
+        generator_version: { type: string }
+        content_digest: { type: string }
+        created_at: { type: [string, "null"], format: date-time }
+    ArtifactScanFinding:
+      type: object
+      properties:
+        vulnerability_id: { type: string }
+        severity: { type: string }
+        package_name: { type: string }
+        package_version: { type: string }
+        package_type: { type: string }
+        package_purl: { type: string }
+        fixed_versions: { type: array, items: { type: string } }
+        source: { type: string }
+        source_url: { type: string }
+        match_type: { type: string }
+    ArtifactScanJob:
+      type: object
+      properties:
+        job_id: { type: string }
+        status: { type: string }
+        scanner_profile: { type: string }
+        scanner: { type: string }
+        blob_sha256: { type: string }
+    ArtifactScanBatchRequest:
+      type: object
+      required: [paths]
+      properties:
+        paths:
+          type: array
+          items: { type: string }
+          minItems: 1
+          maxItems: 100
+    ArtifactScanBatchResponse:
+      type: object
+      properties:
+        queued: { type: integer }
+        jobs:
+          type: array
+          items: { $ref: "#/components/schemas/ArtifactScanJob" }
+    ArtifactScanAllRequest:
+      type: object
+      properties:
+        repository_id: { type: integer, format: int64 }
+        scanner_profile: { type: string }
+        limit: { type: integer, default: 1000 }
+    ArtifactScanRecomputeRequest:
+      type: object
+      properties:
+        repository_id: { type: integer, format: int64 }
+        blob_sha256: { type: string }
+        scanner_profile: { type: string }
+        limit: { type: integer, default: 1000 }
+    ArtifactScanVerdict:
+      type: object
+      properties:
+        repository_id: { type: integer, format: int64 }
+        blob_sha256: { type: string }
+        scanner_profile: { type: string }
+        status: { type: string }
+        max_severity: { type: string }
+        reason: { type: string }
+    ArtifactScanOpsResponse:
+      type: object
+      properties:
+        queued: { type: integer }
+        recomputed: { type: integer }
+        skipped: { type: integer }
+        jobs:
+          type: array
+          items: { $ref: "#/components/schemas/ArtifactScanJob" }
+        verdicts:
+          type: array
+          items: { $ref: "#/components/schemas/ArtifactScanVerdict" }
+    ArtifactSBOMExportRequest:
+      type: object
+      required: [destination]
+      properties:
+        repository_id: { type: integer, format: int64 }
+        path: { type: string }
+        blob_sha256: { type: string }
+        scanner_profile: { type: string }
+        destination: { type: string }
+    ArtifactSBOMExport:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        sbom_id: { type: integer, format: int64 }
+        destination: { type: string }
+        status: { type: string }
+        next_run_at: { type: string, format: date-time }
     UpstreamHealth:
       type: object
       properties:

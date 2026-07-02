@@ -162,7 +162,8 @@ scanner Deployment
 ```
 
 This is faster and cheaper than creating a Kubernetes Job for every artifact.
-It is appropriate for audit-only rollout and trusted internal repositories.
+It is appropriate for ordinary scanner profiles, high-throughput audit mode, and
+trusted internal repositories.
 
 Required controls:
 
@@ -197,8 +198,9 @@ Required controls:
 Recommended default:
 
 ```text
-MVP: Deployment mode, replicas=1, concurrency=1, audit-only
-Hardened profile: Job mode
+default profile: Deployment mode, replicas=1+, concurrency=1 per worker
+hardened profile: Job mode
+strict profile: Job mode + runtimeClassName + tighter limits
 ```
 
 ## Runtime Isolation
@@ -434,6 +436,27 @@ Deployment mode:
 POST /internal/scans/claim
 ```
 
+Request:
+
+```json
+{
+  "worker_id": "scanner-0",
+  "capabilities": [
+    {
+      "name": "grype",
+      "version": "0.92.0",
+      "supported_ecosystems": ["npm", "maven", "pypi", "cargo", "go"],
+      "supports_sbom": true,
+      "database_schema_version": "6",
+      "database_built_at": "2026-07-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+The server uses capabilities to assign only matching jobs. It also stores the
+latest worker capability report for health and database freshness display.
+
 Response:
 
 ```json
@@ -441,6 +464,8 @@ Response:
   "job_id": "123",
   "blob_sha256": "abc...",
   "scanner": "grype",
+  "scanner_profile": "grype-default",
+  "scanner_config_hash": "grype-default-v1",
   "token": "short-lived-token",
   "deadline": "2026-07-01T12:00:00Z",
   "limits": {
@@ -453,6 +478,26 @@ Response:
 
 Job mode can skip claim and receive the same payload through environment or a
 mounted job spec secret created by the leader.
+
+Heartbeat:
+
+```http
+POST /internal/scans/{job_id}/heartbeat
+```
+
+Heartbeat responses renew both the lease and the short-lived job token:
+
+```json
+{
+  "token": "renewed-short-lived-token",
+  "deadline": "2026-07-01T12:05:00Z",
+  "limits": {
+    "max_artifact_bytes": 104857600,
+    "max_extracted_bytes": 2147483648,
+    "max_files": 100000
+  }
+}
+```
 
 Result submission:
 
@@ -573,6 +618,31 @@ scanner-supplied strings.
 ```yaml
 artifactScanning:
   enabled: false
+  defaultProfile: grype-default
+
+  profiles:
+    grype-default:
+      scanner: grype
+      mode: deployment
+      configHash: grype-default-v1
+      maxArtifactBytes: 104857600
+      maxExtractedBytes: 2147483648
+      maxFiles: 100000
+
+    grype-gvisor-job:
+      scanner: grype
+      mode: job
+      runtimeClassName: gvisor
+      configHash: grype-gvisor-v1
+      maxArtifactBytes: 104857600
+      maxExtractedBytes: 2147483648
+      maxFiles: 100000
+
+    syft-grype-sbom:
+      scanner: syft-grype
+      mode: job
+      storeSBOM: true
+      configHash: syft-grype-v1
 
   worker:
     enabled: false
@@ -603,12 +673,6 @@ artifactScanning:
         memory: 1Gi
         ephemeral-storage: 2Gi
 
-    workspace:
-      maxArtifactBytes: 104857600
-      maxExtractedBytes: 2147483648
-      maxFiles: 100000
-      emptyDirSizeLimit: 2Gi
-
     networkPolicy:
       enabled: true
       allowDns: true
@@ -620,9 +684,10 @@ artifactScanning:
     maxDbAge: 120h
 
   policy:
+    scanner_profile: grype-default
     action: audit
     threshold: high
-    blockUnscanned: false
+    block_unscanned: false
 ```
 
 ## Optional Cluster Policy
@@ -645,16 +710,18 @@ behavior, but detection is not a substitute for isolation.
 
 ## Rollout
 
-### Phase 1: Safe Extension Point
+### Phase 1: Scanner Abstraction and Safe Extension Point
 
 - Add job/result API contract.
+- Add scanner profile and worker capability contracts.
+- Add scanner-aware claim matching.
 - Add no scanner binaries to the forklift server image.
 - Add schema validation for result submission.
 - Add audit-only policy surface.
 
 ### Phase 2: Restricted Deployment Worker
 
-- Add Grype-only worker image.
+- Add Grype worker driver and scanner image.
 - Run Deployment mode with `replicas=1`, `concurrency=1`.
 - Disable DB auto-update during scan.
 - Add NetworkPolicy and Restricted security context.
@@ -665,25 +732,48 @@ behavior, but detection is not a substitute for isolation.
 - Add one-shot Kubernetes Job execution.
 - Enable per-repository scanner profile selection.
 - Use Job mode for high-risk repositories.
+- Keep the result schema identical between Deployment and Job mode.
+
+Implementation note: the Helm chart supports `artifactScanning.worker.mode=job`
+by rendering a `CronJob` that starts restricted one-shot scanner Jobs with
+`--once`. Each Job claims at most one queued scan and exits. This keeps the
+server out of the untrusted-byte execution path while still allowing hardened
+RuntimeClass execution.
 
 ### Phase 4: RuntimeClass Hardening
 
 - Add `runtimeClassName` support for gVisor and Kata.
 - Document expected overhead.
-- Keep standard runtime as the compatibility default.
+- Keep standard runtime as the default profile; hardened profiles opt into
+  gVisor or Kata.
 
 ### Phase 5: SBOM and License Extensions
 
-- Add Syft only when SBOM persistence is needed.
-- Add Grant only when SBOM-based license policy is needed.
-- Keep Dependency-Track optional.
+- Add Syft-backed SBOM profiles.
+- Add Grant-backed license profiles when SBOM-based license policy is needed.
+- Add optional Dependency-Track export from stored SBOMs.
+- Keep export state separate from scanner job/result state.
+
+Implementation note: profile `store_sbom` is copied onto each scan job and
+returned to the worker during claim. When set, the Grype worker invokes Syft to
+produce CycloneDX JSON and submits it with the scan result. The server stores
+SBOMs in `artifact_sboms` and records external export requests in
+`artifact_scan_exports`; export delivery can be implemented as a destination
+adapter that consumes pending rows.
 
 ## Current Recommendation
 
-Start with a Grype-only isolated worker and audit-only policy. Use Deployment
-mode for the first implementation, but design the API so Job mode can be added
-without changing result storage. Make `runtimeClassName` configurable from the
-start, with an empty default and documented `gvisor` and `kata` profiles.
+Adopt the full scanner-orchestration model: scanner profiles, worker capability
+matching, Deployment and Job execution modes, RuntimeClass hardening, normalized
+reports, optional SBOM generation, and external export. Keep those features
+behind explicit profiles so ordinary repositories can use the lighter path while
+high-risk repositories use stronger isolation.
 
-The server should remain a registry and policy engine. The scanner worker should
-be the only component that handles untrusted artifact bytes.
+The server remains a registry and policy engine. Scanner workers and one-shot
+scanner Jobs are the only components that handle untrusted artifact bytes.
+
+This design assumes the artifact scanning feature is not yet a released
+compatibility surface. Old worker claim shapes and direct `scanner` /
+`config_hash` repository settings should not be preserved. Implement the worker
+contract directly around required capabilities, scanner profiles, renewed job
+tokens, and normalized report submission.

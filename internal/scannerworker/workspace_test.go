@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -32,6 +33,10 @@ func TestPrepareArtifactRejectsOversize(t *testing.T) {
 	_, err := PrepareArtifact(context.Background(), t.TempDir(), strings.NewReader(body), hex.EncodeToString(sum[:]), WorkspaceLimits{MaxArtifactBytes: 4})
 	if err == nil {
 		t.Fatal("oversize artifact accepted")
+	}
+	var tooLarge ErrArtifactTooLarge
+	if !errors.As(err, &tooLarge) || tooLarge.MaxBytes != 4 {
+		t.Fatalf("err = %v, want ErrArtifactTooLarge max=4", err)
 	}
 }
 

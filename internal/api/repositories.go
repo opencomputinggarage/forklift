@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 	"github.com/younsl/o/box/kubernetes/forklift/internal/audit"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/auth"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/packagecoord"
 	repopkg "github.com/younsl/o/box/kubernetes/forklift/internal/repo"
 	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
@@ -512,6 +514,10 @@ type artifactDTO struct {
 	PublishedAt    *time.Time `json:"published_at"`
 	CachedAt       time.Time  `json:"cached_at"`
 	LastAccessedAt time.Time  `json:"last_accessed_at"`
+	PackageName    string     `json:"package_name,omitempty"`
+	Ecosystem      string     `json:"ecosystem,omitempty"`
+	DepsDevSystem  string     `json:"depsdev_system,omitempty"`
+	PackagePURL    string     `json:"package_purl,omitempty"`
 	// Vulnerability scan result for this version, when scanned. MaxSeverity is
 	// empty/"none" when clean or not yet scanned. VulnCounts is the per-severity
 	// advisory breakdown that powers the segmented severity bar (same shape the
@@ -536,10 +542,11 @@ type artifactDTO struct {
 }
 
 type artifactScanJobDTO struct {
-	JobID      string `json:"job_id"`
-	Status     string `json:"status"`
-	Scanner    string `json:"scanner"`
-	BlobSHA256 string `json:"blob_sha256"`
+	JobID          string `json:"job_id"`
+	Status         string `json:"status"`
+	ScannerProfile string `json:"scanner_profile"`
+	Scanner        string `json:"scanner"`
+	BlobSHA256     string `json:"blob_sha256"`
 }
 
 type artifactScanBatchReq struct {
@@ -553,6 +560,10 @@ type artifactScanBatchDTO struct {
 
 type artifactScanResultDTO struct {
 	Path                  string                   `json:"path"`
+	PackageName           string                   `json:"package_name,omitempty"`
+	Ecosystem             string                   `json:"ecosystem,omitempty"`
+	DepsDevSystem         string                   `json:"depsdev_system,omitempty"`
+	PackagePURL           string                   `json:"package_purl,omitempty"`
 	Status                string                   `json:"status"`
 	Scanner               string                   `json:"scanner,omitempty"`
 	ScannerVersion        string                   `json:"scanner_version,omitempty"`
@@ -563,6 +574,16 @@ type artifactScanResultDTO struct {
 	Error                 string                   `json:"error,omitempty"`
 	ScannedAt             *time.Time               `json:"scanned_at,omitempty"`
 	Findings              []artifactScanFindingDTO `json:"findings,omitempty"`
+	SBOM                  *artifactScanSBOMDTO     `json:"sbom,omitempty"`
+}
+
+type artifactScanSBOMDTO struct {
+	ID               int64      `json:"id"`
+	Format           string     `json:"format"`
+	Generator        string     `json:"generator"`
+	GeneratorVersion string     `json:"generator_version,omitempty"`
+	ContentDigest    string     `json:"content_digest"`
+	CreatedAt        *time.Time `json:"created_at,omitempty"`
 }
 
 type artifactScanFindingDTO struct {
@@ -613,18 +634,23 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 	count, _ := h.store.CountRepoArtifacts(r.Context(), id, prefix)
 	size, _ := h.store.RepoSize(r.Context(), id)
 	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
-	artifactScanScanner := cfg.ArtifactScan.EffectiveScanner()
-	artifactScanConfigHash := cfg.ArtifactScan.ConfigHash
+	artifactScanProfile := cfg.ArtifactScan.EffectiveScannerProfile()
 	out := make([]artifactDTO, 0, len(arts))
 	for _, a := range arts {
+		coord := packagecoord.FromArtifact(repo.Format, a.Path, a.Version)
+		version := a.Version
+		if version == "" {
+			version = coord.Version
+		}
 		dto := artifactDTO{
-			Path: a.Path, Version: a.Version, Size: a.Size, ContentType: a.ContentType,
+			Path: a.Path, Version: version, Size: a.Size, ContentType: a.ContentType,
 			PublishedAt: a.PublishedAt, CachedAt: a.CachedAt, LastAccessedAt: a.LastAccessedAt,
+			PackageName: coord.PackageName, Ecosystem: coord.Ecosystem, DepsDevSystem: coord.DepsDevSystem, PackagePURL: coord.PURL,
 		}
 		// Attach the stored vulnerability scan for this coordinate, if any.
-		if a.Version != "" {
+		if version != "" {
 			if eco, pkg := repopkg.VulnCoordinate(repo.Format, a.Path); pkg != "" {
-				if scan, serr := h.store.GetVulnScan(r.Context(), eco, pkg, a.Version); serr == nil {
+				if scan, serr := h.store.GetVulnScan(r.Context(), eco, pkg, version); serr == nil {
 					dto.MaxSeverity = scan.MaxSeverity
 					dto.VulnIDs = scan.VulnIDs
 					dto.VulnCounts = scan.SeverityCounts
@@ -637,7 +663,7 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 			}
 			// Attach the stored license resolution for this coordinate, if any.
 			if system, pkg := repopkg.LicenseCoordinate(repo.Format, a.Path); pkg != "" {
-				if ls, lerr := h.store.GetLicenseScan(r.Context(), system, pkg, a.Version); lerr == nil {
+				if ls, lerr := h.store.GetLicenseScan(r.Context(), system, pkg, version); lerr == nil {
 					dto.Licenses = ls.Licenses
 					dto.LicenseSource = ls.Source
 					if !ls.ResolvedAt.IsZero() {
@@ -647,11 +673,24 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		if job, jerr := h.store.LatestArtifactScanJob(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); jerr == nil &&
-			(job.Status == artifactscan.StatusQueued || job.Status == artifactscan.StatusRunning) {
+		if job, jerr := h.store.LatestArtifactScanJob(r.Context(), a.BlobSHA256, artifactScanProfile); jerr == nil &&
+			(job.Status == artifactscan.JobQueued || job.Status == artifactscan.JobRunning) {
 			dto.ArtifactScanStatus = string(job.Status)
 			dto.ArtifactScanScanner = job.Scanner
-		} else if res, serr := h.store.LatestArtifactScanResult(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); serr == nil {
+		} else if verdict, verr := h.store.LatestArtifactScanVerdict(r.Context(), id, a.BlobSHA256, artifactScanProfile); verr == nil {
+			dto.ArtifactScanStatus = string(verdict.Status)
+			dto.ArtifactScanSeverity = string(verdict.MaxSeverity)
+			dto.ArtifactScanScanner = artifactScanProfile
+			if verdict.ResultID != 0 {
+				if findings, ferr := h.store.ListArtifactScanFindings(r.Context(), verdict.ResultID); ferr == nil {
+					dto.ArtifactScanFindingCount = len(findings)
+				}
+			}
+			if !verdict.ComputedAt.IsZero() {
+				computedAt := verdict.ComputedAt
+				dto.ArtifactScanScannedAt = &computedAt
+			}
+		} else if res, serr := h.store.LatestArtifactScanResult(r.Context(), a.BlobSHA256, artifactScanProfile); serr == nil {
 			dto.ArtifactScanStatus = string(res.Status)
 			dto.ArtifactScanSeverity = string(res.MaxSeverity)
 			dto.ArtifactScanScanner = res.Scanner
@@ -660,7 +699,7 @@ func (h *Handler) listArtifacts(w http.ResponseWriter, r *http.Request) {
 				scannedAt := res.ScannedAt
 				dto.ArtifactScanScannedAt = &scannedAt
 			}
-		} else if job, jerr := h.store.LatestArtifactScanJob(r.Context(), a.BlobSHA256, artifactScanScanner, artifactScanConfigHash); jerr == nil {
+		} else if job, jerr := h.store.LatestArtifactScanJob(r.Context(), a.BlobSHA256, artifactScanProfile); jerr == nil {
 			dto.ArtifactScanStatus = string(job.Status)
 			dto.ArtifactScanScanner = job.Scanner
 		}
@@ -697,25 +736,45 @@ func (h *Handler) getArtifactScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
-	scanner := cfg.ArtifactScan.EffectiveScanner()
-	configHash := cfg.ArtifactScan.ConfigHash
+	profile := cfg.ArtifactScan.EffectiveScannerProfile()
+	coord := packagecoord.FromArtifact(repo.Format, artifact.Path, artifact.Version)
 
-	if job, jerr := h.store.LatestArtifactScanJob(r.Context(), artifact.BlobSHA256, scanner, configHash); jerr == nil &&
-		(job.Status == artifactscan.StatusQueued || job.Status == artifactscan.StatusRunning) {
+	if job, jerr := h.store.LatestArtifactScanJob(r.Context(), artifact.BlobSHA256, profile); jerr == nil &&
+		(job.Status == artifactscan.JobQueued || job.Status == artifactscan.JobRunning) {
 		writeJSON(w, http.StatusOK, artifactScanResultDTO{
-			Path:    artifact.Path,
-			Status:  string(job.Status),
-			Scanner: job.Scanner,
+			Path:          artifact.Path,
+			PackageName:   coord.PackageName,
+			Ecosystem:     coord.Ecosystem,
+			DepsDevSystem: coord.DepsDevSystem,
+			PackagePURL:   coord.PURL,
+			Status:        string(job.Status),
+			Scanner:       job.Scanner,
 		})
 		return
 	}
-	res, err := h.store.LatestArtifactScanResult(r.Context(), artifact.BlobSHA256, scanner, configHash)
+	res, err := h.store.LatestArtifactScanResult(r.Context(), artifact.BlobSHA256, profile)
 	if err != nil {
+		if errors.Is(err, meta.ErrNotFound) {
+			writeJSON(w, http.StatusOK, artifactScanResultDTO{
+				Path:          artifact.Path,
+				PackageName:   coord.PackageName,
+				Ecosystem:     coord.Ecosystem,
+				DepsDevSystem: coord.DepsDevSystem,
+				PackagePURL:   coord.PURL,
+				Status:        "unscanned",
+				Scanner:       profile,
+			})
+			return
+		}
 		mapError(w, err)
 		return
 	}
 	out := artifactScanResultDTO{
 		Path:                  artifact.Path,
+		PackageName:           coord.PackageName,
+		Ecosystem:             coord.Ecosystem,
+		DepsDevSystem:         coord.DepsDevSystem,
+		PackagePURL:           coord.PURL,
 		Status:                string(res.Status),
 		Scanner:               res.Scanner,
 		ScannerVersion:        res.ScannerVersion,
@@ -746,7 +805,59 @@ func (h *Handler) getArtifactScan(w http.ResponseWriter, r *http.Request) {
 			MatchType:       f.MatchType,
 		})
 	}
+	if sbom, err := h.store.LatestArtifactSBOM(r.Context(), artifact.BlobSHA256, profile); err == nil {
+		out.SBOM = artifactScanSBOMView(sbom)
+	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) getArtifactSBOM(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(r.Context(), id)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	if !h.canReadRepo(w, r, repo.Name) {
+		return
+	}
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "path required")
+		return
+	}
+	artifact, err := h.store.GetArtifact(r.Context(), id, path)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	cfg, _ := repoconfig.Parse(repo.ConfigJSON)
+	sbom, err := h.store.LatestArtifactSBOM(r.Context(), artifact.BlobSHA256, cfg.ArtifactScan.EffectiveScannerProfile())
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(sbom.ContentJSON))
+}
+
+func artifactScanSBOMView(sbom artifactscan.SBOM) *artifactScanSBOMDTO {
+	out := &artifactScanSBOMDTO{
+		ID:               sbom.ID,
+		Format:           sbom.Format,
+		Generator:        sbom.Generator,
+		GeneratorVersion: sbom.GeneratorVersion,
+		ContentDigest:    sbom.ContentDigest,
+	}
+	if !sbom.CreatedAt.IsZero() {
+		t := sbom.CreatedAt
+		out.CreatedAt = &t
+	}
+	return out
 }
 
 // scanArtifact enqueues a manual artifact-byte scan for one stored artifact.
@@ -779,16 +890,17 @@ func (h *Handler) scanArtifact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	job, err := h.store.EnqueueArtifactScan(r.Context(), jobID, artifact.BlobSHA256,
-		cfg.ArtifactScan.EffectiveScanner(), cfg.ArtifactScan.ConfigHash, time.Now().UTC())
+		cfg.ArtifactScan.EffectiveScannerProfile(), time.Now().UTC())
 	if err != nil {
 		mapError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusAccepted, artifactScanJobDTO{
-		JobID:      job.ID,
-		Status:     string(job.Status),
-		Scanner:    job.Scanner,
-		BlobSHA256: job.BlobSHA256,
+		JobID:          job.ID,
+		Status:         string(job.Status),
+		ScannerProfile: job.ScannerProfile,
+		Scanner:        job.Scanner,
+		BlobSHA256:     job.BlobSHA256,
 	})
 }
 
@@ -835,17 +947,18 @@ func (h *Handler) scanArtifactsBatch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		job, err := h.store.EnqueueArtifactScan(r.Context(), jobID, artifact.BlobSHA256,
-			cfg.ArtifactScan.EffectiveScanner(), cfg.ArtifactScan.ConfigHash, time.Now().UTC())
+			cfg.ArtifactScan.EffectiveScannerProfile(), time.Now().UTC())
 		if err != nil {
 			mapError(w, err)
 			return
 		}
 		out.Queued++
 		out.Jobs = append(out.Jobs, artifactScanJobDTO{
-			JobID:      job.ID,
-			Status:     string(job.Status),
-			Scanner:    job.Scanner,
-			BlobSHA256: job.BlobSHA256,
+			JobID:          job.ID,
+			Status:         string(job.Status),
+			ScannerProfile: job.ScannerProfile,
+			Scanner:        job.Scanner,
+			BlobSHA256:     job.BlobSHA256,
 		})
 	}
 	writeJSON(w, http.StatusAccepted, out)

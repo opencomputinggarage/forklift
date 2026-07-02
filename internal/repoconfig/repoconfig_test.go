@@ -107,8 +107,8 @@ func TestValidate(t *testing.T) {
 
 func TestArtifactScanDefaults(t *testing.T) {
 	cfg := Default().ArtifactScan
-	if got := cfg.EffectiveScanner(); got != "grype" {
-		t.Fatalf("scanner=%q, want grype", got)
+	if got := cfg.EffectiveScannerProfile(); got != "grype-default" {
+		t.Fatalf("scanner_profile=%q, want grype-default", got)
 	}
 	if got := cfg.EffectiveAction(); got != VulnActionAudit {
 		t.Fatalf("action=%q, want audit", got)

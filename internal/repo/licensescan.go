@@ -2,10 +2,10 @@ package repo
 
 import (
 	"context"
-	"path"
 	"time"
 
 	"github.com/younsl/o/box/kubernetes/forklift/internal/meta"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/packagecoord"
 )
 
 // LicenseCoordinate returns the deps.dev system and package name for an artifact
@@ -14,23 +14,11 @@ import (
 // "group:artifact"); only the system label differs. Returns empty strings when
 // the format has no resolvable coordinate.
 func LicenseCoordinate(format, artifactPath string) (system, pkg string) {
-	system = depsDevSystem(format)
-	if system == "" {
+	c := packagecoord.FromArtifact(format, artifactPath, "")
+	if c.DepsDevSystem == "" || c.PackageName == "" {
 		return "", ""
 	}
-	switch format {
-	case meta.FormatMaven:
-		return system, mavenPackage(artifactPath)
-	case meta.FormatNPM:
-		return system, npmPackage(artifactPath)
-	case meta.FormatCargo:
-		return system, cargoPackage(artifactPath)
-	case meta.FormatGo:
-		return system, goPackage(artifactPath)
-	case meta.FormatPyPI:
-		return system, pypiPackageFromFilename(path.Base(artifactPath))
-	}
-	return "", ""
+	return c.DepsDevSystem, c.PackageName
 }
 
 // DepsDevSystem maps a forklift repository format to its deps.dev system name,
@@ -41,20 +29,7 @@ func DepsDevSystem(format string) string { return depsDevSystem(format) }
 // depsDevSystem maps a forklift repository format to its deps.dev system name.
 // Returns "" for unsupported formats (the gate then no-ops).
 func depsDevSystem(format string) string {
-	switch format {
-	case meta.FormatMaven:
-		return "maven"
-	case meta.FormatNPM:
-		return "npm"
-	case meta.FormatCargo:
-		return "cargo"
-	case meta.FormatGo:
-		return "go"
-	case meta.FormatPyPI:
-		return "pypi"
-	default:
-		return ""
-	}
+	return packagecoord.DepsDevSystem(format)
 }
 
 // resolveStored enqueues an immediate license resolution for a freshly stored

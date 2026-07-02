@@ -258,14 +258,18 @@ credential chain (EKS IRSA / Pod Identity).
 {{- if .Values.artifactScanning.enabled }}
 - name: FORKLIFT_ARTIFACT_SCAN_ENABLED
   value: "true"
-- name: FORKLIFT_ARTIFACT_SCAN_SCANNER
-  value: {{ .Values.artifactScanning.scanner | quote }}
-- name: FORKLIFT_ARTIFACT_SCAN_CONFIG_HASH
-  value: {{ .Values.artifactScanning.configHash | quote }}
+- name: FORKLIFT_ARTIFACT_SCAN_DEFAULT_PROFILE
+  value: {{ .Values.artifactScanning.defaultProfile | quote }}
 - name: FORKLIFT_ARTIFACT_SCAN_LEASE_TTL
   value: {{ .Values.artifactScanning.leaseTTL | quote }}
 - name: FORKLIFT_ARTIFACT_SCAN_TOKEN_TTL
   value: {{ .Values.artifactScanning.tokenTTL | quote }}
+- name: FORKLIFT_ARTIFACT_SCAN_MAX_ARTIFACT_BYTES
+  value: {{ .Values.artifactScanning.worker.maxArtifactBytes | quote }}
+- name: FORKLIFT_ARTIFACT_SCAN_MAX_ATTEMPTS
+  value: {{ .Values.artifactScanning.maxAttempts | quote }}
+- name: FORKLIFT_ARTIFACT_SCAN_STORE_SBOM
+  value: {{ .Values.artifactScanning.storeSBOM | quote }}
 - name: FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN
   valueFrom:
     secretKeyRef:

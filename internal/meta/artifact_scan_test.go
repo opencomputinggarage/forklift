@@ -2,48 +2,88 @@ package meta
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/younsl/o/box/kubernetes/forklift/internal/artifactscan"
+	"github.com/younsl/o/box/kubernetes/forklift/internal/repoconfig"
 )
 
-func TestArtifactScanJobLifecycle(t *testing.T) {
+func testScanProfile(now time.Time) artifactscan.Profile {
+	return artifactscan.Profile{
+		Name:       "grype-default",
+		Scanner:    "grype",
+		Mode:       artifactscan.ModeDeployment,
+		ConfigHash: "grype-default-v1",
+		Limits:     artifactscan.Limits{MaxArtifactBytes: 100 << 20},
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+}
+
+func testCapabilities(now time.Time) []artifactscan.ScannerCapability {
+	return []artifactscan.ScannerCapability{{
+		Name:                  "grype",
+		Version:               "1.0.0",
+		DatabaseSchemaVersion: "6",
+		DatabaseBuiltAt:       now,
+		SupportedEcosystems:   []string{"npm"},
+	}}
+}
+
+func TestArtifactScanProfileJobReportVerdictLifecycle(t *testing.T) {
 	s := openTestStore(t)
 	ctx := context.Background()
-	repo, _ := s.CreateRepository(ctx, Repository{Name: "r", Format: FormatNPM, Type: TypeHosted})
-	art, err := s.PutArtifact(ctx, Artifact{RepoID: repo.ID, Path: "a.tgz", BlobSHA256: "abc", Size: 3})
+	cfg := repoconfig.Default()
+	cfg.ArtifactScan = repoconfig.ArtifactScanPolicyConfig{
+		Enabled:        true,
+		ScannerProfile: "grype-default",
+		Action:         repoconfig.VulnActionBlock,
+		Threshold:      repoconfig.SeverityHigh,
+	}
+	cfgJSON, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo, _ := s.CreateRepository(ctx, Repository{Name: "r", Format: FormatNPM, Type: TypeHosted, ConfigJSON: string(cfgJSON)})
+	cachedAt := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	art, err := s.PutArtifact(ctx, Artifact{
+		RepoID:         repo.ID,
+		Path:           "axios/-/axios-0.21.1.tgz",
+		BlobSHA256:     "abc",
+		Size:           3,
+		ContentType:    "application/octet-stream",
+		CachedAt:       cachedAt,
+		LastAccessedAt: cachedAt.Add(time.Minute),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 7, 1, 1, 2, 3, 0, time.UTC)
-	job, err := s.EnqueueArtifactScan(ctx, "job-1", art.BlobSHA256, "grype", "cfg", now)
+	if err := s.EnsureArtifactScannerProfile(ctx, testScanProfile(now)); err != nil {
+		t.Fatalf("ensure profile: %v", err)
+	}
+	job, err := s.EnqueueArtifactScan(ctx, "job-1", art.BlobSHA256, "grype-default", now)
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
-	if job.Status != artifactscan.StatusQueued {
-		t.Fatalf("status = %s", job.Status)
+	if job.Status != artifactscan.JobQueued || job.ScannerProfile != "grype-default" || job.Scanner != "grype" {
+		t.Fatalf("job = %+v", job)
 	}
 	targets, err := s.ArtifactScanTargets(ctx, art.BlobSHA256)
 	if err != nil {
 		t.Fatalf("scan targets: %v", err)
 	}
-	if len(targets) != 1 || targets[0].Repository != "r" || targets[0].Format != FormatNPM || targets[0].Path != "a.tgz" {
+	if len(targets) != 1 || targets[0].Repository != "r" || targets[0].PURL != "pkg:npm/axios@0.21.1" {
 		t.Fatalf("targets = %+v", targets)
 	}
-	latestJob, err := s.LatestArtifactScanJob(ctx, art.BlobSHA256, "grype", "cfg")
-	if err != nil {
-		t.Fatalf("latest job: %v", err)
-	}
-	if latestJob.ID != job.ID || latestJob.Status != artifactscan.StatusQueued {
-		t.Fatalf("latest job = %+v", latestJob)
-	}
-	claimed, err := s.ClaimArtifactScanJob(ctx, "worker-1", now.Add(time.Minute), now)
+	claimed, err := s.ClaimArtifactScanJob(ctx, "worker-1", testCapabilities(now), now.Add(time.Minute), now, 3)
 	if err != nil {
 		t.Fatalf("claim: %v", err)
 	}
-	if claimed.ID != job.ID || claimed.Status != artifactscan.StatusRunning || claimed.Attempts != 1 {
+	if claimed.ID != job.ID || claimed.Status != artifactscan.JobRunning || claimed.Attempts != 1 {
 		t.Fatalf("claimed = %+v", claimed)
 	}
 	if err := s.HeartbeatArtifactScanJob(ctx, job.ID, "worker-1", now.Add(2*time.Minute), now.Add(time.Second)); err != nil {
@@ -54,10 +94,9 @@ func TestArtifactScanJobLifecycle(t *testing.T) {
 		BlobSHA256:            art.BlobSHA256,
 		Scanner:               "grype",
 		ScannerVersion:        "1.0.0",
-		ScannerConfigHash:     "cfg",
 		DatabaseSchemaVersion: "6",
 		DatabaseBuiltAt:       now,
-		Status:                artifactscan.StatusCompleted,
+		Status:                artifactscan.ReportCompleted,
 		MaxSeverity:           artifactscan.SeverityHigh,
 		ScannedAt:             now.Add(3 * time.Second),
 		Findings: []artifactscan.Finding{{
@@ -74,24 +113,23 @@ func TestArtifactScanJobLifecycle(t *testing.T) {
 	if resultID == 0 {
 		t.Fatal("missing result id")
 	}
-	stored, err := s.LatestArtifactScanResult(ctx, art.BlobSHA256, "grype", "cfg")
+	stored, err := s.LatestArtifactScanResult(ctx, art.BlobSHA256, "grype-default")
 	if err != nil {
 		t.Fatalf("latest result: %v", err)
 	}
-	if stored.MaxSeverity != artifactscan.SeverityHigh || len(stored.Findings) != 1 {
+	if stored.ScannerProfile != "grype-default" || stored.MaxSeverity != artifactscan.SeverityHigh || len(stored.Findings) != 1 {
 		t.Fatalf("stored result = %+v", stored)
 	}
-}
-
-func TestClaimArtifactScanJobEmpty(t *testing.T) {
-	s := openTestStore(t)
-	_, err := s.ClaimArtifactScanJob(context.Background(), "worker", time.Now().Add(time.Minute), time.Now())
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("err = %v, want ErrNotFound", err)
+	gotVerdict, err := s.LatestArtifactScanVerdict(ctx, repo.ID, art.BlobSHA256, "grype-default")
+	if err != nil {
+		t.Fatalf("latest verdict: %v", err)
+	}
+	if gotVerdict.Status != artifactscan.VerdictBlock || gotVerdict.ResultID != stored.ID {
+		t.Fatalf("verdict = %+v", gotVerdict)
 	}
 }
 
-func TestClaimArtifactScanJobReclaimsExpiredRunning(t *testing.T) {
+func TestClaimArtifactScanJobRequiresMatchingCapability(t *testing.T) {
 	s := openTestStore(t)
 	ctx := context.Background()
 	repo, _ := s.CreateRepository(ctx, Repository{Name: "r", Format: FormatNPM, Type: TypeHosted})
@@ -100,21 +138,45 @@ func TestClaimArtifactScanJobReclaimsExpiredRunning(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 7, 1, 1, 2, 3, 0, time.UTC)
-	job, err := s.EnqueueArtifactScan(ctx, "job-expired", art.BlobSHA256, "grype", "cfg", now)
+	if err := s.EnsureArtifactScannerProfile(ctx, testScanProfile(now)); err != nil {
+		t.Fatalf("ensure profile: %v", err)
+	}
+	if _, err := s.EnqueueArtifactScan(ctx, "job-mismatch", art.BlobSHA256, "grype-default", now); err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	_, err = s.ClaimArtifactScanJob(ctx, "worker-1", []artifactscan.ScannerCapability{{Name: "trivy"}}, now.Add(time.Minute), now, 3)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("claim err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestClaimArtifactScanJobMarksExpiredAtMaxAttemptsDead(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, _ := s.CreateRepository(ctx, Repository{Name: "r", Format: FormatNPM, Type: TypeHosted})
+	art, err := s.PutArtifact(ctx, Artifact{RepoID: repo.ID, Path: "a.tgz", BlobSHA256: "abc", Size: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 7, 1, 1, 2, 3, 0, time.UTC)
+	if err := s.EnsureArtifactScannerProfile(ctx, testScanProfile(now)); err != nil {
+		t.Fatalf("ensure profile: %v", err)
+	}
+	job, err := s.EnqueueArtifactScan(ctx, "job-dead", art.BlobSHA256, "grype-default", now)
 	if err != nil {
 		t.Fatalf("enqueue: %v", err)
 	}
-	if _, err := s.ClaimArtifactScanJob(ctx, "worker-1", now.Add(time.Minute), now); err != nil {
+	if _, err := s.ClaimArtifactScanJob(ctx, "worker-1", testCapabilities(now), now.Add(time.Minute), now, 1); err != nil {
 		t.Fatalf("first claim: %v", err)
 	}
-	if _, err := s.ClaimArtifactScanJob(ctx, "worker-2", now.Add(2*time.Minute), now.Add(30*time.Second)); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("non-expired claim err = %v, want ErrNotFound", err)
+	if _, err := s.ClaimArtifactScanJob(ctx, "worker-2", testCapabilities(now), now.Add(2*time.Minute), now.Add(2*time.Minute), 1); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("claim after max attempts err = %v, want ErrNotFound", err)
 	}
-	reclaimed, err := s.ClaimArtifactScanJob(ctx, "worker-2", now.Add(3*time.Minute), now.Add(2*time.Minute))
+	stored, err := s.LatestArtifactScanJob(ctx, art.BlobSHA256, "grype-default")
 	if err != nil {
-		t.Fatalf("reclaim: %v", err)
+		t.Fatalf("latest job: %v", err)
 	}
-	if reclaimed.ID != job.ID || reclaimed.WorkerID != "worker-2" || reclaimed.Attempts != 2 {
-		t.Fatalf("reclaimed = %+v", reclaimed)
+	if stored.ID != job.ID || stored.Status != artifactscan.JobDead || stored.FinishedAt.IsZero() {
+		t.Fatalf("stored job = %+v", stored)
 	}
 }

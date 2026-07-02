@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -78,10 +79,19 @@ func main() {
 }
 
 func runOnce(ctx context.Context, log *slog.Logger, client scannerworker.Client, registry *scannerworker.Registry, workRoot string, maxArtifactBytes int64) error {
-	job, err := client.Claim(ctx)
+	capabilities, err := registry.Capabilities(ctx)
 	if err != nil {
 		return err
 	}
+	job, err := client.Claim(ctx, capabilities)
+	if err != nil {
+		return err
+	}
+	var jobMu sync.Mutex
+	runCtx, stopHeartbeat := context.WithCancel(ctx)
+	defer stopHeartbeat()
+	go heartbeatLoop(runCtx, log, client, &job, &jobMu)
+
 	driver, ok := registry.Get(job.Scanner)
 	if !ok {
 		return fmt.Errorf("no driver registered for scanner %q", job.Scanner)
@@ -93,14 +103,34 @@ func runOnce(ctx context.Context, log *slog.Logger, client scannerworker.Client,
 	defer rc.Close()
 
 	root := filepath.Join(workRoot, "forklift-scan-"+job.JobID)
-	prepared, err := scannerworker.PrepareArtifact(ctx, root, rc, job.BlobSHA256, scannerworker.WorkspaceLimits{MaxArtifactBytes: maxArtifactBytes})
+	limit := maxArtifactBytes
+	if job.Limits.MaxArtifactBytes > 0 {
+		limit = job.Limits.MaxArtifactBytes
+	}
+	prepared, err := scannerworker.PrepareArtifact(runCtx, root, rc, job.BlobSHA256, scannerworker.WorkspaceLimits{MaxArtifactBytes: limit})
 	if err != nil {
+		var tooLarge scannerworker.ErrArtifactTooLarge
+		if errors.As(err, &tooLarge) {
+			result := artifactscan.Result{
+				JobID:      job.JobID,
+				BlobSHA256: job.BlobSHA256,
+				Scanner:    job.Scanner,
+				Status:     artifactscan.StatusSkippedTooLarge,
+				Error:      tooLarge.Error(),
+				ScannedAt:  time.Now().UTC(),
+			}
+			log.Info("submitting scan result", "job", job.JobID, "scanner", job.Scanner, "status", result.Status)
+			jobMu.Lock()
+			submitJob := job
+			jobMu.Unlock()
+			return client.SubmitResult(ctx, submitJob, result)
+		}
 		return err
 	}
 	prepared.Targets = job.Targets
 	defer prepared.Cleanup()
 
-	result, err := driver.Scan(ctx, prepared)
+	result, err := driver.Scan(runCtx, prepared)
 	if err != nil && result.Status == "" {
 		return err
 	}
@@ -113,8 +143,64 @@ func runOnce(ctx context.Context, log *slog.Logger, client scannerworker.Client,
 	if result.ScannedAt.IsZero() {
 		result.ScannedAt = time.Now().UTC()
 	}
+	if job.StoreSBOM {
+		generator, ok := driver.(scannerworker.SBOMGenerator)
+		if !ok {
+			return fmt.Errorf("scanner %q does not support sbom generation", job.Scanner)
+		}
+		sbom, err := generator.GenerateSBOM(runCtx, prepared)
+		if err != nil {
+			return err
+		}
+		result.SBOM = &sbom
+	}
 	log.Info("submitting scan result", "job", job.JobID, "scanner", job.Scanner, "status", result.Status)
-	return client.SubmitResult(ctx, job, result)
+	jobMu.Lock()
+	submitJob := job
+	jobMu.Unlock()
+	return client.SubmitResult(ctx, submitJob, result)
+}
+
+func heartbeatLoop(ctx context.Context, log *slog.Logger, client scannerworker.Client, job *scannerworker.ClaimedJob, mu *sync.Mutex) {
+	mu.Lock()
+	interval := heartbeatInterval(job.Deadline, time.Now().UTC())
+	current := *job
+	mu.Unlock()
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			renewed, err := client.Heartbeat(ctx, current)
+			if err != nil {
+				log.Warn("scan heartbeat failed", "job", current.JobID, "err", err)
+				return
+			}
+			mu.Lock()
+			job.Token = renewed.Token
+			job.Deadline = renewed.Deadline
+			job.Limits = renewed.Limits
+			current = *job
+			mu.Unlock()
+			timer.Reset(interval)
+		}
+	}
+}
+
+func heartbeatInterval(deadline, now time.Time) time.Duration {
+	if deadline.IsZero() || !deadline.After(now) {
+		return 30 * time.Second
+	}
+	d := deadline.Sub(now) / 3
+	if d < 5*time.Second {
+		return 5 * time.Second
+	}
+	if d > 30*time.Second {
+		return 30 * time.Second
+	}
+	return d
 }
 
 func env(key, def string) string {

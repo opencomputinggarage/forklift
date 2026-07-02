@@ -23,7 +23,7 @@ func TestListArtifactsEnriched(t *testing.T) {
 
 	const artPath, ver = "left-pad/-/left-pad-1.0.0.tgz", "1.0.0"
 	if _, err := store.PutArtifact(ctx, meta.Artifact{
-		RepoID: id, Path: artPath, Version: ver, BlobSHA256: "sha", Size: 42,
+		RepoID: id, Path: artPath, BlobSHA256: "sha", Size: 42,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -40,11 +40,12 @@ func TestListArtifactsEnriched(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
-	job, err := store.EnqueueArtifactScan(ctx, "scan-job-1", "sha", "grype", "", now)
+	ensureArtifactScanProfile(t, store, now)
+	job, err := store.EnqueueArtifactScan(ctx, "scan-job-1", "sha", "grype-default", now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.ClaimArtifactScanJob(ctx, "worker", now.Add(time.Minute), now); err != nil {
+	if _, err := store.ClaimArtifactScanJob(ctx, "worker", artifactScanCaps(now), now.Add(time.Minute), now, 3); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.CompleteArtifactScanJob(ctx, job.ID, "worker", artifactscan.Result{
@@ -53,7 +54,7 @@ func TestListArtifactsEnriched(t *testing.T) {
 		Scanner:         "grype",
 		ScannerVersion:  "1.0.0",
 		DatabaseBuiltAt: now,
-		Status:          artifactscan.StatusCompleted,
+		Status:          artifactscan.ReportCompleted,
 		MaxSeverity:     artifactscan.SeverityHigh,
 		ScannedAt:       now,
 		Findings: []artifactscan.Finding{{
@@ -74,6 +75,11 @@ func TestListArtifactsEnriched(t *testing.T) {
 		TotalSize int64 `json:"total_size"`
 		Artifacts []struct {
 			Path                     string   `json:"path"`
+			Version                  string   `json:"version"`
+			PackageName              string   `json:"package_name"`
+			Ecosystem                string   `json:"ecosystem"`
+			DepsDevSystem            string   `json:"depsdev_system"`
+			PackagePURL              string   `json:"package_purl"`
 			MaxSeverity              string   `json:"max_severity"`
 			VulnIDs                  []string `json:"vuln_ids"`
 			Licenses                 []string `json:"licenses"`
@@ -88,8 +94,11 @@ func TestListArtifactsEnriched(t *testing.T) {
 		t.Fatalf("unexpected list: %+v", out)
 	}
 	a := out.Artifacts[0]
-	if a.MaxSeverity != "high" || len(a.VulnIDs) != 1 || len(a.Licenses) != 1 || a.Licenses[0] != "MIT" {
+	if a.Version != ver || a.MaxSeverity != "high" || len(a.VulnIDs) != 1 || len(a.Licenses) != 1 || a.Licenses[0] != "MIT" {
 		t.Fatalf("enrichment not attached: %+v", a)
+	}
+	if a.PackageName != "left-pad" || a.Ecosystem != "npm" || a.DepsDevSystem != "npm" || a.PackagePURL != "pkg:npm/left-pad@1.0.0" {
+		t.Fatalf("package coordinate not attached: %+v", a)
 	}
 	if a.ArtifactScanStatus != "completed" || a.ArtifactScanSeverity != "high" || a.ArtifactScanFindingCount != 1 {
 		t.Fatalf("artifact scan enrichment not attached: %+v", a)
@@ -116,7 +125,8 @@ func TestListArtifactsShowsPendingArtifactScanJob(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.EnqueueArtifactScan(ctx, "scan-job-queued", "queued-sha", "grype", "", time.Now().UTC()); err != nil {
+	ensureArtifactScanProfile(t, store, time.Now().UTC())
+	if _, err := store.EnqueueArtifactScan(ctx, "scan-job-queued", "queued-sha", "grype-default", time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,6 +162,7 @@ func TestScanArtifactEnqueuesJob(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	ensureArtifactScanProfile(t, store, time.Now().UTC())
 
 	resp := adminDo(t, http.MethodPost,
 		srv.URL+"/repositories/"+itoa(id)+"/artifacts/scan?path="+url.QueryEscape(artPath), "")
@@ -169,11 +180,11 @@ func TestScanArtifactEnqueuesJob(t *testing.T) {
 	if out.JobID == "" || out.Status != "queued" || out.Scanner != "grype" || out.BlobSHA256 != "manual-sha" {
 		t.Fatalf("unexpected enqueue response: %+v", out)
 	}
-	job, err := store.LatestArtifactScanJob(ctx, "manual-sha", "grype", "")
+	job, err := store.LatestArtifactScanJob(ctx, "manual-sha", "grype-default")
 	if err != nil {
 		t.Fatalf("latest scan job: %v", err)
 	}
-	if job.ID != out.JobID || job.Status != artifactscan.StatusQueued {
+	if job.ID != out.JobID || job.Status != artifactscan.JobQueued {
 		t.Fatalf("stored job = %+v response=%+v", job, out)
 	}
 
@@ -207,11 +218,12 @@ func TestArtifactScanDetailsAndBatch(t *testing.T) {
 		}
 	}
 	now := time.Now().UTC()
-	job, err := store.EnqueueArtifactScan(ctx, "scan-detail-job", paths[0]+"-sha", "grype", "", now)
+	ensureArtifactScanProfile(t, store, now)
+	job, err := store.EnqueueArtifactScan(ctx, "scan-detail-job", paths[0]+"-sha", "grype-default", now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.ClaimArtifactScanJob(ctx, "worker", now.Add(time.Minute), now); err != nil {
+	if _, err := store.ClaimArtifactScanJob(ctx, "worker", artifactScanCaps(now), now.Add(time.Minute), now, 3); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.CompleteArtifactScanJob(ctx, job.ID, "worker", artifactscan.Result{
@@ -220,7 +232,7 @@ func TestArtifactScanDetailsAndBatch(t *testing.T) {
 		Scanner:         "grype",
 		ScannerVersion:  "1.0.0",
 		DatabaseBuiltAt: now,
-		Status:          artifactscan.StatusCompleted,
+		Status:          artifactscan.ReportCompleted,
 		MaxSeverity:     artifactscan.SeverityHigh,
 		ScannedAt:       now,
 		Findings: []artifactscan.Finding{{
@@ -241,6 +253,9 @@ func TestArtifactScanDetailsAndBatch(t *testing.T) {
 	}
 	var detail struct {
 		Status       string `json:"status"`
+		PackageName  string `json:"package_name"`
+		Ecosystem    string `json:"ecosystem"`
+		PackagePURL  string `json:"package_purl"`
 		FindingCount int    `json:"finding_count"`
 		Findings     []struct {
 			VulnerabilityID string `json:"vulnerability_id"`
@@ -251,6 +266,26 @@ func TestArtifactScanDetailsAndBatch(t *testing.T) {
 	resp.Body.Close()
 	if detail.Status != "completed" || detail.FindingCount != 1 || len(detail.Findings) != 1 || detail.Findings[0].VulnerabilityID != "CVE-2026-DETAIL" {
 		t.Fatalf("detail = %+v", detail)
+	}
+	if detail.PackageName != "pkg" || detail.Ecosystem != "npm" || detail.PackagePURL != "pkg:npm/pkg@1.0.0" {
+		t.Fatalf("detail coordinate = %+v", detail)
+	}
+
+	resp = adminDo(t, http.MethodGet,
+		srv.URL+"/repositories/"+itoa(id)+"/artifacts/scan?path="+url.QueryEscape(paths[1]), "")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("unscanned detail status=%d", resp.StatusCode)
+	}
+	var unscanned struct {
+		Status       string `json:"status"`
+		PackageName  string `json:"package_name"`
+		PackagePURL  string `json:"package_purl"`
+		FindingCount int    `json:"finding_count"`
+	}
+	json.NewDecoder(resp.Body).Decode(&unscanned)
+	resp.Body.Close()
+	if unscanned.Status != "unscanned" || unscanned.FindingCount != 0 || unscanned.PackageName != "other" || unscanned.PackagePURL != "pkg:npm/other@1.0.0" {
+		t.Fatalf("unscanned detail = %+v", unscanned)
 	}
 
 	body := `{"paths":["` + paths[0] + `","` + paths[1] + `"]}`
@@ -281,4 +316,28 @@ func TestArtifactScanDetailsAndBatch(t *testing.T) {
 	if listed.Count != 2 || listed.Limit != 1 || listed.Offset != 1 || len(listed.Artifacts) != 1 {
 		t.Fatalf("paged list = %+v", listed)
 	}
+}
+
+func ensureArtifactScanProfile(t *testing.T, store *meta.Store, now time.Time) {
+	t.Helper()
+	if err := store.EnsureArtifactScannerProfile(context.Background(), artifactscan.Profile{
+		Name:       "grype-default",
+		Scanner:    "grype",
+		Mode:       artifactscan.ModeDeployment,
+		ConfigHash: "grype-default-v1",
+		Limits:     artifactscan.Limits{MaxArtifactBytes: 100 << 20},
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("ensure artifact scan profile: %v", err)
+	}
+}
+
+func artifactScanCaps(now time.Time) []artifactscan.ScannerCapability {
+	return []artifactscan.ScannerCapability{{
+		Name:                  "grype",
+		Version:               "1.0.0",
+		DatabaseSchemaVersion: "6",
+		DatabaseBuiltAt:       now,
+	}}
 }

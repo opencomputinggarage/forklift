@@ -16,6 +16,10 @@ func (f fakeDriver) Name() string { return f.name }
 
 func (f fakeDriver) Version(context.Context) (string, error) { return "test", nil }
 
+func (f fakeDriver) Capability(context.Context) (artifactscan.ScannerCapability, error) {
+	return artifactscan.ScannerCapability{Name: f.name, Version: "test"}, nil
+}
+
 func (f fakeDriver) Scan(context.Context, PreparedArtifact) (artifactscan.Result, error) {
 	return artifactscan.Result{Scanner: f.name}, nil
 }
@@ -33,6 +37,13 @@ func TestRegistry(t *testing.T) {
 	}
 	if _, ok := reg.Get("missing"); ok {
 		t.Fatal("missing driver found")
+	}
+	caps, err := reg.Capabilities(context.Background())
+	if err != nil {
+		t.Fatalf("capabilities: %v", err)
+	}
+	if len(caps) != 2 || caps[0].Name != "a" || caps[1].Name != "z" {
+		t.Fatalf("capabilities = %+v", caps)
 	}
 }
 

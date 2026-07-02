@@ -56,7 +56,7 @@ type Manager struct {
 
 	// artifactScanEnqueue, when set, is invoked after a stored artifact is
 	// available as a blob. It must not block the serving path.
-	artifactScanEnqueue func(blobSHA256 string)
+	artifactScanEnqueue func(blobSHA256, scannerProfile string)
 }
 
 // SetApprovalNotifier registers a callback invoked when a package is newly
@@ -68,9 +68,9 @@ func (m *Manager) SetApprovalNotifier(fn func(repo, pkg, version, requestedBy st
 }
 
 // SetArtifactScanEnqueuer registers the optional artifact-byte scan enqueue
-// hook. The hook receives the content-addressed blob digest, not repository
-// protocol coordinates.
-func (m *Manager) SetArtifactScanEnqueuer(fn func(blobSHA256 string)) {
+// hook. The hook receives the content-addressed blob digest and the resolved
+// scanner profile from repository policy.
+func (m *Manager) SetArtifactScanEnqueuer(fn func(blobSHA256, scannerProfile string)) {
 	m.artifactScanEnqueue = fn
 }
 

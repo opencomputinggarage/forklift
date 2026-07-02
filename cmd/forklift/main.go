@@ -71,8 +71,10 @@ func main() {
 		"number of concurrent license resolution workers draining the queue")
 	flag.BoolVar(&cfg.ArtifactScan.Enabled, "artifact-scan-enabled", cfg.ArtifactScan.Enabled,
 		"enable optional isolated artifact-byte scanning")
-	flag.StringVar(&cfg.ArtifactScan.Scanner, "artifact-scan-scanner", cfg.ArtifactScan.Scanner,
-		"artifact scanner name used for scan jobs")
+	flag.StringVar(&cfg.ArtifactScan.DefaultProfile, "artifact-scan-default-profile", cfg.ArtifactScan.DefaultProfile,
+		"default artifact scanner profile")
+	flag.BoolVar(&cfg.ArtifactScan.StoreSBOM, "artifact-scan-store-sbom", cfg.ArtifactScan.StoreSBOM,
+		"store SBOM inventory for the default artifact scanner profile")
 	flag.StringVar(&cfg.ArtifactScan.WorkerToken, "artifact-scan-worker-token", cfg.ArtifactScan.WorkerToken,
 		"bearer token required by scanner workers to claim jobs")
 	flag.Parse()
@@ -226,21 +228,34 @@ func run(cfg *config.Config) error {
 			tokenKey = []byte(cfg.Auth.SessionSecret)
 		}
 		artifactScanSvc, err = artifactscan.NewService(store, artifactscan.ServiceConfig{
-			Scanner:           cfg.ArtifactScan.Scanner,
-			ScannerConfigHash: cfg.ArtifactScan.ScannerConfigHash,
-			LeaseTTL:          cfg.ArtifactScan.LeaseTTL,
-			TokenTTL:          cfg.ArtifactScan.TokenTTL,
-			TokenKey:          tokenKey,
+			DefaultProfile: cfg.ArtifactScan.DefaultProfile,
+			LeaseTTL:       cfg.ArtifactScan.LeaseTTL,
+			TokenTTL:       cfg.ArtifactScan.TokenTTL,
+			TokenKey:       tokenKey,
+			Profiles: []artifactscan.Profile{{
+				Name:       cfg.ArtifactScan.DefaultProfile,
+				Scanner:    "grype",
+				Mode:       artifactscan.ModeDeployment,
+				ConfigHash: cfg.ArtifactScan.DefaultProfile + "-v1",
+				Limits: artifactscan.Limits{
+					MaxArtifactBytes: cfg.ArtifactScan.MaxArtifactBytes,
+				},
+				StoreSBOM: cfg.ArtifactScan.StoreSBOM,
+			}},
+			MaxAttempts: cfg.ArtifactScan.MaxAttempts,
 		})
 		if err != nil {
 			return fmt.Errorf("init artifact scanner service: %w", err)
 		}
-		manager.SetArtifactScanEnqueuer(func(blobSHA256 string) {
-			if _, err := artifactScanSvc.Enqueue(context.Background(), blobSHA256); err != nil {
-				log.Warn("artifact scan enqueue failed", "blob", blobSHA256, "err", err)
+		if err := artifactScanSvc.InitProfiles(ctx); err != nil {
+			return fmt.Errorf("init artifact scanner profiles: %w", err)
+		}
+		manager.SetArtifactScanEnqueuer(func(blobSHA256, scannerProfile string) {
+			if _, err := artifactScanSvc.Enqueue(context.Background(), blobSHA256, scannerProfile); err != nil {
+				log.Warn("artifact scan enqueue failed", "blob", blobSHA256, "profile", scannerProfile, "err", err)
 			}
 		})
-		log.Info("artifact scanning enabled", "scanner", cfg.ArtifactScan.Scanner)
+		log.Info("artifact scanning enabled", "profile", cfg.ArtifactScan.DefaultProfile)
 	}
 
 	// Outbound approval alarms: when a package is quarantined pending approval,

@@ -134,13 +134,15 @@ type LicenseConfig struct {
 
 // ArtifactScanConfig configures optional worker-based artifact-byte scanning.
 type ArtifactScanConfig struct {
-	Enabled           bool
-	Scanner           string
-	ScannerConfigHash string
-	WorkerToken       string
-	TokenKey          string
-	LeaseTTL          time.Duration
-	TokenTTL          time.Duration
+	Enabled          bool
+	DefaultProfile   string
+	WorkerToken      string
+	TokenKey         string
+	LeaseTTL         time.Duration
+	TokenTTL         time.Duration
+	MaxArtifactBytes int64
+	MaxAttempts      int
+	StoreSBOM        bool
 }
 
 // NotifyConfig configures outbound alarms. The alarm channels (receivers) are
@@ -316,13 +318,15 @@ func Load() (*Config, error) {
 			Workers:        envInt("FORKLIFT_LICENSE_WORKERS", 6),
 		},
 		ArtifactScan: ArtifactScanConfig{
-			Enabled:           envBool("FORKLIFT_ARTIFACT_SCAN_ENABLED", false),
-			Scanner:           env("FORKLIFT_ARTIFACT_SCAN_SCANNER", "grype"),
-			ScannerConfigHash: env("FORKLIFT_ARTIFACT_SCAN_CONFIG_HASH", ""),
-			WorkerToken:       env("FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN", ""),
-			TokenKey:          env("FORKLIFT_ARTIFACT_SCAN_TOKEN_KEY", ""),
-			LeaseTTL:          envDuration("FORKLIFT_ARTIFACT_SCAN_LEASE_TTL", 10*time.Minute),
-			TokenTTL:          envDuration("FORKLIFT_ARTIFACT_SCAN_TOKEN_TTL", 10*time.Minute),
+			Enabled:          envBool("FORKLIFT_ARTIFACT_SCAN_ENABLED", false),
+			DefaultProfile:   env("FORKLIFT_ARTIFACT_SCAN_DEFAULT_PROFILE", "grype-default"),
+			WorkerToken:      env("FORKLIFT_ARTIFACT_SCAN_WORKER_TOKEN", ""),
+			TokenKey:         env("FORKLIFT_ARTIFACT_SCAN_TOKEN_KEY", ""),
+			LeaseTTL:         envDuration("FORKLIFT_ARTIFACT_SCAN_LEASE_TTL", 10*time.Minute),
+			TokenTTL:         envDuration("FORKLIFT_ARTIFACT_SCAN_TOKEN_TTL", 10*time.Minute),
+			MaxArtifactBytes: envInt64("FORKLIFT_ARTIFACT_SCAN_MAX_ARTIFACT_BYTES", 100<<20),
+			MaxAttempts:      int(envInt64("FORKLIFT_ARTIFACT_SCAN_MAX_ATTEMPTS", 3)),
+			StoreSBOM:        envBool("FORKLIFT_ARTIFACT_SCAN_STORE_SBOM", false),
 		},
 		Notify: NotifyConfig{
 			WebhookTimeout: envDuration("FORKLIFT_NOTIFY_WEBHOOK_TIMEOUT", 5*time.Second),
@@ -388,11 +392,14 @@ func (c *Config) validate() error {
 		if c.ArtifactScan.WorkerToken == "" {
 			return fmt.Errorf("artifact scanning enabled but worker token is empty")
 		}
-		if c.ArtifactScan.Scanner == "" {
-			return fmt.Errorf("artifact scanning enabled but scanner is empty")
+		if c.ArtifactScan.DefaultProfile == "" {
+			return fmt.Errorf("artifact scanning enabled but default profile is empty")
 		}
 		if c.ArtifactScan.LeaseTTL <= 0 || c.ArtifactScan.TokenTTL <= 0 {
 			return fmt.Errorf("artifact scan TTLs must be positive")
+		}
+		if c.ArtifactScan.MaxArtifactBytes <= 0 || c.ArtifactScan.MaxAttempts <= 0 {
+			return fmt.Errorf("artifact scan limits must be positive")
 		}
 	}
 	return nil
@@ -418,6 +425,16 @@ func envBool(key string, def bool) bool {
 func envInt(key string, def int) int {
 	if v, ok := os.LookupEnv(key); ok {
 		n, err := strconv.Atoi(strings.TrimSpace(v))
+		if err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+func envInt64(key string, def int64) int64 {
+	if v, ok := os.LookupEnv(key); ok {
+		n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
 		if err == nil {
 			return n
 		}

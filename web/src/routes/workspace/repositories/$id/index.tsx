@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
-import { X } from "lucide-react";
-import { api, Artifact, ArtifactList, ArtifactScanResult, AuditLogList, humanSize, Me, Receiver, RepoConfig, RepoPermission, RepoToken, repoEndpoint, Repository } from "@/api";
+import { ExternalLink, Search, X } from "lucide-react";
+import { api, Artifact, ArtifactScanFinding, ArtifactList, ArtifactScanResult, AuditLogList, humanSize, Me, Receiver, RepoConfig, RepoPermission, RepoToken, repoEndpoint, Repository } from "@/api";
 import { useAuth } from "@/authContext";
 import { UpstreamStatus } from "@/components/feedback/upstream-status";
 import { ConfirmModal } from "@/components/overlays/confirm-modal";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/app-ui/badge";
 import { PageHeader } from "@/components/app-ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/app-ui/select";
+import { SeverityBadge } from "@/components/app-ui/severity-badge";
 import { StateBadge } from "@/components/app-ui/status-badge";
 import {
   Table,
@@ -30,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { filterFindings, normalizedSeverity, packageSummary, severityOrder, sortedFindings, summarizeFindings } from "./-artifact-scan-findings";
 
 export const Route = createFileRoute("/workspace/repositories/$id/")({
   component: RepositoryDetailRoute,
@@ -103,7 +105,7 @@ export function RepositoryDetail({ me }: { me: Me }) {
         ))}
       </nav>
 
-      {tab === "artifacts" && <Artifacts repoId={repo.id} canDelete={!!me.admin} />}
+      {tab === "artifacts" && <Artifacts repoId={repo.id} canManageArtifacts={!!me.admin} />}
       {tab === "permissions" && <RepoPermissions repoId={repo.id} />}
       {tab === "audit" && <AuditLogs repoId={repo.id} />}
       {tab === "approvals" && repo.type === "proxy" && (
@@ -600,7 +602,7 @@ function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
   const approval = repo.config.approval ?? { enabled: false, mode: "enforce", auto_approve: [] };
   const vuln = repo.config.vuln ?? { enabled: false, action: "audit", threshold: "high", ignore: [] };
   const license = repo.config.license ?? { enabled: false, action: "audit", deny: [], allow: [] };
-  const artifactScan = repo.config.artifact_scan ?? { enabled: false, scanner: "grype", action: "audit", threshold: "high" };
+  const artifactScan = repo.config.artifact_scan ?? { enabled: false, scanner_profile: "grype-default", action: "audit", threshold: "high" };
   // Source-IP ACL applies to every repository type (including group entry).
   const ipacl = repo.config.ip_acl ?? { enabled: false, allow: [] };
   // Approval-notification receivers selected for this repository.
@@ -915,13 +917,9 @@ function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             <span>Gate downloads by the latest isolated scanner result</span>
           </label>
           <FieldGroup className="grid gap-4 md:grid-cols-2">
-            <Field><FieldLabel>Scanner</FieldLabel>
-              <Input value={artifactScan.scanner || "grype"}
-                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, scanner: e.target.value.trim() || "grype" } } })} /></Field>
-            <Field><FieldLabel>Config hash</FieldLabel>
-              <Input value={artifactScan.config_hash || ""}
-                placeholder="default"
-                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, config_hash: e.target.value.trim() } } })} /></Field>
+            <Field><FieldLabel>Scanner profile</FieldLabel>
+              <Input value={artifactScan.scanner_profile || "grype-default"}
+                onChange={(e) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, scanner_profile: e.target.value.trim() || "grype-default" } } })} /></Field>
             <Field><FieldLabel>{t("common.threshold")}</FieldLabel>
               <Select value={artifactScan.threshold || "high"}
                 onChange={(v) => setRepo({ ...repo, config: { ...repo.config, artifact_scan: { ...artifactScan, threshold: v } } })}
@@ -946,7 +944,7 @@ function Security({ repo, setRepo, canWrite }: { repo: Repository; setRepo: (r: 
             <span>Block artifacts with no completed scan result when action is block</span>
           </label>
           <p className="mb-0 mt-4 text-sm text-muted-foreground">
-            The server only checks stored results here. Scanner execution stays in the isolated worker; changing scanner config should also change the config hash.
+            The server only checks stored verdicts here. Scanner profiles define the scanner, config hash, execution mode, and worker limits.
           </p>
           </CardContent>
         </Card>
@@ -1086,7 +1084,7 @@ function RepoPermissions({ repoId }: { repoId: number }) {
   );
 }
 
-function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }) {
+function Artifacts({ repoId, canManageArtifacts }: { repoId: number; canManageArtifacts: boolean }) {
   const { t } = useTranslation();
   const [data, setData] = useState<ArtifactList | null>(null);
   const [prefix, setPrefix] = useState("");
@@ -1110,6 +1108,8 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
   const shownArtifacts = (data?.artifacts ?? []).filter((a) => {
     if (!status) return true;
     if (status === "unscanned") return !a.artifact_scan_status;
+    if (status === "findings") return a.artifact_scan_status === "completed" && (a.artifact_scan_finding_count ?? 0) > 0;
+    if (status === "clean") return a.artifact_scan_status === "completed" && (a.artifact_scan_finding_count ?? 0) === 0;
     return a.artifact_scan_status === status;
   });
   const allShownSelected = shownArtifacts.length > 0 && shownArtifacts.every((a) => selected.has(a.path));
@@ -1207,11 +1207,11 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
       <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-2 max-sm:flex-col max-sm:items-stretch">
         <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:flex-col max-sm:items-stretch">
           <Select value={status} onChange={setStatus}
-            options={["", "unscanned", "queued", "running", "completed", "failed"].map((s) => ({ value: s, label: s || "all scan states" }))} />
+            options={["", "findings", "clean", "unscanned", "queued", "running", "completed", "failed"].map((s) => ({ value: s, label: s || "all scan states" }))} />
           <Select value={String(limit)} onChange={(v) => { const n = Number(v); setLimit(n); setOffset(0); load(prefix, 0, n); }}
             options={[50, 100, 250, 500].map((n) => ({ value: String(n), label: `${n} rows` }))} />
-          {canDelete && <Button type="button" disabled={scanReadyVisible.length === 0 || scanningPath === "(visible)"} onClick={scanVisible}>Scan visible ({scanReadyVisible.length})</Button>}
-          {canDelete && selected.size > 0 && <Button variant="outline" type="button" disabled={scanningPath === "(selected)"} onClick={scanSelected}>Scan selected ({selected.size})</Button>}
+          {canManageArtifacts && <Button type="button" disabled={scanReadyVisible.length === 0 || scanningPath === "(visible)"} onClick={scanVisible}>Scan visible ({scanReadyVisible.length})</Button>}
+          {canManageArtifacts && selected.size > 0 && <Button variant="outline" type="button" disabled={scanningPath === "(selected)"} onClick={scanSelected}>Scan selected ({selected.size})</Button>}
         </div>
         <div className="flex min-w-0 items-center gap-2 max-sm:flex-col max-sm:items-stretch">
         <Button variant="outline" type="button" disabled={offset === 0} onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); load(prefix, next); }}>{t("common.newer")}</Button>
@@ -1223,7 +1223,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
         <TableWrap>
         <Table>
           <TableHeader>
-            <TableRow>{canDelete && <TableHead className="w-10"><Checkbox checked={allShownSelected} onCheckedChange={(checked) => setSelected(new Set(checked ? shownArtifacts.map((a) => a.path) : []))} /></TableHead>}<TableHead>Artifact</TableHead><TableHead>Scan result</TableHead><TableHead>{t("common.last-accessed")}</TableHead><TableHead></TableHead></TableRow>
+            <TableRow>{canManageArtifacts && <TableHead className="w-10"><Checkbox checked={allShownSelected} onCheckedChange={(checked) => setSelected(new Set(checked ? shownArtifacts.map((a) => a.path) : []))} /></TableHead>}<TableHead>Artifact</TableHead><TableHead>Scan result</TableHead><TableHead>{t("common.last-accessed")}</TableHead><TableHead></TableHead></TableRow>
           </TableHeader>
           <TableBody>
             {shownArtifacts.map((a) => (
@@ -1232,13 +1232,15 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
                 className={cn("cursor-pointer", detailPath === a.path && "bg-muted/35")}
                 onClick={() => openDetails(a)}
               >
-                {canDelete && <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(a.path)} onCheckedChange={(checked) => toggleSelected(a.path, !!checked)} /></TableCell>}
+                {canManageArtifacts && <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(a.path)} onCheckedChange={(checked) => toggleSelected(a.path, !!checked)} /></TableCell>}
                 <TableCell>
                   <div className="break-all font-mono text-xs">{a.path}</div>
                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {a.package_name && <Badge variant="outline" className="font-mono">{a.ecosystem || a.depsdev_system || "pkg"}:{a.package_name}</Badge>}
                     <span>{a.version || "no version"}</span>
                     <span>{humanSize(a.size)}</span>
                     <span>{a.content_type}</span>
+                    {a.package_purl && <span className="break-all font-mono">{a.package_purl}</span>}
                     {a.licenses?.slice(0, 3).map((licenseId) => <Badge key={licenseId} variant="outline">{licenseId}</Badge>)}
                     {a.max_severity && <SeverityBar severity={a.max_severity} counts={a.vuln_counts} source={a.vuln_source} scannedAt={a.vuln_scanned_at} />}
                   </div>
@@ -1251,7 +1253,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
                 <TableCell className="text-muted-foreground">{a.last_accessed_at?.slice(0, 19).replace("T", " ")}</TableCell>
                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
-                      {canDelete && <>
+                      {canManageArtifacts && <>
                       <Button variant="outline" onClick={() => scan(a)} disabled={scanningPath === a.path}>
                         {a.artifact_scan_status ? "Rescan" : "Scan"}
                       </Button>
@@ -1262,7 +1264,7 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
               </TableRow>
             ))}
             {data && shownArtifacts.length === 0 && (
-              <TableRow><TableCell colSpan={canDelete ? 5 : 4} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={canManageArtifacts ? 5 : 4} className="text-muted-foreground">{t("repo.no-cached-artifacts")}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -1290,6 +1292,18 @@ function Artifacts({ repoId, canDelete }: { repoId: number; canDelete: boolean }
 }
 
 function ArtifactScanDetailsPanel({ path, result, error }: { path: string; result: ArtifactScanResult | null; error: string }) {
+  const [severity, setSeverity] = useState("");
+  const [query, setQuery] = useState("");
+  const findings = useMemo(() => sortedFindings(result?.findings ?? []), [result]);
+  const summary = useMemo(() => summarizeFindings(findings), [findings]);
+  const packages = useMemo(() => packageSummary(findings), [findings]);
+  const visibleFindings = useMemo(() => filterFindings(findings, severity, query), [findings, query, severity]);
+
+  useEffect(() => {
+    setSeverity("");
+    setQuery("");
+  }, [path]);
+
   return (
     <div className="min-h-[320px] min-w-0 rounded-[var(--radius)] border border-border bg-muted/20 p-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
       <div className="mb-3 flex min-w-0 flex-col gap-1">
@@ -1302,39 +1316,115 @@ function ArtifactScanDetailsPanel({ path, result, error }: { path: string; resul
         {!error && !result && <div className="text-sm text-muted-foreground">{`Loading...`}</div>}
         {result && (
           <div className="space-y-4">
+            {(result.package_name || result.package_purl) && (
+              <div className="rounded-[var(--radius)] border border-border bg-background/60 p-2">
+                <div className="mb-1 text-xs font-medium text-muted-foreground">Package coordinate</div>
+                <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+                  {result.package_name && <Badge variant="outline" className="font-mono">{result.ecosystem || result.depsdev_system || "pkg"}:{result.package_name}</Badge>}
+                  {result.package_purl && <span className="break-all font-mono text-muted-foreground">{result.package_purl}</span>}
+                </div>
+              </div>
+            )}
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge variant={result.status === "completed" ? "success" : result.status === "failed" ? "destructive" : "outline"}>{result.status}</Badge>
-              {result.max_severity && <Badge variant={result.max_severity === "critical" || result.max_severity === "high" ? "destructive" : "outline"}>{result.max_severity}</Badge>}
+              {result.max_severity && <SeverityBadge severity={normalizedSeverity(result.max_severity)} />}
+              <Badge variant={result.finding_count > 0 ? "destructive" : "outline"}>{result.finding_count.toLocaleString()} findings</Badge>
               <span className="text-sm text-muted-foreground">{[result.scanner, result.scanner_version, result.scanned_at?.slice(0, 19).replace("T", " "), result.database_schema_version].filter(Boolean).join(" · ")}</span>
             </div>
             {result.error && <Alert>{result.error}</Alert>}
-            {result.finding_count === 0 ? (
+            {result.status === "unscanned" ? (
+              <div className="text-sm text-muted-foreground">This artifact has not been scanned yet.</div>
+            ) : result.finding_count === 0 ? (
               <div className="text-sm text-muted-foreground">No vulnerability findings were reported for this artifact.</div>
             ) : (
-              <TableWrap>
-                <Table>
-                  <TableHeader>
-                    <TableRow><TableHead>Vulnerability</TableHead><TableHead>Severity</TableHead><TableHead>Package</TableHead><TableHead>Version</TableHead><TableHead>Fixed</TableHead><TableHead>Source</TableHead></TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(result.findings ?? []).map((f, idx) => (
-                      <TableRow key={`${f.vulnerability_id}-${f.package_name}-${idx}`}>
-                        <TableCell className="font-mono text-xs">{f.vulnerability_id}</TableCell>
-                        <TableCell><Badge variant={f.severity === "critical" || f.severity === "high" ? "destructive" : "outline"}>{f.severity || "unknown"}</Badge></TableCell>
-                        <TableCell className="break-all font-mono text-xs">{f.package_name || "unknown"}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{f.package_version || "—"}</TableCell>
-                        <TableCell className="break-all text-xs text-muted-foreground">{f.fixed_versions?.length ? f.fixed_versions.join(", ") : "—"}</TableCell>
-                        <TableCell className="break-all text-xs">{f.source_url ? <a href={f.source_url} target="_blank" rel="noreferrer">{f.source || f.source_url}</a> : (f.source || "—")}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableWrap>
+              <>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-[var(--radius)] border border-border bg-background/60 p-2">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">Severity</div>
+                    <div className="flex min-w-0 flex-wrap gap-1.5">
+                      {severityOrder.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className={cn("rounded-[var(--radius)] outline-none focus-visible:ring-2 focus-visible:ring-ring", severity === s && "ring-2 ring-ring")}
+                          onClick={() => setSeverity(severity === s ? "" : s)}
+                        >
+                          <SeverityBadge severity={s}>{s} {summary[s] ?? 0}</SeverityBadge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-[var(--radius)] border border-border bg-background/60 p-2">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">Top packages</div>
+                    <div className="flex min-w-0 flex-wrap gap-1.5">
+                      {packages.slice(0, 6).map((pkg) => (
+                        <Badge key={pkg.name} variant={pkg.highest === "critical" || pkg.highest === "high" ? "destructive" : "outline"} className="max-w-full">
+                          <span className="truncate font-mono">{pkg.name}</span>
+                          <span>{pkg.count}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                    <Input className="pl-7" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vulnerability, package, fixed version" />
+                  </div>
+                  {(query || severity) && <Button type="button" variant="outline" onClick={() => { setQuery(""); setSeverity(""); }}>Clear</Button>}
+                </div>
+                <div className="text-xs text-muted-foreground">{visibleFindings.length.toLocaleString()} of {findings.length.toLocaleString()} findings shown</div>
+                <div className="space-y-2">
+                  {visibleFindings.map((f, idx) => (
+                    <ArtifactScanFindingItem key={`${f.vulnerability_id}-${f.package_name}-${f.package_version}-${idx}`} finding={f} />
+                  ))}
+                  {visibleFindings.length === 0 && (
+                    <div className="rounded-[var(--radius)] border border-border bg-background/60 p-3 text-sm text-muted-foreground">No findings match the current filters.</div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
         </>
       )}
+    </div>
+  );
+}
+
+function ArtifactScanFindingItem({ finding }: { finding: ArtifactScanFinding }) {
+  const severity = normalizedSeverity(finding.severity);
+  const fixed = finding.fixed_versions?.length ? finding.fixed_versions.join(", ") : "No fixed version reported";
+  return (
+    <div className="rounded-[var(--radius)] border border-border bg-background/70 p-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="break-all font-mono text-sm font-semibold">{finding.vulnerability_id || "UNKNOWN"}</span>
+            <SeverityBadge severity={severity} />
+            {finding.match_type && <Badge variant="outline">{finding.match_type}</Badge>}
+          </div>
+          <div className="mt-2 break-all font-mono text-xs text-muted-foreground">
+            {finding.package_name || "unknown"}{finding.package_version ? `@${finding.package_version}` : ""}
+            {finding.package_type ? ` · ${finding.package_type}` : ""}
+          </div>
+        </div>
+        {finding.source_url && (
+          <a className="inline-flex shrink-0 items-center gap-1 text-xs" href={finding.source_url} target="_blank" rel="noreferrer">
+            Source <ExternalLink className="size-3" aria-hidden="true" />
+          </a>
+        )}
+      </div>
+      <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+        <div>
+          <div className="font-medium">Fixed</div>
+          <div className="mt-1 break-all text-muted-foreground">{fixed}</div>
+        </div>
+        <div>
+          <div className="font-medium">Package URL</div>
+          <div className="mt-1 break-all font-mono text-muted-foreground">{finding.package_purl || "—"}</div>
+        </div>
+      </div>
     </div>
   );
 }

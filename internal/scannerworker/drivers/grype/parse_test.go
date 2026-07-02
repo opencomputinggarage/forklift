@@ -90,3 +90,55 @@ func TestBestPURLTargetSkipsNPMMetadata(t *testing.T) {
 		t.Fatalf("purl = %q, want empty", got)
 	}
 }
+
+func TestBestPURLTargetOtherEcosystems(t *testing.T) {
+	tests := []struct {
+		name   string
+		target artifactscan.Target
+		want   string
+	}{
+		{
+			name: "maven",
+			target: artifactscan.Target{
+				Format:  "maven",
+				Path:    "com/google/guava/guava/31.0/guava-31.0.jar",
+				Version: "31.0",
+			},
+			want: "pkg:maven/com.google.guava/guava@31.0",
+		},
+		{
+			name: "pypi",
+			target: artifactscan.Target{
+				Format:  "pypi",
+				Path:    "packages/ab/cd/requests-2.31.0-py3-none-any.whl",
+				Version: "2.31.0",
+			},
+			want: "pkg:pypi/requests@2.31.0",
+		},
+		{
+			name: "cargo",
+			target: artifactscan.Target{
+				Format:  "cargo",
+				Path:    "api/v1/crates/serde/1.0.197/download",
+				Version: "1.0.197",
+			},
+			want: "pkg:cargo/serde@1.0.197",
+		},
+		{
+			name: "go",
+			target: artifactscan.Target{
+				Format:  "go",
+				Path:    "github.com/gin-gonic/gin/@v/v1.9.0.zip",
+				Version: "v1.9.0",
+			},
+			want: "pkg:golang/github.com/gin-gonic/gin@v1.9.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := bestPURLTarget([]artifactscan.Target{tt.target}); got != tt.want {
+				t.Fatalf("purl = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

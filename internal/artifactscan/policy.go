@@ -12,23 +12,24 @@ const (
 // Policy is the repository-facing artifact scanning policy.
 type Policy struct {
 	Enabled        bool
+	ScannerProfile string
 	Action         PolicyAction
 	Threshold      Severity
 	BlockUnscanned bool
 }
 
-// Verdict is the request-time decision derived from stored scan state.
-type Verdict struct {
+// RequestDecision is the request-time decision derived from a stored verdict.
+type RequestDecision struct {
 	Allowed bool
 	Action  PolicyAction
 	Reason  string
 }
 
-// Evaluate returns the request-time verdict for a stored scan result. A nil
-// result represents an unscanned artifact.
-func Evaluate(policy Policy, result *Result) Verdict {
-	if !policy.Enabled {
-		return Verdict{Allowed: true, Action: PolicyAudit, Reason: "artifact scanning disabled"}
+// ComputeVerdict applies repository policy to a scan report. A nil report
+// represents an artifact with no usable report yet.
+func ComputeVerdict(repositoryID int64, blobSHA256 string, policy Policy, result *Result, policyHash string) Verdict {
+	if policy.ScannerProfile == "" {
+		policy.ScannerProfile = "grype-default"
 	}
 	if policy.Action == "" {
 		policy.Action = PolicyAudit
@@ -36,20 +37,81 @@ func Evaluate(policy Policy, result *Result) Verdict {
 	if policy.Threshold == "" {
 		policy.Threshold = SeverityHigh
 	}
+	v := Verdict{
+		RepositoryID:   repositoryID,
+		BlobSHA256:     blobSHA256,
+		ScannerProfile: policy.ScannerProfile,
+		PolicyHash:     policyHash,
+		Status:         VerdictPending,
+		Reason:         "artifact has not been scanned",
+		MaxSeverity:    SeverityUnknown,
+	}
+	if !policy.Enabled {
+		v.Status = VerdictAllow
+		v.Reason = "artifact scanning disabled"
+		return v
+	}
 	if result == nil {
 		if policy.BlockUnscanned && policy.Action == PolicyBlock {
-			return Verdict{Allowed: false, Action: PolicyBlock, Reason: "artifact has not been scanned"}
+			v.Status = VerdictBlock
 		}
-		return Verdict{Allowed: true, Action: policy.Action, Reason: "artifact has not been scanned"}
+		return v
 	}
-	if result.Status != StatusCompleted {
-		return Verdict{Allowed: true, Action: policy.Action, Reason: string(result.Status)}
+	v.ResultID = result.ID
+	v.MaxSeverity = result.MaxSeverity
+	switch result.Status {
+	case ReportCompleted:
+		if SeverityRank(result.MaxSeverity) < SeverityRank(policy.Threshold) {
+			v.Status = VerdictAllow
+			v.Reason = "below threshold"
+			return v
+		}
+		v.Reason = "artifact scan policy violation"
+		switch policy.Action {
+		case PolicyBlock:
+			v.Status = VerdictBlock
+		case PolicyWarn:
+			v.Status = VerdictWarn
+		default:
+			v.Status = VerdictAudit
+		}
+	case ReportFailed:
+		v.Status = VerdictPending
+		v.Reason = "scanner failed"
+	case ReportNotApplicable:
+		v.Status = VerdictAllow
+		v.Reason = "scanner not applicable"
+	case ReportSkippedTooLarge:
+		v.Status = VerdictPending
+		v.Reason = "artifact too large to scan"
+	case ReportReused:
+		v.Status = VerdictAllow
+		v.Reason = "reused scan report"
+	default:
+		v.Status = VerdictPending
+		v.Reason = string(result.Status)
 	}
-	if SeverityRank(result.MaxSeverity) < SeverityRank(policy.Threshold) {
-		return Verdict{Allowed: true, Action: policy.Action, Reason: "below threshold"}
+	return v
+}
+
+// Decide returns the serving decision for a stored verdict.
+func Decide(policy Policy, verdict *Verdict) RequestDecision {
+	if !policy.Enabled {
+		return RequestDecision{Allowed: true, Action: PolicyAudit, Reason: "artifact scanning disabled"}
 	}
-	if policy.Action == PolicyBlock {
-		return Verdict{Allowed: false, Action: policy.Action, Reason: "artifact scan policy violation"}
+	if policy.Action == "" {
+		policy.Action = PolicyAudit
 	}
-	return Verdict{Allowed: true, Action: policy.Action, Reason: "artifact scan policy violation"}
+	if verdict == nil {
+		if policy.BlockUnscanned && policy.Action == PolicyBlock {
+			return RequestDecision{Allowed: false, Action: PolicyBlock, Reason: "artifact has not been scanned"}
+		}
+		return RequestDecision{Allowed: true, Action: policy.Action, Reason: "artifact has not been scanned"}
+	}
+	switch verdict.Status {
+	case VerdictBlock:
+		return RequestDecision{Allowed: false, Action: PolicyBlock, Reason: verdict.Reason}
+	default:
+		return RequestDecision{Allowed: true, Action: policy.Action, Reason: verdict.Reason}
+	}
 }

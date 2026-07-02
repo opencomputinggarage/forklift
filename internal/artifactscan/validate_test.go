@@ -64,9 +64,9 @@ func TestValidateResultRejectsUntrustedFields(t *testing.T) {
 			},
 		},
 		{
-			name: "running status",
+			name: "invalid job status as report status",
 			mutate: func(r *Result) {
-				r.Status = StatusRunning
+				r.Status = ReportStatus(JobRunning)
 			},
 		},
 		{
@@ -100,28 +100,28 @@ func TestValidateResultRejectsUntrustedFields(t *testing.T) {
 	}
 }
 
-func TestEvaluate(t *testing.T) {
+func TestComputeVerdict(t *testing.T) {
 	p := Policy{Enabled: true, Action: PolicyBlock, Threshold: SeverityHigh}
 	res := &Result{Status: StatusCompleted, MaxSeverity: SeverityMedium}
-	if got := Evaluate(p, res); !got.Allowed {
+	if got := ComputeVerdict(1, "blob", p, res, "policy"); got.Status == VerdictBlock {
 		t.Fatalf("medium should be allowed below high threshold: %+v", got)
 	}
 	res.MaxSeverity = SeverityCritical
-	if got := Evaluate(p, res); got.Allowed {
+	if got := ComputeVerdict(1, "blob", p, res, "policy"); got.Status != VerdictBlock {
 		t.Fatalf("critical should be blocked: %+v", got)
 	}
 }
 
-func TestEvaluateUnscannedAndDisabled(t *testing.T) {
-	if got := Evaluate(Policy{}, nil); !got.Allowed {
+func TestDecideUnscannedAndDisabled(t *testing.T) {
+	if got := Decide(Policy{}, nil); !got.Allowed {
 		t.Fatalf("disabled policy should allow: %+v", got)
 	}
 	p := Policy{Enabled: true, Action: PolicyBlock, Threshold: SeverityHigh, BlockUnscanned: true}
-	if got := Evaluate(p, nil); got.Allowed {
+	if got := Decide(p, nil); got.Allowed {
 		t.Fatalf("blockUnscanned policy should block missing result: %+v", got)
 	}
 	p.Action = PolicyAudit
-	if got := Evaluate(p, nil); !got.Allowed {
+	if got := Decide(p, nil); !got.Allowed {
 		t.Fatalf("audit policy should allow missing result: %+v", got)
 	}
 }

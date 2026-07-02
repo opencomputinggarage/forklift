@@ -55,13 +55,16 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 	}
 
 	svc, err := artifactscan.NewService(store, artifactscan.ServiceConfig{
-		Scanner:  "grype",
-		TokenKey: []byte("0123456789abcdef0123456789abcdef"),
+		DefaultProfile: "grype-default",
+		TokenKey:       []byte("0123456789abcdef0123456789abcdef"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.Enqueue(ctx, blobSHA); err != nil {
+	if err := svc.InitProfiles(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Enqueue(ctx, blobSHA, "grype-default"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -76,7 +79,7 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 	}
 	unauth.Body.Close()
 
-	claimResp := postScanJSON(t, srv.URL+"/internal/scans/claim", "worker-secret", `{"worker_id":"worker-1"}`)
+	claimResp := postScanJSON(t, srv.URL+"/internal/scans/claim", "worker-secret", `{"worker_id":"worker-1","capabilities":[{"name":"grype","version":"1.0.0","database_schema_version":"6","database_built_at":"2026-07-01T00:00:00Z"}]}`)
 	if claimResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(claimResp.Body)
 		t.Fatalf("claim status=%d body=%s", claimResp.StatusCode, body)
@@ -89,11 +92,19 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 	if claim.JobID == "" || claim.BlobSHA256 != blobSHA || claim.Token == "" {
 		t.Fatalf("bad claim response: %+v", claim)
 	}
+	if claim.Deadline.IsZero() || claim.Limits.MaxArtifactBytes != 100<<20 {
+		t.Fatalf("bad claim lease/limits: %+v", claim)
+	}
 	if len(claim.Targets) != 1 ||
 		claim.Targets[0].Repository != "npmjs" ||
 		claim.Targets[0].Format != meta.FormatNPM ||
 		claim.Targets[0].Path != "pkg/-/pkg-1.0.0.tgz" ||
-		claim.Targets[0].Version != "1.0.0" {
+		claim.Targets[0].Version != "1.0.0" ||
+		claim.Targets[0].PackageName != "pkg" ||
+		claim.Targets[0].Ecosystem != "npm" ||
+		claim.Targets[0].DepsDevSystem != "npm" ||
+		claim.Targets[0].PURL != "pkg:npm/pkg@1.0.0" ||
+		claim.Targets[0].Size != blobSize {
 		t.Fatalf("bad claim targets: %+v", claim.Targets)
 	}
 
@@ -115,6 +126,20 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 		t.Fatalf("blob sha header=%q, want %q", got, blobSHA)
 	}
 
+	heartbeat := postScanJSON(t, srv.URL+"/internal/scans/"+claim.JobID+"/heartbeat", claim.Token, `{"worker_id":"worker-1"}`)
+	if heartbeat.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(heartbeat.Body)
+		t.Fatalf("heartbeat status=%d body=%s", heartbeat.StatusCode, body)
+	}
+	var heartbeatResp scanHeartbeatResp
+	if err := json.NewDecoder(heartbeat.Body).Decode(&heartbeatResp); err != nil {
+		t.Fatal(err)
+	}
+	heartbeat.Body.Close()
+	if heartbeatResp.Token == "" || heartbeatResp.Deadline.IsZero() {
+		t.Fatalf("bad heartbeat response: %+v", heartbeatResp)
+	}
+
 	result := scanResultReq{
 		WorkerID: "worker-1",
 		Result: artifactscan.Result{
@@ -123,7 +148,7 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 			Scanner:         "grype",
 			ScannerVersion:  "1.0.0",
 			DatabaseBuiltAt: time.Now().UTC(),
-			Status:          artifactscan.StatusCompleted,
+			Status:          artifactscan.ReportCompleted,
 			MaxSeverity:     artifactscan.SeverityHigh,
 			ScannedAt:       time.Now().UTC(),
 			Findings: []artifactscan.Finding{{
@@ -137,18 +162,18 @@ func TestScanInternalClaimBlobAndResult(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	submit := postScanJSON(t, srv.URL+"/internal/scans/"+claim.JobID+"/result", claim.Token, string(resultBody))
+	submit := postScanJSON(t, srv.URL+"/internal/scans/"+claim.JobID+"/result", heartbeatResp.Token, string(resultBody))
 	if submit.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(submit.Body)
 		t.Fatalf("submit status=%d body=%s", submit.StatusCode, body)
 	}
 	submit.Body.Close()
 
-	stored, err := store.LatestArtifactScanResult(ctx, blobSHA, "grype", "")
+	stored, err := store.LatestArtifactScanResult(ctx, blobSHA, "grype-default")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.Status != artifactscan.StatusCompleted || stored.MaxSeverity != artifactscan.SeverityHigh || len(stored.Findings) != 1 {
+	if stored.Status != artifactscan.ReportCompleted || stored.MaxSeverity != artifactscan.SeverityHigh || len(stored.Findings) != 1 {
 		t.Fatalf("stored result = %+v", stored)
 	}
 }

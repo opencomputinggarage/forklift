@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -41,15 +42,21 @@ func (h *ScanInternal) Routes() chi.Router {
 }
 
 type scanClaimReq struct {
-	WorkerID string `json:"worker_id"`
+	WorkerID     string                           `json:"worker_id"`
+	Capabilities []artifactscan.ScannerCapability `json:"capabilities"`
 }
 
 type scanClaimResp struct {
-	JobID      string                `json:"job_id"`
-	BlobSHA256 string                `json:"blob_sha256"`
-	Scanner    string                `json:"scanner"`
-	Token      string                `json:"token"`
-	Targets    []artifactscan.Target `json:"targets,omitempty"`
+	JobID             string                `json:"job_id"`
+	BlobSHA256        string                `json:"blob_sha256"`
+	ScannerProfile    string                `json:"scanner_profile"`
+	Scanner           string                `json:"scanner"`
+	ScannerConfigHash string                `json:"scanner_config_hash"`
+	Token             string                `json:"token"`
+	Deadline          time.Time             `json:"deadline"`
+	Limits            artifactscan.Limits   `json:"limits"`
+	StoreSBOM         bool                  `json:"store_sbom,omitempty"`
+	Targets           []artifactscan.Target `json:"targets,omitempty"`
 }
 
 func (h *ScanInternal) claim(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +73,11 @@ func (h *ScanInternal) claim(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "worker_id required")
 		return
 	}
-	claimed, err := h.svc.Claim(r.Context(), req.WorkerID)
+	if len(req.Capabilities) == 0 {
+		writeError(w, http.StatusBadRequest, "capabilities required")
+		return
+	}
+	claimed, err := h.svc.Claim(r.Context(), req.WorkerID, req.Capabilities)
 	if errors.Is(err, meta.ErrNotFound) {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -76,11 +87,16 @@ func (h *ScanInternal) claim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, scanClaimResp{
-		JobID:      claimed.Job.ID,
-		BlobSHA256: claimed.Job.BlobSHA256,
-		Scanner:    claimed.Job.Scanner,
-		Token:      claimed.Token,
-		Targets:    claimed.Targets,
+		JobID:             claimed.Job.ID,
+		BlobSHA256:        claimed.Job.BlobSHA256,
+		ScannerProfile:    claimed.Job.ScannerProfile,
+		Scanner:           claimed.Job.Scanner,
+		ScannerConfigHash: claimed.Job.ScannerConfigHash,
+		Token:             claimed.Token,
+		Deadline:          claimed.Deadline,
+		Limits:            claimed.Limits,
+		StoreSBOM:         claimed.Job.StoreSBOM,
+		Targets:           claimed.Targets,
 	})
 }
 
@@ -115,6 +131,12 @@ type scanHeartbeatReq struct {
 	WorkerID string `json:"worker_id"`
 }
 
+type scanHeartbeatResp struct {
+	Token    string              `json:"token"`
+	Deadline time.Time           `json:"deadline"`
+	Limits   artifactscan.Limits `json:"limits"`
+}
+
 func (h *ScanInternal) heartbeat(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.authorizedScanToken(w, r)
 	if !ok {
@@ -129,11 +151,16 @@ func (h *ScanInternal) heartbeat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid json body")
 		return
 	}
-	if err := h.svc.Heartbeat(r.Context(), bearerToken(r), req.WorkerID); err != nil {
+	renewed, err := h.svc.Heartbeat(r.Context(), bearerToken(r), req.WorkerID)
+	if err != nil {
 		mapError(w, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeJSON(w, http.StatusOK, scanHeartbeatResp{
+		Token:    renewed.Token,
+		Deadline: renewed.Deadline,
+		Limits:   renewed.Limits,
+	})
 }
 
 type scanResultReq struct {
@@ -150,6 +177,7 @@ func (h *ScanInternal) result(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "job token mismatch")
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxScanResultBodyBytes)
 	var req scanResultReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json body")
@@ -161,6 +189,8 @@ func (h *ScanInternal) result(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+const maxScanResultBodyBytes = 10 << 20
 
 func (h *ScanInternal) authorizedWorker(r *http.Request) bool {
 	if h.workerToken == "" {

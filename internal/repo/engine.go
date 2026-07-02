@@ -561,7 +561,8 @@ func (e *Engine) artifactScanGate(w http.ResponseWriter, r *http.Request, spec f
 	if !cfg.Enabled || art.BlobSHA256 == "" {
 		return false
 	}
-	result, err := e.store.LatestArtifactScanResult(r.Context(), art.BlobSHA256, cfg.EffectiveScanner(), cfg.ConfigHash)
+	profile := cfg.EffectiveScannerProfile()
+	verdict, err := e.store.LatestArtifactScanVerdict(r.Context(), spec.repo.ID, art.BlobSHA256, profile)
 	if errors.Is(err, meta.ErrNotFound) {
 		if cfg.EffectiveAction() == repoconfig.VulnActionBlock && cfg.BlockUnscanned {
 			http.Error(w, "artifact pending security scan", http.StatusForbidden)
@@ -575,19 +576,20 @@ func (e *Engine) artifactScanGate(w http.ResponseWriter, r *http.Request, spec f
 	}
 	policy := artifactscan.Policy{
 		Enabled:        true,
+		ScannerProfile: profile,
 		Action:         artifactscan.PolicyAction(cfg.EffectiveAction()),
 		Threshold:      artifactscan.ParseSeverity(cfg.EffectiveThreshold()),
 		BlockUnscanned: cfg.BlockUnscanned,
 	}
-	verdict := artifactscan.Evaluate(policy, &result)
-	if verdict.Allowed {
-		if verdict.Reason == "artifact scan policy violation" {
-			e.log.Warn("artifact scan policy: would block", "repo", spec.repo.Name, "path", spec.path, "severity", result.MaxSeverity, "action", cfg.EffectiveAction())
+	decision := artifactscan.Decide(policy, &verdict)
+	if decision.Allowed {
+		if verdict.Status == artifactscan.VerdictAudit || verdict.Status == artifactscan.VerdictWarn {
+			e.log.Warn("artifact scan policy: would block", "repo", spec.repo.Name, "path", spec.path, "severity", verdict.MaxSeverity, "action", cfg.EffectiveAction())
 		}
 		return false
 	}
-	e.log.Warn("artifact blocked by scan policy", "repo", spec.repo.Name, "path", spec.path, "severity", result.MaxSeverity)
-	http.Error(w, "blocked: artifact scan policy ("+string(result.MaxSeverity)+")", http.StatusForbidden)
+	e.log.Warn("artifact blocked by scan policy", "repo", spec.repo.Name, "path", spec.path, "severity", verdict.MaxSeverity)
+	http.Error(w, "blocked: artifact scan policy ("+string(verdict.MaxSeverity)+")", http.StatusForbidden)
 	return true
 }
 

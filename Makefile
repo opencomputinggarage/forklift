@@ -11,7 +11,7 @@ COVER_MIN   ?= 73
 PLATFORMS   ?= linux/amd64,linux/arm64
 DATA_DIR    ?= ./.data
 
-.PHONY: all build run dev scan-dev web-dev test coverage fmt lint vet tidy clean web-build artifact-scan-dev artifact-scan-worker-dev artifact-scan-worker-loop docker-build docker-push helm-lint helm-template creds
+.PHONY: all build run dev scan-dev scan-stack-dev web-dev test coverage fmt lint vet tidy clean web-build artifact-scan-dev artifact-scan-worker-dev artifact-scan-worker-loop docker-build docker-push helm-lint helm-template creds
 
 all: fmt vet lint test build
 
@@ -46,6 +46,26 @@ scan-dev:
 		--deps-dev-url= \
 		--artifact-scan-enabled \
 		--artifact-scan-worker-token=$${FORKLIFT_SCAN_DEV_WORKER_TOKEN:-dev-scan-token}
+
+## scan-stack-dev: run the artifact-scan server and scanner worker together
+scan-stack-dev:
+	@command -v curl >/dev/null || { echo "curl is required for scan-stack-dev readiness checks"; exit 1; }
+	@echo "starting artifact scan stack on http://127.0.0.1:$${FORKLIFT_SCAN_DEV_PORT:-8080}"
+	@set -e; \
+	port="$${FORKLIFT_SCAN_DEV_PORT:-8080}"; \
+	$(MAKE) scan-dev & server_pid="$$!"; \
+	trap 'kill "$$server_pid" "$${worker_pid:-}" 2>/dev/null || true; wait 2>/dev/null || true' INT TERM EXIT; \
+	for i in $$(seq 1 60); do \
+		if ! kill -0 "$$server_pid" 2>/dev/null; then wait "$$server_pid"; exit "$$?"; fi; \
+		if curl -fsS "http://127.0.0.1:$$port/api/v1/me" >/dev/null 2>&1; then break; fi; \
+		sleep 1; \
+	done; \
+	if ! curl -fsS "http://127.0.0.1:$$port/api/v1/me" >/dev/null 2>&1; then \
+		echo "server did not become ready on :$$port"; exit 1; \
+	fi; \
+	echo "server ready; starting scanner worker loop"; \
+	FORKLIFT_SCAN_WORKER_LOOP=true $(MAKE) artifact-scan-worker-dev & worker_pid="$$!"; \
+	wait
 
 ## web-dev: run the React UI dev server
 web-dev:
